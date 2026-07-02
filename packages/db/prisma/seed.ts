@@ -3,8 +3,12 @@
  * (Page Accueil.dc.html, Page Article.dc.html). Idempotent : purge puis recrée.
  */
 import { PrismaClient, Prisma } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+// mot de passe commun des comptes de démo : « abidjan2026 »
+const DEMO_HASH = bcrypt.hashSync("abidjan2026", 10);
 
 const p = (text: string) => ({ type: "paragraph", text });
 const h2 = (text: string) => ({ type: "h2", text });
@@ -86,16 +90,17 @@ async function main() {
   ]);
 
   const admin = await prisma.user.create({
-    data: { email: "admin@abidjan4all.net", name: "Administration A4A", role: "admin", verified: true, country: "CI" },
+    data: { email: "admin@abidjan4all.net", name: "Administration A4A", role: "admin", verified: true, country: "CI", passwordHash: DEMO_HASH },
   });
   const editrice = await prisma.user.create({
-    data: { email: "mariam.toure@abidjan4all.net", name: "Mariam Touré", role: "editor", verified: true, country: "CI" },
+    data: { email: "mariam.toure@abidjan4all.net", name: "Mariam Touré", role: "editor", verified: true, country: "CI", passwordHash: DEMO_HASH },
   });
   const awa = await prisma.user.create({
     data: {
       email: "awa.kone@abidjan4all.net",
       name: "Awa Koné",
       role: "journalist",
+      passwordHash: DEMO_HASH,
       bio: "Data journaliste — cacao, marchés et économie ivoirienne.",
       verified: true,
       country: "CI",
@@ -107,6 +112,7 @@ async function main() {
       email: "koffi.diallo@abidjan4all.net",
       name: "Koffi Diallo",
       role: "journalist",
+      passwordHash: DEMO_HASH,
       bio: "Correspondant diaspora, Montréal.",
       verified: true,
       country: "CA",
@@ -118,6 +124,7 @@ async function main() {
       email: "ngoran.kouassi@gmail.com",
       name: "N'Goran Kouassi",
       role: "member",
+      passwordHash: DEMO_HASH,
       country: "FR",
       interests: [rub["cacao-marches"]!, rub["diaspora"]!, rub["sport"]!],
       badges: { connect: [{ id: bDiaspora.id }] },

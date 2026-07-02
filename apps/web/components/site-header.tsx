@@ -30,7 +30,9 @@ export function SiteHeader() {
           <span className="text-[13px] text-ink-3">⌕</span>
           <span className="text-[12.5px] text-ink-3">Rechercher…</span>
         </div>
-        <span className="hidden text-[12.5px] font-semibold text-ink-2 sm:inline">Connexion</span>
+        <Link href="/login" className="hidden text-[12.5px] font-semibold text-ink-2 hover:text-ink sm:inline">
+          Connexion
+        </Link>
         <ThemeToggle />
         <button
           type="button"
