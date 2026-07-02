@@ -1,0 +1,90 @@
+/*
+ * Design tokens — Abidjan4All
+ * Source de vérité : design_handoff_abidjan4all/design/Design System.dc.html
+ * (valeurs recopiées à l'identique ; ne pas modifier sans mettre à jour la maquette)
+ */
+
+:root {
+  /* marque */
+  --navy: #1a2a4a;
+  --navy-2: #28406e;
+  --red: #d6282d;
+  --red-bright: #ff4a4a;
+  --orange: #e8641a;
+  --green: #0e8a5f;
+  --accent: #e8641a;
+
+  /* fonds & encres — thème clair */
+  --bg: #fbfaf7;
+  --surface: #ffffff;
+  --surface-2: #f4f2ec;
+  --surface-3: #edeae0;
+  --ink: #16181d;
+  --ink-2: #464c58;
+  --ink-3: #727a88;
+  --line: #e3dfd4;
+  --line-2: #edeae1;
+  --brand-fill: #1a2a4a;
+  --brand-on: #ffffff;
+  --brand-word: #1a2a4a;
+  --topbar: rgba(251, 250, 247, 0.82);
+
+  /* ombres */
+  --shadow-sm: 0 1px 2px rgba(20, 24, 40, 0.06), 0 1px 3px rgba(20, 24, 40, 0.05);
+  --shadow-md: 0 4px 12px rgba(20, 24, 40, 0.08), 0 2px 4px rgba(20, 24, 40, 0.05);
+  --shadow-lg: 0 18px 44px rgba(20, 24, 40, 0.14), 0 6px 14px rgba(20, 24, 40, 0.08);
+
+  /* bascule des logos clair/sombre */
+  --show-light: block;
+  --show-dark: none;
+
+  /* rayons (README §Design tokens) */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* couleurs des 13+1 rubriques (README §Design tokens) */
+  --rub-cacao: #8a5a2b;
+  --rub-diaspora: #2e5aac;
+  --rub-business: #0e8a5f;
+  --rub-femmes: #b0347a;
+  --rub-environnement: #3c8f4e;
+  --rub-videos: #d6282d;
+  --rub-direct: #e8641a;
+  --rub-english: #147c82;
+  --rub-tourisme: #c98a17;
+  --rub-religion: #6a5aa6;
+  --rub-politique: #364152;
+  --rub-economie: #1a6e8e;
+  --rub-culture: #c0562b;
+  --rub-sport: #157a3b;
+}
+
+[data-theme="dark"] {
+  --navy: #1a2a4a;
+  --navy-2: #33518c;
+  --bg: #0e141f;
+  --surface: #161e2c;
+  --surface-2: #1c2637;
+  --surface-3: #243044;
+  --ink: #ece9e1;
+  --ink-2: #aeb5c2;
+  --ink-3: #798394;
+  --line: #28303f;
+  --line-2: #202836;
+  --brand-fill: #33518c;
+  --brand-on: #f5f3ee;
+  --brand-word: #8fa6d6;
+  --topbar: rgba(14, 20, 31, 0.82);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 22px 50px rgba(0, 0, 0, 0.6);
+  --show-light: none;
+  --show-dark: block;
+}
+
+::selection {
+  background: var(--accent, #e8641a);
+  color: #fff;
+}

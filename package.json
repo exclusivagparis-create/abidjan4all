@@ -1,0 +1,21 @@
+{
+  "name": "abidjan4all",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Abidjan4All — média numérique de la Côte d'Ivoire et de la diaspora (monorepo de production)",
+  "packageManager": "pnpm@10.4.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "db:generate": "pnpm --filter @a4a/db db:generate",
+    "db:migrate": "pnpm --filter @a4a/db db:migrate",
+    "db:studio": "pnpm --filter @a4a/db db:studio"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0"
+  }
+}

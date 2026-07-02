@@ -1,0 +1,558 @@
+// Schéma Prisma — Abidjan4All
+// Source : design_handoff_abidjan4all/DATA_MODEL.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  reader
+  member
+  journalist
+  editor
+  admin
+  partner
+}
+
+enum ArticleStatus {
+  draft
+  review
+  scheduled
+  published
+}
+
+enum RubriqueKind {
+  gratuit
+  freemium
+  premium
+  affiliation
+}
+
+enum MediaType {
+  image
+  video
+  svg
+  audio
+}
+
+// DATA_MODEL.md laisse le statut du live-blog non typé ; valeurs déduites du
+// prototype Live Blog.dc.html (à faire évoluer si le CdC en précise d'autres).
+enum LiveBlogStatus {
+  scheduled
+  live
+  ended
+}
+
+enum LiveUpdateType {
+  text
+  quote
+  stat
+  media
+}
+
+enum CommentStatus {
+  pending
+  approved
+  rejected
+  flagged
+}
+
+enum Plan {
+  free
+  essentiel
+  pro
+  corporate
+}
+
+enum SubscriptionStatus {
+  active
+  past_due
+  canceled
+}
+
+enum PaymentMethod {
+  momo
+  orange
+  card
+  paypal
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  refunded
+}
+
+enum AdFormat {
+  leaderboard_728x90
+  mpu_300x250
+  native
+  interstitial
+}
+
+enum AdStatus {
+  draft
+  active
+  paused
+  ended
+}
+
+enum ListingType {
+  emploi
+  immobilier
+  service
+}
+
+enum ListingStatus {
+  pending
+  published
+  expired
+}
+
+enum FactCheckVerdict {
+  vrai
+  faux
+  trompeur
+  a_verifier
+}
+
+// ---------------------------------------------------------------------------
+// Utilisateurs & communauté
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String?
+  name         String
+  role         Role     @default(reader)
+  avatarUrl    String?
+  country      String? // ex. "CI", "CA"
+  bio          String?
+  verified     Boolean  @default(false)
+  badges       Badge[]
+  interests    String[] // ids de rubriques (feed "Pour vous")
+  locale       String   @default("fr") // fr | en
+  theme        String   @default("light")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subscription            Subscription?
+  comments                Comment[]
+  favorites               Article[]                @relation("Favorites")
+  groups                  Group[]
+  articles                Article[]                @relation("AuthoredArticles")
+  coauthoredArticles      Article[]                @relation("CoauthoredArticles")
+  mediaAssets             MediaAsset[]
+  listings                Listing[]
+  enrollments             Enrollment[]
+  newsletterSubscriptions NewsletterSubscription[]
+}
+
+model Badge {
+  id    String @id @default(cuid())
+  slug  String @unique // diaspora, expert_cacao, journalist, ambassadeur...
+  label String
+  users User[]
+}
+
+model Group {
+  id           String @id @default(cuid())
+  slug         String @unique
+  name         String
+  color        String
+  membersCount Int    @default(0)
+  members      User[]
+}
+
+// ---------------------------------------------------------------------------
+// Éditorial
+// ---------------------------------------------------------------------------
+
+model Rubrique {
+  id    String       @id @default(cuid())
+  slug  String       @unique // "cacao-marches"
+  name  String
+  color String // "#8A5A2B"
+  kind  RubriqueKind
+  order Int
+
+  articles  Article[]
+  liveBlogs LiveBlog[]
+}
+
+model Article {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  title       String
+  kicker      String?
+  dek         String? // chapeau
+  body        Json // blocs WYSIWYG : paragraph, h2, quote, image, embed, callout
+  status      ArticleStatus @default(draft)
+  premium     Boolean       @default(false)
+  publishedAt DateTime?
+  scheduledAt DateTime?
+
+  rubrique   Rubrique @relation(fields: [rubriqueId], references: [id])
+  rubriqueId String
+
+  author   User   @relation("AuthoredArticles", fields: [authorId], references: [id])
+  authorId String
+
+  coauthors User[] @relation("CoauthoredArticles")
+
+  coverAsset   MediaAsset? @relation("ArticleCover", fields: [coverAssetId], references: [id])
+  coverAssetId String?
+
+  tags        String[]
+  readingTime Int      @default(0)
+  views       Int      @default(0)
+  seo         Json     @default("{}") // { slug, metaTitle, metaDescription, ogImage }
+  aiSummary   Json? // { keyPoints: string[], long: string }
+
+  comments    Comment[]
+  favoritedBy User[]      @relation("Favorites")
+  liveBlog    LiveBlog?
+  factChecks  FactCheck[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // TODO (migration SQL brute) : index full-text sur title/dek/body — DATA_MODEL.md §Index
+  @@index([status, publishedAt])
+  @@index([rubriqueId, publishedAt])
+}
+
+model MediaAsset {
+  id          String    @id @default(cuid())
+  type        MediaType
+  url         String
+  thumbUrl    String?
+  width       Int?
+  height      Int?
+  durationSec Int?
+  sizeBytes   Int?
+  tags        String[]
+  alt         String?
+  credit      String?
+
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+  uploadedById String
+
+  articlesAsCover Article[]    @relation("ArticleCover")
+  liveUpdates     LiveUpdate[]
+
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Live-blog (temps réel : SSE/WebSocket /liveblogs/:id/stream)
+// ---------------------------------------------------------------------------
+
+model LiveBlog {
+  id String @id @default(cuid())
+
+  article   Article? @relation(fields: [articleId], references: [id])
+  articleId String?  @unique
+
+  title String
+  dek   String?
+
+  rubrique   Rubrique @relation(fields: [rubriqueId], references: [id])
+  rubriqueId String
+
+  status       LiveBlogStatus @default(live)
+  startedAt    DateTime       @default(now())
+  updatesCount Int            @default(0)
+
+  updates LiveUpdate[]
+}
+
+model LiveUpdate {
+  id String @id @default(cuid())
+
+  liveBlog   LiveBlog @relation(fields: [liveBlogId], references: [id])
+  liveBlogId String
+
+  time   DateTime       @default(now())
+  type   LiveUpdateType
+  title  String?
+  body   String
+  pinned Boolean        @default(false)
+
+  mediaAsset   MediaAsset? @relation(fields: [mediaAssetId], references: [id])
+  mediaAssetId String?
+
+  @@index([liveBlogId, time])
+}
+
+// ---------------------------------------------------------------------------
+// Commentaires (modération : file d'attente + score de toxicité IA)
+// ---------------------------------------------------------------------------
+
+model Comment {
+  id String @id @default(cuid())
+
+  article   Article @relation(fields: [articleId], references: [id])
+  articleId String
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  body      String
+  status    CommentStatus @default(pending)
+  reactions Json          @default("{}") // { "👍": 24, "🔥": 6 }
+
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  parentId String?
+  replies  Comment[] @relation("CommentReplies")
+
+  createdAt DateTime @default(now())
+
+  @@index([articleId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Abonnements & paiements (A4A+ : Essentiel 2 000 XOF/mois · Pro 4 000 · Corporate sur devis)
+// ---------------------------------------------------------------------------
+
+model Subscription {
+  id String @id @default(cuid())
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
+
+  plan             Plan               @default(free)
+  status           SubscriptionStatus @default(active)
+  method           PaymentMethod?
+  methodMask       String? // ex. "07 •• •• 89", "•••• 4242"
+  currentPeriodEnd DateTime?
+  since            DateTime           @default(now())
+
+  payments Payment[]
+}
+
+model Payment {
+  id String @id @default(cuid())
+
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  subscriptionId String
+
+  amount      Int
+  currency    String        @default("XOF")
+  provider    String // paydunya | cinetpay | stripe | paypal
+  providerRef String
+  status      PaymentStatus @default(pending)
+  createdAt   DateTime      @default(now())
+
+  invoice Invoice?
+}
+
+model Invoice {
+  id String @id @default(cuid())
+
+  payment   Payment @relation(fields: [paymentId], references: [id])
+  paymentId String  @unique
+
+  number   String   @unique
+  url      String
+  issuedAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Newsletters (double opt-in)
+// ---------------------------------------------------------------------------
+
+model Newsletter {
+  id               String @id @default(cuid())
+  slug             String @unique
+  name             String
+  cadence          String // quotidienne | hebdo | mensuelle...
+  description      String
+  subscribersCount Int    @default(0)
+
+  subscriptions NewsletterSubscription[]
+}
+
+model NewsletterSubscription {
+  id String @id @default(cuid())
+
+  newsletter   Newsletter @relation(fields: [newsletterId], references: [id])
+  newsletterId String
+
+  user   User?   @relation(fields: [userId], references: [id])
+  userId String?
+
+  email     String
+  confirmed Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([newsletterId, email])
+}
+
+// ---------------------------------------------------------------------------
+// Régie publicitaire
+// ---------------------------------------------------------------------------
+
+model AdCampaign {
+  id         String   @id @default(cuid())
+  advertiser String
+  format     AdFormat
+  cpm        Int
+  targeting  Json // { geo:["CI","FR","CEDEAO"], rubriques:[], device:"mobile" }
+
+  startAt DateTime
+  endAt   DateTime
+
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  status      AdStatus @default(draft)
+}
+
+// ---------------------------------------------------------------------------
+// Marketplace (emploi / immobilier / service)
+// ---------------------------------------------------------------------------
+
+model Listing {
+  id          String      @id @default(cuid())
+  type        ListingType
+  title       String
+  description String
+  price       Int?
+  currency    String      @default("XOF")
+  location    String
+  attributes  Json // champs spécifiques par type
+
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String
+
+  status   ListingStatus @default(pending)
+  paidTier String?
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([type, status, expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// E-learning
+// ---------------------------------------------------------------------------
+
+model Course {
+  id           String  @id @default(cuid())
+  slug         String  @unique
+  title        String
+  category     String
+  level        String // débutant | intermédiaire | avancé
+  price        Int
+  isPremium    Boolean @default(false)
+  lessonsCount Int     @default(0)
+  rating       Float   @default(0)
+
+  lessons     Lesson[]
+  enrollments Enrollment[]
+}
+
+model Lesson {
+  id String @id @default(cuid())
+
+  course   Course @relation(fields: [courseId], references: [id])
+  courseId String
+
+  order       Int
+  title       String
+  module      String
+  videoUrl    String?
+  durationSec Int
+  resources   Json    @default("[]")
+
+  lastForEnrollments Enrollment[] @relation("LastLesson")
+
+  @@unique([courseId, order])
+}
+
+model Enrollment {
+  id String @id @default(cuid())
+
+  course   Course @relation(fields: [courseId], references: [id])
+  courseId String
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  progressPct Int @default(0)
+
+  lastLesson   Lesson? @relation("LastLesson", fields: [lastLessonId], references: [id])
+  lastLessonId String?
+
+  certificateIssued Boolean @default(false)
+
+  @@unique([courseId, userId])
+}
+
+// ---------------------------------------------------------------------------
+// Podcasts
+// ---------------------------------------------------------------------------
+
+model Podcast {
+  id       String @id @default(cuid())
+  slug     String @unique
+  title    String
+  category String
+  cadence  String
+  coverUrl String
+
+  episodes Episode[]
+}
+
+model Episode {
+  id String @id @default(cuid())
+
+  podcast   Podcast @relation(fields: [podcastId], references: [id])
+  podcastId String
+
+  number      Int
+  title       String
+  description String
+  audioUrl    String
+  durationSec Int
+  publishedAt DateTime
+
+  @@unique([podcastId, number])
+}
+
+// ---------------------------------------------------------------------------
+// Fact-checking & glossaire
+// ---------------------------------------------------------------------------
+
+model FactCheck {
+  id      String           @id @default(cuid())
+  claim   String
+  verdict FactCheckVerdict
+  topic   String
+  body    String
+  sources String[]
+
+  article   Article? @relation(fields: [articleId], references: [id])
+  articleId String?
+
+  publishedAt DateTime @default(now())
+}
+
+model GlossaryTerm {
+  id         String @id @default(cuid())
+  term       String @unique
+  category   String
+  definition String
+}

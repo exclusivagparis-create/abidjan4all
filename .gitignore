@@ -1,0 +1,15 @@
+node_modules/
+.next/
+.turbo/
+dist/
+*.tsbuildinfo
+
+# environnement — ne jamais committer de secrets
+.env
+.env.local
+.env.*.local
+
+# divers
+.DS_Store
+npm-debug.log*
+pnpm-debug.log*
