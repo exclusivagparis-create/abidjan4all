@@ -1,25 +1,227 @@
 import Link from "next/link";
+import { prisma } from "@a4a/db";
+import { RubriqueBadge } from "@a4a/ui";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { Ticker } from "@/components/ticker";
+import { PlaceholderMedia } from "@/components/placeholder-media";
+import { articleListSelect } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 
-export default function HomePage() {
+export const revalidate = 60;
+
+const MARCHES = [
+  { label: "Cacao Londres", value: "4 015 $", delta: "▲2,4%", tone: "text-green" },
+  { label: "Cacao NY", value: "8 720 $", delta: "▲1,1%", tone: "text-green" },
+  { label: "BRVM Composite", value: "242,1", delta: "▲1,8%", tone: "text-green" },
+  { label: "Pétrole Brent", value: "78,4 $", delta: "▼0,3%", tone: "text-red" },
+  { label: "EUR / FCFA", value: "655,96", delta: "=", tone: "text-ink-3" },
+];
+
+export default async function HomePage() {
+  const [articles, liveUpdates, plusLus] = await Promise.all([
+    prisma.article.findMany({
+      where: { status: "published" },
+      select: articleListSelect,
+      orderBy: { publishedAt: "desc" },
+      take: 12,
+    }),
+    prisma.liveUpdate.findMany({
+      where: { liveBlog: { status: "live" } },
+      orderBy: { time: "desc" },
+      take: 4,
+      select: { title: true, body: true, liveBlog: { select: { title: true } } },
+    }),
+    prisma.article.findMany({
+      where: { status: "published" },
+      select: { slug: true, title: true, rubrique: { select: { slug: true } } },
+      orderBy: { views: "desc" },
+      take: 3,
+    }),
+  ]);
+
+  const [lead, ...reste] = articles;
+  const rail = reste.slice(0, 2);
+  const cacao = articles.filter((a) => a.rubrique.slug === "cacao-marches" && a !== lead).slice(0, 3);
+  const grille = reste.slice(2, 8);
+  const tickerItems = liveUpdates.map((u) => u.title ?? u.liveBlog.title);
+
+  const url = (a: { slug: string; rubrique: { slug: string } }) => `/${a.rubrique.slug}/${a.slug}`;
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-[1180px] flex-col items-start justify-center gap-6 px-8">
-      <div className="text-[13px] font-bold uppercase tracking-[0.16em] text-accent">
-        Abidjan4All · fondations · 2026
-      </div>
-      <h1 className="max-w-[16ch] font-serif text-6xl font-medium leading-[0.98] tracking-tight">
-        Le média numérique de la <span className="text-brand-word">Côte d&apos;Ivoire</span> et de
-        la diaspora.
-      </h1>
-      <p className="max-w-[60ch] font-serif text-xl leading-relaxed text-ink-2">
-        Monorepo initialisé : Next.js 15, Tailwind 4, Prisma/PostgreSQL et le design system du
-        handoff. Les écrans publics arrivent avec la phase DF-01.
-      </p>
-      <Link
-        href="/design"
-        className="rounded-pill bg-brand-fill px-5 py-3 text-[13px] font-semibold text-brand-on"
-      >
-        Voir le design system →
-      </Link>
-    </main>
+    <div className="min-h-screen bg-bg text-ink">
+      <SiteHeader />
+      <Ticker items={tickerItems} />
+
+      {/* HERO */}
+      {lead ? (
+        <section className="mx-auto max-w-[1200px] px-8 pt-[34px]">
+          <div className="grid grid-cols-1 gap-9 border-b-2 border-ink pb-8 lg:grid-cols-[1.6fr_1fr]">
+            <article>
+              <Link href={url(lead)} className="group block">
+                <div className="relative mb-5 h-[420px] overflow-hidden rounded-[14px]">
+                  <PlaceholderMedia url={lead.coverAsset?.url} alt={lead.coverAsset?.alt} className="h-full w-full" />
+                  <span
+                    className="absolute left-4 top-4 rounded-[5px] px-3 py-1.5 text-[11.5px] font-bold uppercase tracking-[0.09em] text-white"
+                    style={{ background: lead.rubrique.color }}
+                  >
+                    {lead.rubrique.name}
+                  </span>
+                </div>
+                <h1 className="mb-3.5 font-serif text-[46px] font-medium leading-[1.04] tracking-tight group-hover:underline">
+                  {lead.title}
+                </h1>
+              </Link>
+              <p className="mb-4 max-w-[60ch] font-serif text-xl leading-[1.5] text-ink-2">{lead.dek}</p>
+              <div className="flex items-center gap-2.5 text-[13px] text-ink-3">
+                <span className="font-bold text-ink">{lead.author.name}</span>
+                <span>
+                  · {formatDate(lead.publishedAt)} · {lead.readingTime} min
+                </span>
+                {lead.premium ? <PremiumChip /> : null}
+              </div>
+            </article>
+
+            <aside className="flex flex-col">
+              {rail.map((a) => (
+                <div key={a.slug} className="mb-4 border-b border-line-2 pb-4">
+                  <RubriqueBadge slug={a.rubrique.slug} label={a.rubrique.name} color={a.rubrique.color} />
+                  <Link href={url(a)}>
+                    <h2 className="mb-1.5 mt-[7px] font-serif text-2xl font-semibold leading-[1.14] hover:underline">
+                      {a.title}
+                    </h2>
+                  </Link>
+                  <div className="text-xs text-ink-3">
+                    {a.author.name} · {a.readingTime} min
+                  </div>
+                </div>
+              ))}
+              <div className="mt-auto rounded-md border border-line bg-surface-2 px-5 py-4">
+                <div className="mb-1 border-b border-line pb-2.5 text-[11px] font-bold uppercase tracking-[0.1em]">
+                  Les plus lus
+                </div>
+                {plusLus.map((a, i) => (
+                  <div
+                    key={a.slug}
+                    className="flex items-baseline gap-3 border-b border-line-2 py-[9px] last:border-b-0"
+                  >
+                    <span className="font-serif text-xl font-medium text-orange">{i + 1}</span>
+                    <Link href={url(a)}>
+                      <h4 className="font-serif text-[15px] font-semibold leading-[1.2] hover:underline">
+                        {a.title}
+                      </h4>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </aside>
+          </div>
+        </section>
+      ) : null}
+
+      {/* RUBAN MARCHÉS (statique — flux de cotation à brancher en DF-05) */}
+      <section className="mx-auto max-w-[1200px] px-8 pt-[18px]">
+        <div className="flex overflow-hidden rounded-md border border-line bg-surface shadow-[var(--shadow-sm)]">
+          <div className="flex flex-none items-center bg-navy px-5 text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-white">
+            Marchés
+          </div>
+          <div className="grid flex-1 grid-cols-2 sm:grid-cols-5">
+            {MARCHES.map((m, i) => (
+              <div key={m.label} className={`px-5 py-3 ${i < MARCHES.length - 1 ? "border-r border-line-2" : ""}`}>
+                <div className="text-[11px] text-ink-3">{m.label}</div>
+                <div className="text-[15px] font-bold">
+                  {m.value} <span className={m.tone}>{m.delta}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* BLOC CACAO & MARCHÉS */}
+      {cacao.length > 0 ? (
+        <section className="mx-auto max-w-[1200px] px-8 pt-12">
+          <SectionHeader name="Cacao & Marchés" color="#8A5A2B" href="/cacao-marches" />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
+            <article className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
+              <PlaceholderMedia url={cacao[0]!.coverAsset?.url} alt={cacao[0]!.coverAsset?.alt} className="h-[300px] w-full" />
+              <div className="px-[26px] pb-[26px] pt-[22px]">
+                <span className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: "#8A5A2B" }}>
+                  {cacao[0]!.kicker ?? "Cacao & Marchés"}
+                </span>
+                <Link href={url(cacao[0]!)}>
+                  <h3 className="my-2 font-serif text-[27px] font-semibold leading-[1.14] hover:underline">
+                    {cacao[0]!.title}
+                  </h3>
+                </Link>
+                <p className="mb-3 max-w-[56ch] font-serif text-base leading-[1.5] text-ink-2">{cacao[0]!.dek}</p>
+                <div className="text-[12.5px] text-ink-3">
+                  {cacao[0]!.author.name} · {cacao[0]!.readingTime} min
+                </div>
+              </div>
+            </article>
+            <div className="flex flex-col gap-4">
+              {cacao.slice(1).map((a) => (
+                <div key={a.slug} className="rounded-md border border-line bg-surface px-[18px] py-4 shadow-[var(--shadow-sm)]">
+                  <span className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: "#8A5A2B" }}>
+                    {a.kicker ?? "Marchés"}
+                  </span>
+                  <Link href={url(a)}>
+                    <h4 className="my-1.5 font-serif text-[19px] font-semibold leading-[1.18] hover:underline">{a.title}</h4>
+                  </Link>
+                  <div className="text-[11.5px] text-ink-3">{a.readingTime} min</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {/* GRILLE À LA UNE */}
+      <section className="mx-auto max-w-[1200px] px-8 pt-12">
+        <SectionHeader name="À la une" color="var(--orange)" />
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {grille.map((a) => (
+            <article key={a.slug}>
+              <Link href={url(a)} className="group block">
+                <PlaceholderMedia url={a.coverAsset?.url} alt={a.coverAsset?.alt} className="mb-3 h-[170px] w-full rounded-[10px]" />
+                <RubriqueBadge slug={a.rubrique.slug} label={a.rubrique.name} color={a.rubrique.color} />
+                <h4 className="mt-[7px] font-serif text-[19px] font-semibold leading-[1.22] group-hover:underline">
+                  {a.title}
+                </h4>
+              </Link>
+              <div className="mt-1.5 flex items-center gap-2 text-xs text-ink-3">
+                {a.author.name} · {a.readingTime} min {a.premium ? <PremiumChip /> : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <SiteFooter />
+    </div>
+  );
+}
+
+function SectionHeader({ name, color, href }: { name: string; color: string; href?: string }) {
+  return (
+    <div className="mb-[22px] flex items-center gap-3.5">
+      <span className="h-[5px] w-[34px] rounded-[3px]" style={{ background: color }} />
+      <h2 className="font-serif text-[28px] font-semibold">{name}</h2>
+      <span className="h-px flex-1 bg-line" />
+      {href ? (
+        <Link href={href} className="text-[13px] font-semibold" style={{ color }}>
+          Tout voir ›
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+function PremiumChip() {
+  return (
+    <span className="rounded-pill bg-[linear-gradient(135deg,#F5C24B,#E8641A)] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[#16181D]">
+      A4A+
+    </span>
   );
 }

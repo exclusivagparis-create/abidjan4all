@@ -58,6 +58,16 @@
      utiliser shadow-[var(--shadow-sm)] ou style inline */
 }
 
+/* animations du prototype (ticker En Direct, pastille live) */
+@keyframes a4a-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes a4a-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.7); }
+}
+
 body {
   background: var(--bg);
   color: var(--ink);
