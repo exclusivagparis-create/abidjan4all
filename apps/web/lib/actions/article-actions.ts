@@ -22,6 +22,7 @@ const ArticleInputSchema = z.object({
   premium: z.boolean(),
   tags: z.array(z.string().trim().min(1)).max(12),
   scheduledAt: z.string().nullable().optional(), // ISO ou null
+  coverAssetId: z.string().nullable().optional(),
   blocks: z.array(BlockSchema).max(200),
 });
 
@@ -76,6 +77,7 @@ export async function saveArticle(raw: unknown): Promise<ActionResult> {
     premium: input.premium,
     tags: input.tags,
     scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
+    coverAssetId: input.coverAssetId ?? null,
     body: input.blocks as Prisma.InputJsonValue,
     readingTime: computeReadingTime(input.blocks),
   };

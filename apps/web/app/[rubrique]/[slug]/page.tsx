@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PlaceholderMedia } from "@/components/placeholder-media";
 import { ArticleBody } from "@/components/article-body";
+import { CommentsSection } from "@/components/comments-section";
 import { formatDateFull, initials } from "@/lib/format";
 
 export const revalidate = 60;
@@ -149,6 +150,8 @@ export default async function ArticlePage({ params }: Props) {
             </div>
           </div>
         ) : null}
+
+        <CommentsSection articleId={article.id} />
 
         {/* À LIRE AUSSI */}
         <div className="mx-auto max-w-[840px] px-8 pb-6 pt-8">

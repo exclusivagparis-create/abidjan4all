@@ -17,10 +17,16 @@ function toLocalInput(d: Date | null): string | null {
 
 export default async function EditArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [session, article, rubriques] = await Promise.all([
+  const [session, article, rubriques, mediaOptions] = await Promise.all([
     auth(),
     prisma.article.findUnique({ where: { id }, include: { author: { select: { name: true } } } }),
     prisma.rubrique.findMany({ orderBy: { order: "asc" }, select: { id: true, slug: true, name: true, color: true } }),
+    prisma.mediaAsset.findMany({
+      where: { type: { in: ["image", "svg"] } },
+      orderBy: { createdAt: "desc" },
+      take: 23,
+      select: { id: true, url: true, alt: true },
+    }),
   ]);
   if (!article) notFound();
 
@@ -34,6 +40,7 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
     tags: article.tags,
     status: article.status,
     scheduledAt: toLocalInput(article.scheduledAt),
+    coverAssetId: article.coverAssetId,
     slug: article.slug,
     blocks: Array.isArray(article.body) ? (article.body as EditorArticle["blocks"]) : [],
   };
@@ -48,6 +55,7 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
         rubriques={rubriques}
         canPublish={PUBLISH_ROLES.includes((session?.user?.role ?? "") as (typeof PUBLISH_ROLES)[number])}
         authorName={article.author.name}
+        mediaOptions={mediaOptions}
       />
     </div>
   );

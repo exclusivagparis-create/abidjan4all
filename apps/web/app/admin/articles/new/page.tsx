@@ -8,9 +8,15 @@ export const metadata: Metadata = { title: "Nouvel article · Studio" };
 export const dynamic = "force-dynamic";
 
 export default async function NewArticlePage() {
-  const [session, rubriques] = await Promise.all([
+  const [session, rubriques, mediaOptions] = await Promise.all([
     auth(),
     prisma.rubrique.findMany({ orderBy: { order: "asc" }, select: { id: true, slug: true, name: true, color: true } }),
+    prisma.mediaAsset.findMany({
+      where: { type: { in: ["image", "svg"] } },
+      orderBy: { createdAt: "desc" },
+      take: 23,
+      select: { id: true, url: true, alt: true },
+    }),
   ]);
 
   const initial: EditorArticle = {
@@ -23,6 +29,7 @@ export default async function NewArticlePage() {
     tags: [],
     status: "draft",
     scheduledAt: null,
+    coverAssetId: null,
     slug: null,
     blocks: [{ type: "paragraph", text: "" }],
   };
@@ -37,6 +44,7 @@ export default async function NewArticlePage() {
         rubriques={rubriques}
         canPublish={PUBLISH_ROLES.includes((session?.user?.role ?? "") as (typeof PUBLISH_ROLES)[number])}
         authorName={session?.user?.name ?? "—"}
+        mediaOptions={mediaOptions}
       />
     </div>
   );

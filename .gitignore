@@ -9,6 +9,9 @@ dist/
 .env.local
 .env.*.local
 
+# uploads locaux (médiathèque dev — S3 en production)
+apps/web/public/uploads/
+
 # divers
 .DS_Store
 npm-debug.log*

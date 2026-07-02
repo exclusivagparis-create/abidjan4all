@@ -18,11 +18,13 @@ export type EditorArticle = {
   tags: string[];
   status: ArticleStatus;
   scheduledAt: string | null; // valeur pour <input datetime-local>
+  coverAssetId: string | null;
   slug: string | null;
   blocks: Block[];
 };
 
 export type RubriqueOption = { id: string; slug: string; name: string; color: string };
+export type MediaOption = { id: string; url: string; alt: string | null };
 
 const BLOCK_LABEL: Record<Block["type"], string> = {
   paragraph: "Paragraphe",
@@ -37,11 +39,13 @@ export function ArticleEditor({
   rubriques,
   canPublish,
   authorName,
+  mediaOptions = [],
 }: {
   initial: EditorArticle;
   rubriques: RubriqueOption[];
   canPublish: boolean;
   authorName: string;
+  mediaOptions?: MediaOption[];
 }) {
   const router = useRouter();
   const [article, setArticle] = useState(initial);
@@ -85,6 +89,7 @@ export function ArticleEditor({
       premium: article.premium,
       tags: article.tags,
       scheduledAt: article.scheduledAt ? new Date(article.scheduledAt).toISOString() : null,
+      coverAssetId: article.coverAssetId,
       blocks: article.blocks,
     };
   }
@@ -361,6 +366,46 @@ export function ArticleEditor({
               className="w-24 rounded-pill border border-dashed border-line bg-transparent px-[11px] py-[5px] text-xs text-ink outline-none placeholder:text-ink-3"
             />
           </div>
+        </Panel>
+
+        <Panel title="Image à la une">
+          {mediaOptions.length === 0 ? (
+            <p className="text-[12.5px] text-ink-3">
+              Bibliothèque vide — ajoutez des visuels dans la Médiathèque.
+            </p>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => set("coverAssetId", null)}
+                className={`flex h-16 items-center justify-center rounded-[8px] border text-[11px] font-semibold ${
+                  article.coverAssetId === null ? "border-ink text-ink" : "border-line text-ink-3"
+                }`}
+              >
+                Aucune
+              </button>
+              {mediaOptions.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  title={m.alt ?? undefined}
+                  onClick={() => set("coverAssetId", m.id)}
+                  className={`h-16 overflow-hidden rounded-[8px] border-2 ${
+                    article.coverAssetId === m.id ? "border-[var(--accent)]" : "border-transparent"
+                  }`}
+                >
+                  {m.url.startsWith("placeholder://") ? (
+                    <span className="flex h-full w-full items-center justify-center bg-surface-2 px-1 text-center font-mono text-[9px] uppercase text-ink-3">
+                      {m.url.slice("placeholder://".length).slice(0, 24)}
+                    </span>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.url} alt={m.alt ?? ""} className="h-full w-full object-cover" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </Panel>
 
         <Panel title="Référencement">

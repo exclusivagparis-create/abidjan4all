@@ -27,12 +27,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const contenu: NavItem[] = [
     { label: "Tableau de bord", href: "/admin", icon: "▦" },
     { label: "Articles", href: "/admin/articles", icon: "≣", badge: reviewCount },
-    { label: "Médiathèque", icon: "▤" },
+    { label: "Médiathèque", href: "/admin/media", icon: "▤" },
     { label: "Rubriques", icon: "◫" },
     { label: "Live-blog", icon: "◉" },
   ];
   const communaute: NavItem[] = [
-    { label: "Commentaires", icon: "◎", badge: pendingComments, badgeColor: "var(--orange)" },
+    { label: "Commentaires", href: "/admin/comments", icon: "◎", badge: pendingComments, badgeColor: "var(--orange)" },
     { label: "Abonnés A4A+", icon: "◍" },
     { label: "Utilisateurs", icon: "☺" },
   ];
