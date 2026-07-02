@@ -46,7 +46,7 @@
   /* typographie — Newsreader (éditorial) / Archivo (interface) */
   --font-serif: var(--font-newsreader), Georgia, serif;
   --font-sans: var(--font-archivo), system-ui, sans-serif;
-  --font-expanded: var(--font-archivo-expanded), var(--font-archivo), system-ui, sans-serif;
+  --font-expanded: "Archivo Expanded", var(--font-archivo), system-ui, sans-serif;
 
   /* rayons 6/12/16/999 (littéraux : mêmes valeurs que tokens.css) */
   --radius-sm: 6px;

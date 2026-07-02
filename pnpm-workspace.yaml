@@ -2,3 +2,11 @@ packages:
   - "apps/*"
   - "packages/*"
   - "services/*"
+
+onlyBuiltDependencies:
+  - "@prisma/client"
+  - "@prisma/engines"
+  - "@turbo/windows-64"
+  - prisma
+  - sharp
+  - turbo

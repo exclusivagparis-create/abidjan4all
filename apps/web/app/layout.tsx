@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Archivo, Archivo_Expanded, Newsreader } from "next/font/google";
+import { Archivo, Newsreader } from "next/font/google";
 import { ThemeProvider, ThemeScript } from "@a4a/ui";
 import "./globals.css";
 
@@ -18,13 +18,6 @@ const archivo = Archivo({
   display: "swap",
 });
 
-const archivoExpanded = Archivo_Expanded({
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
-  variable: "--font-archivo-expanded",
-  display: "swap",
-});
-
 export const metadata: Metadata = {
   title: {
     default: "Abidjan4All — média numérique de la Côte d'Ivoire et de la diaspora",
@@ -39,10 +32,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="fr"
       suppressHydrationWarning
-      className={`${newsreader.variable} ${archivo.variable} ${archivoExpanded.variable}`}
+      className={`${newsreader.variable} ${archivo.variable}`}
     >
       <head>
         <ThemeScript />
+        {/* Archivo Expanded n'est pas dans le catalogue next/font : même chargement que la maquette */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@600;700;800&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body>
         <ThemeProvider>{children}</ThemeProvider>
