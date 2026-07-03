@@ -5,19 +5,22 @@ export const revalidate = 600;
 
 // Flux RSS 2.0 — 30 derniers articles publiés.
 export async function GET() {
-  const articles = await prisma.article.findMany({
-    where: { status: "published" },
-    orderBy: { publishedAt: "desc" },
-    take: 30,
-    select: {
-      slug: true,
-      title: true,
-      dek: true,
-      publishedAt: true,
-      author: { select: { name: true } },
-      rubrique: { select: { slug: true, name: true } },
-    },
-  });
+  // tolérant au build sans base : flux vide, régénéré au runtime (ISR 10 min)
+  const articles = await prisma.article
+    .findMany({
+      where: { status: "published" },
+      orderBy: { publishedAt: "desc" },
+      take: 30,
+      select: {
+        slug: true,
+        title: true,
+        dek: true,
+        publishedAt: true,
+        author: { select: { name: true } },
+        rubrique: { select: { slug: true, name: true } },
+      },
+    })
+    .catch(() => []);
 
   const items = articles
     .map((a) => {

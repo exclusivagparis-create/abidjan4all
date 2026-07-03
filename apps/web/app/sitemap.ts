@@ -5,6 +5,7 @@ import { absoluteUrl } from "@/lib/seo";
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // tolérant au build sans base (docker build/CI) : régénéré au runtime (ISR 1 h)
   const [articles, rubriques] = await Promise.all([
     prisma.article.findMany({
       where: { status: "published" },
@@ -13,7 +14,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       take: 5000,
     }),
     prisma.rubrique.findMany({ select: { slug: true }, orderBy: { order: "asc" } }),
-  ]);
+  ]).catch(() => [[], []] as const);
 
   const statics: MetadataRoute.Sitemap = [
     { url: absoluteUrl("/"), changeFrequency: "hourly", priority: 1 },

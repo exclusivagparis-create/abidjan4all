@@ -8,7 +8,9 @@ import { PlaceholderMedia } from "@/components/placeholder-media";
 import { articleListSelect } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 
-export const revalidate = 60;
+// SSR à chaque requête : le build (Docker/CI) n'a pas besoin de la base.
+// À l'échelle : cache CDN (Cloudflare) devant, cf. README infra.
+export const dynamic = "force-dynamic";
 
 const MARCHES = [
   { label: "Cacao Londres", value: "4 015 $", delta: "▲2,4%", tone: "text-green" },

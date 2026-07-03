@@ -32,6 +32,22 @@ pnpm dev                                 # http://localhost:3000
 La page `/design` reproduit le nuancier du design system pour comparaison avec
 `design/Design System.dc.html` (source de vérité visuelle).
 
+## Déploiement (IONOS VPS)
+
+```bash
+# sur le serveur (Docker + compose v2 installés)
+git clone <repo> && cd abidjan4all
+cp .env.example .env    # renseigner POSTGRES_PASSWORD, AUTH_SECRET,
+                        # NEXT_PUBLIC_SITE_URL, AI_API_KEY, clés PSP…
+docker compose -f infra/docker/docker-compose.prod.yml up -d --build
+```
+
+Le service `migrate` applique les migrations Prisma avant le démarrage du web.
+TLS et cache : Cloudflare (ou caddy/traefik) devant le port 3000 — l'accueil est
+rendu à la requête, à mettre en cache CDN court (30-60 s) à l'échelle.
+CI : `.github/workflows/ci.yml` (type-check + build sur PostgreSQL de service +
+image Docker) dès que le repo aura un remote GitHub.
+
 ## Feuille de route (cahier des charges)
 
 DF-01 Front-End/UX · DF-02 CMS/Back-End · DF-03 Monétisation (A4A+, paywall, pub, marketplace) ·

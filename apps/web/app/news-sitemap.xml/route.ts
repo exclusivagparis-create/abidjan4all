@@ -6,18 +6,21 @@ export const revalidate = 300;
 // Sitemap Google News : articles publiés dans les dernières 48 h (max 1 000).
 export async function GET() {
   const since = new Date(Date.now() - 48 * 3600 * 1000);
-  const articles = await prisma.article.findMany({
-    where: { status: "published", publishedAt: { gte: since } },
-    orderBy: { publishedAt: "desc" },
-    take: 1000,
-    select: {
-      slug: true,
-      title: true,
-      publishedAt: true,
-      tags: true,
-      rubrique: { select: { slug: true } },
-    },
-  });
+  // tolérant au build sans base : régénéré au runtime (ISR 5 min)
+  const articles = await prisma.article
+    .findMany({
+      where: { status: "published", publishedAt: { gte: since } },
+      orderBy: { publishedAt: "desc" },
+      take: 1000,
+      select: {
+        slug: true,
+        title: true,
+        publishedAt: true,
+        tags: true,
+        rubrique: { select: { slug: true } },
+      },
+    })
+    .catch(() => []);
 
   const urls = articles
     .map(

@@ -1,0 +1,56 @@
+# Production Abidjan4All — VPS IONOS (docker compose v2)
+#   cp .env.example .env   # à la racine du repo, renseigner les secrets
+#   docker compose -f infra/docker/docker-compose.prod.yml up -d --build
+# TLS/CDN : Cloudflare ou reverse-proxy (caddy/traefik) devant le port 3000.
+
+services:
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file: ../../.env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+  # une passe : applique les migrations Prisma puis s'arrête
+  migrate:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+      target: builder
+    command: pnpm --filter @a4a/db exec prisma migrate deploy
+    env_file: ../../.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?definir POSTGRES_PASSWORD dans .env}
+      POSTGRES_DB: ${POSTGRES_DB:-abidjan4all}
+    volumes:
+      - a4a_pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-abidjan4all}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    volumes:
+      - a4a_redisdata_prod:/data
+
+volumes:
+  a4a_pgdata_prod:
+  a4a_redisdata_prod:
