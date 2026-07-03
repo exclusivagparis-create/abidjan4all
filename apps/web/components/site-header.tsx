@@ -26,10 +26,17 @@ export function SiteHeader() {
           ))}
         </nav>
         <span className="flex-1" />
-        <div className="hidden items-center gap-2 rounded-pill border border-line bg-surface-2 px-3.5 py-2 lg:flex">
+        <form
+          action="/recherche"
+          className="hidden items-center gap-2 rounded-pill border border-line bg-surface-2 px-3.5 py-2 lg:flex"
+        >
           <span className="text-[13px] text-ink-3">⌕</span>
-          <span className="text-[12.5px] text-ink-3">Rechercher…</span>
-        </div>
+          <input
+            name="q"
+            placeholder="Rechercher…"
+            className="w-28 bg-transparent text-[12.5px] text-ink outline-none placeholder:text-ink-3"
+          />
+        </form>
         <Link href="/login" className="hidden text-[12.5px] font-semibold text-ink-2 hover:text-ink sm:inline">
           Connexion
         </Link>

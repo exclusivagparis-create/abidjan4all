@@ -228,7 +228,10 @@ model Article {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // TODO (migration SQL brute) : index full-text sur title/dek/body — DATA_MODEL.md §Index
+  // colonne générée (migration fulltext_search) : to_tsvector('french', titre+chapeau+corps),
+  // index GIN — interrogée via $queryRaw (websearch_to_tsquery), cf. apps/web/lib/search.ts
+  searchVector Unsupported("tsvector")?
+
   @@index([status, publishedAt])
   @@index([rubriqueId, publishedAt])
 }
