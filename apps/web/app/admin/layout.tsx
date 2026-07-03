@@ -29,7 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Articles", href: "/admin/articles", icon: "≣", badge: reviewCount },
     { label: "Médiathèque", href: "/admin/media", icon: "▤" },
     { label: "Rubriques", icon: "◫" },
-    { label: "Live-blog", icon: "◉" },
+    { label: "Live-blog", href: "/admin/live", icon: "◉" },
   ];
   const communaute: NavItem[] = [
     { label: "Commentaires", href: "/admin/comments", icon: "◎", badge: pendingComments, badgeColor: "var(--orange)" },
