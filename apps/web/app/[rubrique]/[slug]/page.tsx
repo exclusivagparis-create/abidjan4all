@@ -100,7 +100,8 @@ export default async function ArticlePage({ params }: Props) {
       />
       <SiteHeader />
 
-      <main>
+      {/* Africa in English : contenu anglophone signalé aux lecteurs d'écran et moteurs (DF-05) */}
+      <main lang={article.rubrique.slug === "africa-in-english" ? "en" : undefined}>
         {/* Bloc-titre (variante « Édition classique » de Page Article.dc.html) */}
         <div className="mx-auto max-w-[760px] px-8 pt-11">
           <nav className="mb-5 text-xs font-semibold uppercase tracking-[0.12em] text-ink-3">

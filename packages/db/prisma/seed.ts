@@ -265,6 +265,29 @@ async function main() {
     artIds[a.slug] = created.id;
   }
 
+  // Africa in English — contenu anglophone (DF-05, i18n)
+  await prisma.article.create({
+    data: {
+      slug: "ivorian-cocoa-grinding-push",
+      title: "Ivory Coast bets big on grinding its own cocoa",
+      kicker: "Analysis",
+      dek: "The world's top producer wants to process half its harvest at home by 2028 — investors from the diaspora are paying attention.",
+      body: [
+        p("Abidjan's port has just recorded its highest quarterly volume of locally processed beans. Behind the number lies a deliberate strategy: stop exporting raw commodities and capture the value added of the global chocolate industry."),
+        h2("Why it matters"),
+        p("For decades, the country shipped most of its harvest to Europe and North America, where the margins were made. New grinding plants around San-Pédro aim to change that equation."),
+      ] as Prisma.InputJsonValue,
+      status: "published",
+      publishedAt: j("2026-06-28T12:00:00Z"),
+      rubriqueId: rub["africa-in-english"]!,
+      authorId: koffi.id,
+      tags: ["cocoa", "industry", "english"],
+      readingTime: 4,
+      views: 2310,
+      seo: { metaTitle: "Ivory Coast bets big on grinding its own cocoa", metaDescription: "Processing half the harvest at home by 2028." } as Prisma.InputJsonValue,
+    },
+  });
+
   // workflow : un brouillon + un programmé
   await prisma.article.create({
     data: {
@@ -342,6 +365,45 @@ async function main() {
       sources: ["Communiqué UEMOA (mai 2026)", "Rapport BCEAO 2025"],
       articleId: artIds["franc-cfa-coeur-debat"]!,
     },
+  });
+
+  // ---- E-learning (DF-05)
+  const courseCacao = await prisma.course.create({
+    data: {
+      slug: "investir-filiere-cacao",
+      title: "Investir dans la filière cacao",
+      category: "Business",
+      level: "Intermédiaire",
+      price: 15000,
+      isPremium: true,
+      lessonsCount: 3,
+      rating: 4.7,
+    },
+  });
+  await prisma.lesson.createMany({
+    data: [
+      { courseId: courseCacao.id, order: 1, module: "Fondamentaux", title: "Comprendre la chaîne de valeur", durationSec: 900, videoUrl: "placeholder://video-cacao-1", resources: [] },
+      { courseId: courseCacao.id, order: 2, module: "Fondamentaux", title: "Lire les cours mondiaux", durationSec: 1200, videoUrl: "placeholder://video-cacao-2", resources: [] },
+      { courseId: courseCacao.id, order: 3, module: "Pratique", title: "Monter un dossier d'investissement", durationSec: 1500, videoUrl: "placeholder://video-cacao-3", resources: [] },
+    ],
+  });
+  const courseDiaspora = await prisma.course.create({
+    data: {
+      slug: "entreprendre-depuis-la-diaspora",
+      title: "Entreprendre en Côte d'Ivoire depuis la diaspora",
+      category: "Entrepreneuriat",
+      level: "Débutant",
+      price: 0,
+      isPremium: false,
+      lessonsCount: 2,
+      rating: 4.4,
+    },
+  });
+  await prisma.lesson.createMany({
+    data: [
+      { courseId: courseDiaspora.id, order: 1, module: "Démarrer", title: "Choisir sa structure juridique", durationSec: 840, videoUrl: "placeholder://video-diaspora-1", resources: [] },
+      { courseId: courseDiaspora.id, order: 2, module: "Démarrer", title: "Ouvrir et opérer à distance", durationSec: 960, videoUrl: "placeholder://video-diaspora-2", resources: [] },
+    ],
   });
 
   const pod = await prisma.podcast.create({
