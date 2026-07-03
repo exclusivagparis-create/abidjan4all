@@ -8,6 +8,8 @@ import { PlaceholderMedia } from "@/components/placeholder-media";
 import { ArticleBody } from "@/components/article-body";
 import { CommentsSection } from "@/components/comments-section";
 import { formatDateFull, initials } from "@/lib/format";
+import { auth } from "@/auth";
+import { hasActiveSubscription } from "@/lib/billing";
 
 export const revalidate = 60;
 
@@ -41,9 +43,11 @@ export default async function ArticlePage({ params }: Props) {
   const article = await getArticle(rubriqueSlug, slug);
   if (!article) notFound();
 
-  // TODO(DF-03) : débloquer l'intégralité pour les abonnés authentifiés (Auth.js)
+  // paywall : débloqué pour les abonnés A4A+ en cours de validité (DF-03)
+  const session = await auth();
+  const unlocked = session?.user ? await hasActiveSubscription(session.user.id) : false;
   const blocks = Array.isArray(article.body) ? article.body : [];
-  const gated = article.premium;
+  const gated = article.premium && !unlocked;
   const visibleBlocks = gated ? blocks.slice(0, 2) : blocks;
 
   const related = await prisma.article.findMany({
@@ -133,12 +137,15 @@ export default async function ArticlePage({ params }: Props) {
                 publicité, dès 2 000 FCFA/mois.
               </p>
               <div className="flex flex-wrap justify-center gap-3">
-                <button type="button" className="rounded-pill bg-red px-[26px] py-[13px] text-sm font-bold text-white">
+                <Link href="/abonnement" className="rounded-pill bg-red px-[26px] py-[13px] text-sm font-bold text-white">
                   S&apos;abonner à A4A+
-                </button>
-                <button type="button" className="rounded-pill border border-line bg-surface px-6 py-[13px] text-sm font-semibold text-ink">
+                </Link>
+                <Link
+                  href={`/login?next=/${article.rubrique.slug}/${article.slug}`}
+                  className="rounded-pill border border-line bg-surface px-6 py-[13px] text-sm font-semibold text-ink"
+                >
                   J&apos;ai déjà un compte
-                </button>
+                </Link>
               </div>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5 text-[11px] text-ink-3">
                 <span className="mr-0.5">Paiement sécurisé</span>

@@ -37,16 +37,16 @@ export function SiteHeader() {
             className="w-28 bg-transparent text-[12.5px] text-ink outline-none placeholder:text-ink-3"
           />
         </form>
-        <Link href="/login" className="hidden text-[12.5px] font-semibold text-ink-2 hover:text-ink sm:inline">
-          Connexion
+        <Link href="/espace-membre" className="hidden text-[12.5px] font-semibold text-ink-2 hover:text-ink sm:inline">
+          Mon compte
         </Link>
         <ThemeToggle />
-        <button
-          type="button"
+        <Link
+          href="/abonnement"
           className="rounded-pill bg-red px-[18px] py-[9px] text-[12.5px] font-bold text-white"
         >
           S&apos;abonner
-        </button>
+        </Link>
       </div>
     </header>
   );

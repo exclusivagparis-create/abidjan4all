@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma, Prisma } from "@a4a/db";
 import { apiError } from "@/lib/api";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { hasActiveSubscription } from "@/lib/billing";
 
 // GET /api/v1/articles/:slug — body complet ; 402 si premium & non-abonné
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -16,8 +17,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   });
   if (!article) return apiError("not_found", "Article introuvable.", 404);
 
-  // TODO(DF-03) : lever la restriction pour les abonnés authentifiés (Auth.js + Subscription)
-  if (article.premium) {
+  // paywall : 402 sauf abonnement A4A+ en cours de validité (DF-03)
+  const session = await auth();
+  const unlocked = session?.user ? await hasActiveSubscription(session.user.id) : false;
+  if (article.premium && !unlocked) {
     const teaser = Array.isArray(article.body) ? article.body.slice(0, 2) : article.body;
     return Response.json(
       {

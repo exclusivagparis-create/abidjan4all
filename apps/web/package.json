@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@a4a/db": "workspace:*",
+    "@a4a/payments": "workspace:*",
     "@a4a/ui": "workspace:*",
     "bcryptjs": "^3.0.2",
     "next": "^15.3.0",
