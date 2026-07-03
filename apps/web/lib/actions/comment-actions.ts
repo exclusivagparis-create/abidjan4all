@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma, type CommentStatus } from "@a4a/db";
+import { moderateText } from "@a4a/ai";
 import { auth, PUBLISH_ROLES } from "@/auth";
 
 export type CommentResult = { ok: true } | { ok: false; error: string };
@@ -24,9 +25,14 @@ export async function addComment(
   const article = await prisma.article.findUnique({ where: { id: articleId }, select: { id: true } });
   if (!article) return { ok: false, error: "Article introuvable." };
 
-  // TODO(DF-04) : score de toxicité via services/ai avant mise en file
+  // modération auto IA (CdC DF-04) : bloqué → signalé, douteux → file humaine,
+  // sain → publié directement
+  const moderation = await moderateText(parsed.data).catch(() => null);
+  const status: CommentStatus =
+    moderation?.action === "block" ? "flagged" : moderation?.action === "allow" ? "approved" : "pending";
+
   await prisma.comment.create({
-    data: { articleId, userId: session.user.id, body: parsed.data, status: "pending" },
+    data: { articleId, userId: session.user.id, body: parsed.data, status },
   });
   return { ok: true };
 }

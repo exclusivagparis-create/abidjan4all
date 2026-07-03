@@ -150,6 +150,29 @@ export default async function ArticlePage({ params }: Props) {
           </div>
         ) : null}
 
+        {/* Points clés (Article.aiSummary — GET /ai/summary/:id) */}
+        {(() => {
+          const summary = article.aiSummary as { keyPoints?: string[] } | null;
+          if (!summary?.keyPoints?.length) return null;
+          return (
+            <div className="mx-auto max-w-[760px] px-8 pt-8">
+              <div className="rounded-md border border-line bg-surface-2 px-5 py-4">
+                <div className="mb-2.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.1em] text-accent">
+                  ✦ Les points clés
+                </div>
+                <ul className="flex flex-col gap-1.5">
+                  {summary.keyPoints.map((point) => (
+                    <li key={point} className="flex gap-2 font-serif text-[15px] leading-normal text-ink-2">
+                      <span className="font-bold text-accent">·</span>
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          );
+        })()}
+
         <article className="paywalled relative mx-auto max-w-[760px] px-8 pt-10">
           <ArticleBody blocks={visibleBlocks} />
           {gated ? (

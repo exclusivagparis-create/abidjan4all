@@ -1,11 +1,16 @@
-# services/ai (placeholder)
+# @a4a/ai
 
-Couche d'accès LLM prévue par le handoff (README §Stack, API_CONTRACTS.md §IA) :
+Couche IA du cahier des charges (API Claude via le SDK officiel `@anthropic-ai/sdk`).
 
-- `GET /ai/summary/:articleId` — résumé automatique (keyPoints + long) → `Article.aiSummary`
-- `POST /ai/translate` — traduction FR→EN (Africa in English)
-- `POST /ai/chat` — assistant éditorial avec sources
-- `POST /ai/moderate` — score de toxicité pour la modération des commentaires
-- `GET /ai/recommendations` — feed « Pour vous » (User.interests)
+Implémenté :
+- `summarizeArticle` → `GET /api/v1/ai/summary/:articleId` (cache dans `Article.aiSummary`)
+- `moderateText` → `POST /api/v1/ai/moderate` + modération auto des commentaires
+- `answerFromSources` → `GET /api/v1/ai/search` + bloc « Réponse A4A » sur /recherche
 
-À implémenter en phase DF-04/DF-05. Variables : `AI_API_KEY`, `AI_MODEL`.
+Sans `AI_API_KEY`, chaque fonction bascule sur un repli heuristique déterministe
+(champ `engine: "heuristique"`) — l'app reste testable hors ligne.
+
+Variables : `AI_API_KEY` (clé Anthropic), `AI_MODEL` (défaut `claude-opus-4-8`).
+
+Restent (contrat §IA) : `POST /ai/translate` (FR→EN), `POST /ai/chat`,
+`GET /ai/recommendations` (feed « Pour vous »).

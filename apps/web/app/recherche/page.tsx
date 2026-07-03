@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PlaceholderMedia } from "@/components/placeholder-media";
 import { formatDate } from "@/lib/format";
+import { answerFromSources } from "@a4a/ai";
 import {
   PERIOD_LABELS,
   searchArticles,
@@ -23,6 +24,7 @@ type Params = {
   period?: string;
   sort?: string;
   page?: string;
+  ia?: string;
 };
 
 /** URL /recherche en conservant les autres filtres. */
@@ -48,6 +50,19 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     page,
     limit: LIMIT,
   });
+
+  // Réponse A4A (contrat GET /ai/search) — générée à la demande (?ia=1)
+  const aiAnswer =
+    q && params.ia === "1" && results.length > 0
+      ? await answerFromSources(
+          q,
+          results.slice(0, 4).map((r) => ({
+            title: r.title,
+            url: `/${r.rubriqueSlug}/${r.slug}`,
+            snippet: r.snippet.replace(/<\/?mark>/g, ""),
+          }))
+        ).catch(() => null)
+      : null;
 
   return (
     <div className="min-h-screen bg-bg text-ink">
@@ -136,6 +151,42 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
             {/* résultats */}
             <div>
+              {/* Réponse A4A · synthèse IA (Recherche.dc.html) */}
+              {aiAnswer?.answer ? (
+                <div className="mb-7 rounded-[16px] border border-[var(--accent)] bg-[linear-gradient(180deg,rgba(232,100,26,0.08),transparent)] px-6 py-[22px]">
+                  <div className="mb-3.5 flex items-center gap-[9px]">
+                    <span className="flex h-[26px] w-[26px] items-center justify-center rounded-[8px] bg-accent text-[13px] text-white">✦</span>
+                    <span className="text-[12.5px] font-bold tracking-[0.04em] text-accent">Réponse A4A · synthèse IA</span>
+                    <span className="rounded-pill border border-line bg-surface px-[9px] py-0.5 text-[10.5px] font-semibold text-ink-3">
+                      {aiAnswer.engine === "claude" ? "Bêta" : "Mode démo"}
+                    </span>
+                  </div>
+                  <p className="mb-3.5 font-serif text-lg leading-[1.65]">{aiAnswer.answer}</p>
+                  <div className="flex flex-wrap items-center gap-2 border-t border-line-2 pt-3">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">Sources</span>
+                    {aiAnswer.sources.map((s, i) => (
+                      <Link
+                        key={s.url}
+                        href={s.url}
+                        className="rounded-pill border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-ink-2 hover:text-ink"
+                      >
+                        {i + 1} · {s.title.slice(0, 40)}
+                        {s.title.length > 40 ? "…" : ""}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : q && results.length > 0 ? (
+                <div className="mb-6">
+                  <Link
+                    href={buildUrl(params, { ia: "1" })}
+                    className="inline-flex items-center gap-2 rounded-pill border border-[var(--accent)] px-4 py-2 text-[12.5px] font-bold text-accent"
+                  >
+                    ✦ Générer la synthèse IA de ces résultats
+                  </Link>
+                </div>
+              ) : null}
+
               <div className="mb-4 flex items-center justify-between text-[12.5px] text-ink-3">
                 <span>
                   <b className="text-ink">

@@ -9,6 +9,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@a4a/ai": "workspace:*",
     "@a4a/db": "workspace:*",
     "@a4a/payments": "workspace:*",
     "@a4a/ui": "workspace:*",

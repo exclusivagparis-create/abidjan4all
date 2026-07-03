@@ -12,7 +12,7 @@ export function CommentForm({ articleId }: { articleId: string }) {
   if (result?.ok) {
     return (
       <p className="rounded-md border border-line bg-surface-2 px-4 py-3 text-[13px] font-semibold text-green">
-        Merci ! Votre commentaire est en attente de modération.
+        Merci ! Votre commentaire a été soumis — il apparaîtra après modération.
       </p>
     );
   }
