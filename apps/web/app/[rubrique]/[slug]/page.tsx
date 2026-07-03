@@ -10,6 +10,7 @@ import { CommentsSection } from "@/components/comments-section";
 import { formatDateFull, initials } from "@/lib/format";
 import { auth } from "@/auth";
 import { hasActiveSubscription } from "@/lib/billing";
+import { absoluteUrl, breadcrumbJsonLd, newsArticleJsonLd } from "@/lib/seo";
 
 export const revalidate = 60;
 
@@ -31,10 +32,34 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await getArticle(rubrique, slug);
   if (!article) return {};
   const seo = (article.seo ?? {}) as { metaTitle?: string; metaDescription?: string };
+  const path = `/${article.rubrique.slug}/${article.slug}`;
+  const image =
+    article.coverAsset && !article.coverAsset.url.startsWith("placeholder://")
+      ? [absoluteUrl(article.coverAsset.url)]
+      : undefined;
+
   return {
     title: seo.metaTitle ?? article.title,
     description: seo.metaDescription ?? article.dek ?? undefined,
-    openGraph: { title: article.title, description: article.dek ?? undefined, type: "article" },
+    alternates: { canonical: path },
+    openGraph: {
+      title: article.title,
+      description: article.dek ?? undefined,
+      type: "article",
+      url: path,
+      images: image,
+      publishedTime: article.publishedAt?.toISOString(),
+      modifiedTime: article.updatedAt.toISOString(),
+      authors: [article.author.name],
+      section: article.rubrique.name,
+      tags: article.tags,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description: article.dek ?? undefined,
+      images: image,
+    },
   };
 }
 
@@ -64,6 +89,15 @@ export default async function ArticlePage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-bg text-ink">
+      {/* Schema.org (DF-06) : NewsArticle avec balisage paywall + fil d'Ariane */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(newsArticleJsonLd(article)) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd(article)) }}
+      />
       <SiteHeader />
 
       <main>
@@ -115,7 +149,7 @@ export default async function ArticlePage({ params }: Props) {
           </div>
         ) : null}
 
-        <article className="relative mx-auto max-w-[760px] px-8 pt-10">
+        <article className="paywalled relative mx-auto max-w-[760px] px-8 pt-10">
           <ArticleBody blocks={visibleBlocks} />
           {gated ? (
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[120px] bg-[linear-gradient(to_bottom,transparent,var(--bg))]" />

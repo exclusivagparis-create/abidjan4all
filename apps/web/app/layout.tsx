@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Archivo, Newsreader } from "next/font/google";
 import { ThemeProvider, ThemeScript } from "@a4a/ui";
+import { organizationJsonLd, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
 const newsreader = Newsreader({
@@ -19,13 +21,23 @@ const archivo = Archivo({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Abidjan4All — média numérique de la Côte d'Ivoire et de la diaspora",
     template: "%s · Abidjan4All",
   },
   description:
     "Actualité, business, cacao, diaspora : le média numérique de référence de la Côte d'Ivoire.",
+  openGraph: {
+    siteName: "Abidjan4All",
+    locale: "fr_FR",
+    type: "website",
+  },
+  twitter: { card: "summary_large_image" },
+  alternates: { types: { "application/rss+xml": "/rss.xml" } },
 };
+
+const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -45,7 +57,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd()) }}
+        />
         <ThemeProvider>{children}</ThemeProvider>
+        {GA4_ID ? (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`} strategy="afterInteractive" />
+            <Script id="ga4" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)};gtag('js',new Date());gtag('config','${GA4_ID}');`}
+            </Script>
+          </>
+        ) : null}
       </body>
     </html>
   );
