@@ -17,7 +17,7 @@ export async function CommentsSection({ articleId }: { articleId: string }) {
         body: true,
         reactions: true,
         createdAt: true,
-        user: { select: { name: true, badges: { select: { label: true } } } },
+        user: { select: { id: true, name: true, badges: { select: { label: true } } } },
       },
     }),
   ]);
@@ -49,7 +49,9 @@ export async function CommentsSection({ articleId }: { articleId: string }) {
               <span className="flex h-8 w-8 items-center justify-center rounded-pill bg-[linear-gradient(135deg,#2E5AAC,#0E8A5F)] text-[11px] font-bold text-white">
                 {initials(c.user.name)}
               </span>
-              <span className="text-[13px] font-bold">{c.user.name}</span>
+              <Link href={`/membre/${c.user.id}`} className="text-[13px] font-bold hover:underline">
+                {c.user.name}
+              </Link>
               {c.user.badges[0] ? (
                 <span className="rounded-pill border border-line bg-surface-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.05em] text-ink-3">
                   {c.user.badges[0].label}

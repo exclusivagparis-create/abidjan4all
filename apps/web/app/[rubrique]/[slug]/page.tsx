@@ -21,7 +21,7 @@ async function getArticle(rubriqueSlug: string, slug: string) {
     where: { slug, status: "published", rubrique: { slug: rubriqueSlug } },
     include: {
       rubrique: { select: { slug: true, name: true, color: true } },
-      author: { select: { name: true, bio: true } },
+      author: { select: { id: true, name: true, bio: true } },
       coverAsset: { select: { url: true, alt: true, credit: true } },
     },
   });
@@ -132,7 +132,9 @@ export default async function ArticlePage({ params }: Props) {
               {initials(article.author.name)}
             </div>
             <div>
-              <div className="text-sm font-bold">{article.author.name}</div>
+              <Link href={`/membre/${article.author.id}`} className="text-sm font-bold hover:underline">
+                {article.author.name}
+              </Link>
               <div className="text-[12.5px] text-ink-3">
                 {article.author.bio ? `${article.author.bio.split("—")[0]?.trim()} · ` : ""}
                 {formatDateFull(article.publishedAt)} · {article.readingTime} min de lecture
