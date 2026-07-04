@@ -131,6 +131,31 @@ async function main() {
     },
   });
 
+  // ---- Groupes communauté (maquette Espace Membre — compteurs marketing du design)
+  await Promise.all([
+    prisma.group.create({
+      data: {
+        slug: "entrepreneurs-ci",
+        name: "Entrepreneurs CI",
+        color: "#0E8A5F",
+        membersCount: 4210,
+        members: { connect: [{ id: lecteur.id }] },
+      },
+    }),
+    prisma.group.create({
+      data: {
+        slug: "diaspora-quebec",
+        name: "Diaspora Québec",
+        color: "#2E5AAC",
+        membersCount: 1830,
+        members: { connect: [{ id: lecteur.id }, { id: koffi.id }] },
+      },
+    }),
+    prisma.group.create({
+      data: { slug: "cacao-filiere", name: "Cacao Filière", color: "#8A5A2B", membersCount: 960 },
+    }),
+  ]);
+
   // abonné A4A+ Essentiel avec un paiement et sa facture
   const sub = await prisma.subscription.create({
     data: {

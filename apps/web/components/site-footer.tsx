@@ -23,6 +23,7 @@ export async function SiteFooter() {
         <nav className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-line-2 pt-4 text-[12.5px] font-semibold text-ink-2">
           <Link href="/en-direct" className="hover:text-ink">Nos directs</Link>
           <Link href="/podcasts" className="hover:text-ink">Podcasts</Link>
+          <Link href="/groupes" className="hover:text-ink">Groupes</Link>
           <Link href="/formation" className="hover:text-ink">A4A Formation</Link>
           <Link href="/recherche" className="hover:text-ink">Recherche</Link>
           <Link href="/abonnement" className="hover:text-ink">S&apos;abonner à A4A+</Link>
