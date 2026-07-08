@@ -149,6 +149,121 @@ function heuristicModeration(text: string): ModerationResult {
 }
 
 // ---------------------------------------------------------------------------
+// Traduction d'article — POST /ai/translate
+// ---------------------------------------------------------------------------
+
+export interface ArticleTranslation {
+  title: string;
+  body: string;
+  engine: string;
+}
+
+/** Traduit un article (fr→en pour « Africa in English », ou l'inverse). */
+export async function translateArticle(
+  title: string,
+  text: string,
+  target: "en" | "fr"
+): Promise<ArticleTranslation> {
+  const client = getClient();
+  if (!client) return heuristicTranslation(title, text, target);
+
+  const langue = target === "en" ? "anglais" : "français";
+  const response = await client.messages.create({
+    model: model(),
+    max_tokens: 8192,
+    system:
+      `Tu es traducteur de presse pour Abidjan4All, média ivoirien. Tu traduis fidèlement vers le ${langue}, ` +
+      "registre journalistique, sans rien ajouter ni omettre. Les noms propres, sigles (BRVM, CAN…) et montants restent tels quels.",
+    messages: [
+      { role: "user", content: `Traduis cet article.\n\nTitre : ${title}\n\n${text.slice(0, 24000)}` },
+    ],
+    output_config: {
+      format: {
+        type: "json_schema",
+        schema: {
+          type: "object",
+          properties: {
+            title: { type: "string", description: "Titre traduit" },
+            body: { type: "string", description: "Corps traduit, paragraphes séparés par des sauts de ligne" },
+          },
+          required: ["title", "body"],
+          additionalProperties: false,
+        },
+      },
+    },
+  });
+
+  const parsed = JSON.parse(firstText(response.content)) as { title: string; body: string };
+  return { ...parsed, engine: "claude" };
+}
+
+/** Repli sans clé : contenu inchangé, balisé comme non traduit. */
+function heuristicTranslation(title: string, text: string, target: "en" | "fr"): ArticleTranslation {
+  const notice =
+    target === "en"
+      ? "[Automatic translation unavailable — original French text follows.]"
+      : "[Traduction automatique indisponible — texte original ci-dessous.]";
+  return { title, body: `${notice}\n\n${text}`, engine: "heuristique" };
+}
+
+// ---------------------------------------------------------------------------
+// Assistant éditorial — POST /ai/chat
+// ---------------------------------------------------------------------------
+
+export interface ChatReply {
+  reply: string;
+  sources: SearchSource[];
+  engine: string;
+}
+
+/**
+ * Répond au lecteur à partir des extraits fournis (article courant et/ou
+ * résultats de recherche) — mêmes règles d'ancrage que la recherche.
+ */
+export async function chatReply(message: string, sources: SearchSource[]): Promise<ChatReply> {
+  const client = getClient();
+  if (!client) return heuristicChat(message, sources);
+
+  const corpus =
+    sources.length > 0
+      ? sources.map((s, i) => `[${i + 1}] ${s.title}\n${s.snippet}`).join("\n\n")
+      : "(aucun extrait fourni)";
+
+  const response = await client.messages.create({
+    model: model(),
+    max_tokens: 1024,
+    thinking: { type: "adaptive" },
+    system:
+      "Tu es l'assistant éditorial d'Abidjan4All, média ivoirien. Tu réponds en français, brièvement et cordialement, " +
+      "en t'appuyant d'abord sur les extraits fournis (cite-les par leur numéro [n]). Hors de leur périmètre, reste général " +
+      "et renvoie vers la rédaction ; jamais de conseil médical, juridique ou financier personnalisé.",
+    messages: [{ role: "user", content: `Message du lecteur : ${message}\n\nExtraits :\n${corpus}` }],
+  });
+
+  return { reply: firstText(response.content), sources, engine: "claude" };
+}
+
+/** Repli sans clé : renvoie les extraits pertinents, sans génération. */
+function heuristicChat(message: string, sources: SearchSource[]): ChatReply {
+  if (sources.length === 0) {
+    return {
+      reply:
+        "Je n'ai pas trouvé d'article correspondant à votre question. Reformulez, ou parcourez les rubriques — la rédaction publie tous les jours.",
+      sources: [],
+      engine: "heuristique",
+    };
+  }
+  const top = sources.slice(0, 3);
+  return {
+    reply:
+      "Voici ce que la rédaction a publié à ce sujet : " +
+      top.map((s, i) => `${s.title} [${i + 1}]`).join(" · "),
+    sources: top,
+    engine: "heuristique",
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Réponse générative de recherche — GET /ai/search
 // ---------------------------------------------------------------------------
 
