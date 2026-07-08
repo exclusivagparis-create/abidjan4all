@@ -306,7 +306,13 @@ export default async function EspaceMembrePage({
           ) : (
             sub.payments.map((p) => (
               <div key={p.id} className="flex flex-wrap items-center gap-3 border-b border-line-2 py-3 text-[13px] last:border-b-0">
-                <span className="font-mono font-semibold">{p.invoice?.number ?? p.providerRef}</span>
+                {p.invoice ? (
+                  <a href={p.invoice.url} target="_blank" rel="noreferrer" className="font-mono font-semibold underline decoration-line underline-offset-2 hover:decoration-ink" title="Télécharger la facture (PDF)">
+                    {p.invoice.number}
+                  </a>
+                ) : (
+                  <span className="font-mono font-semibold">{p.providerRef}</span>
+                )}
                 <span className="text-ink-3">{formatDateFull(p.createdAt)}</span>
                 <span className="ml-auto font-bold">{formatXOF(p.amount)}</span>
                 <span className="rounded-pill bg-[rgba(14,138,95,0.12)] px-2.5 py-0.5 text-[11px] font-bold text-green">

@@ -16,6 +16,7 @@
     "bcryptjs": "^3.0.2",
     "next": "^15.3.0",
     "next-auth": "^5.0.0-beta.29",
+    "pdf-lib": "^1.17.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "web-push": "^3.6.7",
