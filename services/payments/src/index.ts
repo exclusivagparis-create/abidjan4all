@@ -123,3 +123,61 @@ export const mockProvider: PaymentProvider = {
 export function getProvider(): PaymentProvider {
   return mockProvider;
 }
+
+// ---------------------------------------------------------------------------
+// Signature des webhooks
+// ---------------------------------------------------------------------------
+
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+/** Fenêtre de validité d'un webhook signé (anti-rejeu). */
+export const WEBHOOK_TOLERANCE_S = 300;
+
+/**
+ * Signe un corps de webhook — schéma générique style Stripe :
+ * HMAC-SHA256(`${timestamp}.${rawBody}`) en hexadécimal.
+ * Sert au simulateur de PSP et aux tests d'intégration.
+ */
+export function signWebhookPayload(rawBody: string, secret: string, timestamp = Math.floor(Date.now() / 1000)): {
+  timestamp: number;
+  signature: string;
+} {
+  const signature = createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex");
+  return { timestamp, signature };
+}
+
+export type WebhookVerification = { ok: true } | { ok: false; reason: string };
+
+/**
+ * Vérifie la signature générique (en-têtes x-a4a-signature / x-a4a-timestamp)
+ * en temps constant, avec fenêtre anti-rejeu.
+ *
+ * TODO(prod) : chaque PSP a son schéma natif à brancher dans son adaptateur —
+ * PayDunya : hash SHA-512 du master key dans le payload ; Stripe :
+ * en-tête Stripe-Signature (t=…,v1=…) sur le corps brut.
+ */
+export function verifyWebhookSignature(
+  rawBody: string,
+  headers: { signature: string | null; timestamp: string | null },
+  secret: string,
+  nowS = Math.floor(Date.now() / 1000)
+): WebhookVerification {
+  if (!headers.signature || !headers.timestamp) {
+    return { ok: false, reason: "en-têtes x-a4a-signature / x-a4a-timestamp manquants" };
+  }
+  const ts = Number(headers.timestamp);
+  if (!Number.isFinite(ts)) return { ok: false, reason: "timestamp invalide" };
+  if (Math.abs(nowS - ts) > WEBHOOK_TOLERANCE_S) return { ok: false, reason: "timestamp hors fenêtre (rejeu ?)" };
+
+  const expected = createHmac("sha256", secret).update(`${ts}.${rawBody}`).digest();
+  let provided: Buffer;
+  try {
+    provided = Buffer.from(headers.signature, "hex");
+  } catch {
+    return { ok: false, reason: "signature illisible" };
+  }
+  if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+    return { ok: false, reason: "signature invalide" };
+  }
+  return { ok: true };
+}
