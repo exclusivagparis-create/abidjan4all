@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma, Prisma, type ArticleStatus } from "@a4a/db";
 import { auth, PUBLISH_ROLES, STUDIO_ROLES } from "@/auth";
+import { sendArticleAlert } from "@/lib/push";
 
 const BlockSchema = z.object({
   type: z.enum(["paragraph", "h2", "quote", "callout", "image"]),
@@ -152,5 +153,9 @@ export async function transitionArticle(id: string, action: Transition): Promise
 
   await prisma.article.update({ where: { id }, data });
   revalidatePublic();
+  // Alerte Web Push à la première mise en ligne (pas sur une re-publication).
+  if (action === "publish" && !article.publishedAt) {
+    sendArticleAlert(id).catch((e) => console.error("[push]", e));
+  }
   return { ok: true, id };
 }

@@ -38,11 +38,15 @@ La page `/design` reproduit le nuancier du design system pour comparaison avec
 # sur le serveur (Docker + compose v2 installés)
 git clone <repo> && cd abidjan4all
 cp .env.example .env    # renseigner POSTGRES_PASSWORD, AUTH_SECRET,
-                        # NEXT_PUBLIC_SITE_URL, AI_API_KEY, clés PSP…
+                        # NEXT_PUBLIC_SITE_URL, AI_API_KEY, clés PSP,
+                        # clés VAPID (npx web-push generate-vapid-keys)…
 docker compose -f infra/docker/docker-compose.prod.yml up -d --build
 ```
 
 Le service `migrate` applique les migrations Prisma avant le démarrage du web.
+Alertes Web Push (DF-04) : sans clés VAPID, les alertes sont désactivées sans
+casser le site ; l'opt-in vit dans l'espace membre, l'envoi part à la
+publication (Studio et scheduler), filtré par les rubriques suivies.
 TLS et cache : Cloudflare (ou caddy/traefik) devant le port 3000 — l'accueil est
 rendu à la requête, à mettre en cache CDN court (30-60 s) à l'échelle.
 CI : `.github/workflows/ci.yml` (type-check + build sur PostgreSQL de service +

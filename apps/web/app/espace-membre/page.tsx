@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { cancelSubscriptionAction } from "@/lib/actions/billing-actions";
 import { updateProfileAction } from "@/lib/actions/community-actions";
+import { PushOptIn } from "@/components/push-optin";
 import { formatDateFull, initials } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Espace membre" };
@@ -196,6 +197,9 @@ export default async function EspaceMembrePage({
             </div>
           )}
         </section>
+
+        {/* Alertes Web Push (DF-04) */}
+        <PushOptIn />
 
         {/* Profil public : édition bio + pays */}
         <section className="mb-8 rounded-[14px] border border-line bg-surface p-6 shadow-[var(--shadow-sm)]">

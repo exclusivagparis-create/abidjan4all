@@ -157,6 +157,19 @@ model User {
   listings                Listing[]
   enrollments             Enrollment[]
   newsletterSubscriptions NewsletterSubscription[]
+  pushSubscriptions       PushSubscription[]
+}
+
+/// Abonnement Web Push (VAPID) — anonyme ou rattaché à un compte pour
+/// filtrer les alertes par intérêts rubrique (DF-04).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?
+  createdAt DateTime @default(now())
 }
 
 model Badge {
