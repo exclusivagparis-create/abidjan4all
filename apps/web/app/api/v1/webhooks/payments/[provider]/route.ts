@@ -41,6 +41,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
       return apiError("invalid_signature", "Signature du webhook invalide.", 401);
     }
   } else {
+    if (process.env.NODE_ENV === "production" && provider !== "mock") {
+      console.error(`[webhook:${provider}] rejeté en production car PAYMENTS_WEBHOOK_SECRET n'est pas configuré.`);
+      return apiError("invalid_signature", "Signature requise en production.", 500);
+    }
     console.warn(`[webhook:${provider}] PAYMENTS_WEBHOOK_SECRET absent — signature NON vérifiée (dev uniquement)`);
   }
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Archivo, Newsreader } from "next/font/google";
 import { ThemeProvider, ThemeScript } from "@a4a/ui";
-import { organizationJsonLd, SITE_URL } from "@/lib/seo";
+import { organizationJsonLd, safeJsonLd, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
 const newsreader = Newsreader({
@@ -59,7 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd()) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationJsonLd()) }}
         />
         <ThemeProvider>{children}</ThemeProvider>
         {GA4_ID ? (
