@@ -32,6 +32,11 @@ export async function settleMockPayment(paymentId: string, outcome: "paid" | "fa
   const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
   if (!payment) redirect("/abonnement");
 
+  // Sécurité : Interdire le contournement en simulant un paiement réel
+  if (payment.provider !== "mock") {
+    redirect("/abonnement?echec=securite");
+  }
+
   if (outcome === "paid") {
     const result = await fulfillPayment(payment.providerRef);
     if (!result.ok) redirect("/abonnement");

@@ -1,0 +1,20 @@
+
+> @a4a/web@0.1.0 dev /app/apps/web
+> next dev
+
+   ▲ Next.js 15.5.20
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.2:3000
+
+ ✓ Starting...
+ ○ Compiling /instrumentation ...
+ ✓ Compiled /instrumentation in 842ms (101 modules)
+[scheduler] publication automatique des programmés — toutes les 60 s
+ ✓ Ready in 2.8s
+ ○ Compiling / ...
+ ✓ Compiled / in 1622ms (701 modules)
+ HEAD / 200 in 2857ms
+/app/apps/web:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @a4a/web@0.1.0 dev: `next dev`
+Command failed with signal "SIGTERM"
+[?25h

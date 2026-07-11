@@ -17,9 +17,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   });
   if (!article) return apiError("not_found", "Article introuvable.", 404);
 
-  // paywall : 402 sauf abonnement A4A+ en cours de validité (DF-03)
+  // paywall : 402 sauf abonnement A4A+ en cours de validité (DF-03) ou la rédaction
   const session = await auth();
-  const unlocked = session?.user ? await hasActiveSubscription(session.user.id) : false;
+  const unlocked = session?.user
+    ? (["admin", "editor", "journalist"].includes(session.user.role) || await hasActiveSubscription(session.user.id))
+    : false;
   if (article.premium && !unlocked) {
     const teaser = Array.isArray(article.body) ? article.body.slice(0, 2) : article.body;
     return Response.json(

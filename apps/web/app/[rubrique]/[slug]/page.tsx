@@ -10,7 +10,7 @@ import { CommentsSection } from "@/components/comments-section";
 import { formatDateFull, initials } from "@/lib/format";
 import { auth } from "@/auth";
 import { hasActiveSubscription } from "@/lib/billing";
-import { absoluteUrl, breadcrumbJsonLd, newsArticleJsonLd } from "@/lib/seo";
+import { absoluteUrl, breadcrumbJsonLd, newsArticleJsonLd, safeJsonLd } from "@/lib/seo";
 
 export const revalidate = 60;
 
@@ -68,9 +68,11 @@ export default async function ArticlePage({ params }: Props) {
   const article = await getArticle(rubriqueSlug, slug);
   if (!article) notFound();
 
-  // paywall : débloqué pour les abonnés A4A+ en cours de validité (DF-03)
+  // paywall : débloqué pour les abonnés A4A+ en cours de validité (DF-03) ou la rédaction
   const session = await auth();
-  const unlocked = session?.user ? await hasActiveSubscription(session.user.id) : false;
+  const unlocked = session?.user
+    ? (["admin", "editor", "journalist"].includes(session.user.role) || await hasActiveSubscription(session.user.id))
+    : false;
   const blocks = Array.isArray(article.body) ? article.body : [];
   const gated = article.premium && !unlocked;
   const visibleBlocks = gated ? blocks.slice(0, 2) : blocks;
@@ -92,11 +94,11 @@ export default async function ArticlePage({ params }: Props) {
       {/* Schema.org (DF-06) : NewsArticle avec balisage paywall + fil d'Ariane */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(newsArticleJsonLd(article)) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(newsArticleJsonLd(article)) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd(article)) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd(article)) }}
       />
       <SiteHeader />
 

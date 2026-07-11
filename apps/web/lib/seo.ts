@@ -107,3 +107,12 @@ export function xmlEscape(s: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
 }
+
+/**
+ * Sécurise l'encodage JSON-LD pour l'injecter dans un tag <script>.
+ * Convertit les caractères '<' et '>' en échappements Unicode pour éviter
+ * l'injection HTML (notamment le breakout par </script>).
+ */
+export function safeJsonLd(obj: unknown): string {
+  return JSON.stringify(obj).replace(/</g, "\\u003c").replace(/>/g, "\\u003e");
+}
