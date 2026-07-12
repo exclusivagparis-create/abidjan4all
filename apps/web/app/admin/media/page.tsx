@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { MediaUpload } from "@/components/admin/media-upload";
+import { MediaEdit } from "@/components/admin/media-edit";
 import { MediaDeleteButton } from "@/components/admin/media-delete-button";
 import { PlaceholderMedia } from "@/components/placeholder-media";
 import { formatDate } from "@/lib/format";
@@ -34,8 +35,9 @@ export default async function AdminMedia() {
                 {formatDate(a.createdAt)} · {a.uploadedBy.name}
                 {a._count.articlesAsCover > 0 ? ` · à la une ×${a._count.articlesAsCover}` : ""}
               </div>
-              <div className="mt-2">
+              <div className="mt-2 flex items-start gap-2">
                 <MediaDeleteButton id={a.id} />
+                <MediaEdit asset={{ id: a.id, alt: a.alt, credit: a.credit }} />
               </div>
             </div>
           </div>
