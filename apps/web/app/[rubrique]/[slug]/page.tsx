@@ -114,40 +114,71 @@ export default async function ArticlePage({ params }: Props) {
             </Link>
           </nav>
 
-          <span
-            className="rounded-[5px] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.1em] text-white"
-            style={{ background: article.rubrique.color }}
-          >
-            {article.kicker ?? article.rubrique.name}
-          </span>
-          <h1 className="mb-4 mt-[18px] font-serif text-[46px] font-medium leading-[1.05] tracking-tight">
+          {/* Rangée de pilules (modèle : .tag-row) */}
+          <div className="mb-4 flex flex-wrap gap-2">
+            <span
+              className="rounded-[2px] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-white"
+              style={{ background: article.rubrique.color }}
+            >
+              {article.rubrique.name}
+            </span>
+            {article.kicker ? (
+              <span className="rounded-[2px] bg-ink px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-bg">
+                {article.kicker}
+              </span>
+            ) : null}
+            {article.premium ? (
+              <span className="rounded-[2px] bg-[linear-gradient(135deg,#F5C24B,#E8641A)] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#16181D]">
+                ★ A4A+
+              </span>
+            ) : null}
+          </div>
+
+          <h1 className="mb-[18px] font-serif text-[clamp(30px,5vw,46px)] font-extrabold leading-[1.12] tracking-tight">
             {article.title}
           </h1>
           {article.dek ? (
-            <p className="mb-6 max-w-[56ch] font-serif text-[21px] leading-[1.45] text-ink-2">{article.dek}</p>
+            <p className="mb-6 border-l-4 border-[#F47920] pl-4 font-serif text-[18px] italic leading-[1.55] text-ink-2">
+              {article.dek}
+            </p>
           ) : null}
 
-          <div className="mb-8 flex items-center gap-3 border-b border-line-2 pb-7">
-            <div className="flex h-11 w-11 items-center justify-center rounded-pill bg-[linear-gradient(135deg,#E8641A,#D6282D)] text-[15px] font-bold text-white">
-              {initials(article.author.name)}
-            </div>
-            <div>
-              <Link href={`/membre/${article.author.id}`} className="text-sm font-bold hover:underline">
+          {/* Byline (modèle : auteur vert, date grise, pilule temps de lecture, badge rubrique) */}
+          <div className="mb-8 flex flex-wrap items-center gap-x-5 gap-y-2 border-b-2 border-ink pb-5 text-[12.5px]">
+            <span className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-pill bg-[#006633] text-[13px] font-bold text-white">
+                {initials(article.author.name)}
+              </span>
+              <Link href={`/membre/${article.author.id}`} className="font-bold text-[#0E8A5F] hover:underline">
                 {article.author.name}
               </Link>
-              <div className="text-[12.5px] text-ink-3">
-                {article.author.bio ? `${article.author.bio.split("—")[0]?.trim()} · ` : ""}
-                {formatDateFull(article.publishedAt)} · {article.readingTime} min de lecture
-              </div>
-            </div>
+            </span>
+            <span className="text-ink-3">{formatDateFull(article.publishedAt)}</span>
+            <span className="rounded-pill border border-line bg-surface-2 px-3 py-1 text-[11.5px] font-semibold text-ink-2">
+              ⏱ {article.readingTime} min de lecture
+            </span>
+            <span
+              className="rounded-pill px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.08em] text-white"
+              style={{ background: article.rubrique.color }}
+            >
+              {article.rubrique.name}
+            </span>
           </div>
         </div>
 
         {article.coverAsset ? (
           <div className="mx-auto max-w-[980px] px-8">
-            <PlaceholderMedia url={article.coverAsset.url} alt={article.coverAsset.alt} className="h-[440px] w-full rounded-[14px]" />
-            {article.coverAsset.credit ? (
-              <div className="mt-2 text-[11.5px] text-ink-3">© {article.coverAsset.credit}</div>
+            <PlaceholderMedia url={article.coverAsset.url} alt={article.coverAsset.alt} className="h-[440px] w-full rounded-[3px]" />
+            {/* Légende du modèle : « 📷 Illustration : … © crédit » */}
+            {article.coverAsset.alt || article.coverAsset.credit ? (
+              <div className="mt-2 px-0.5 text-[11.5px] leading-normal text-ink-3">
+                {article.coverAsset.alt ? (
+                  <>
+                    <strong className="text-ink-2">📷 Illustration :</strong> {article.coverAsset.alt}
+                  </>
+                ) : null}
+                {article.coverAsset.credit ? <em> © {article.coverAsset.credit}</em> : null}
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -181,6 +212,37 @@ export default async function ArticlePage({ params }: Props) {
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[120px] bg-[linear-gradient(to_bottom,transparent,var(--bg))]" />
           ) : null}
         </article>
+
+        {/* Signature (modèle : avatar vert + rôle) puis tags de pied d'article */}
+        {!gated ? (
+          <div className="mx-auto max-w-[760px] px-8">
+            <div className="mt-10 flex items-start gap-4 border-t-2 border-ink pt-5">
+              <span className="flex h-[52px] w-[52px] flex-none items-center justify-center rounded-pill bg-[#006633] font-serif text-[19px] font-bold text-white">
+                {initials(article.author.name)}
+              </span>
+              <span className="text-[12.5px] leading-snug text-ink-3">
+                <Link href={`/membre/${article.author.id}`} className="block text-[14.5px] font-bold text-ink hover:underline">
+                  {article.author.name} — Rédaction Abidjan4All
+                </Link>
+                <span className="font-semibold text-[#0E8A5F]">
+                  {article.author.bio?.split("—")[1]?.trim() ?? `Journaliste · ${article.rubrique.name}`}
+                </span>
+              </span>
+            </div>
+            {article.tags.length > 0 ? (
+              <div className="mt-7 flex flex-wrap gap-2 border-t border-line-2 pt-5">
+                {article.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-[3px] border border-line bg-surface-2 px-2.5 py-1 text-[10.5px] font-medium uppercase tracking-[0.08em] text-ink-3"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* PAYWALL A4A+ (Page Article.dc.html §1a) */}
         {gated ? (
