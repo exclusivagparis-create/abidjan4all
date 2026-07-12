@@ -57,6 +57,12 @@ COPY --from=builder --chown=a4a:a4a /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=a4a:a4a /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=a4a:a4a /app/apps/web/public ./apps/web/public
 
+# Le client Prisma bundlé cherche le moteur relativement aux chunks
+# (/app/apps/web/.prisma/client, constaté en prod) : lien vers la copie
+# embarquée + override explicite du chemin du moteur.
+RUN ln -s /app/node_modules/.prisma /app/apps/web/.prisma
+ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node
+
 USER a4a
 EXPOSE 3000
 ENV PORT=3000 HOSTNAME=0.0.0.0
