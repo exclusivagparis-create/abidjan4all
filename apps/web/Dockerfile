@@ -33,6 +33,15 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV DOCKER_BUILD=1
 RUN pnpm --filter @a4a/web build
 
+# La sortie standalone ne trace pas le client Prisma généré (pnpm + monorepo,
+# vérifié en prod : aucun .prisma/ ni moteur .so dans l'image) — copie
+# explicite du client et de son moteur dans l'arborescence embarquée, où la
+# résolution Node les trouve depuis les chunks (/app/node_modules).
+RUN CLIENT=$(ls -d node_modules/.pnpm/@prisma+client@*/node_modules) \
+  && mkdir -p apps/web/.next/standalone/node_modules/@prisma \
+  && cp -rL "$CLIENT/@prisma/client" apps/web/.next/standalone/node_modules/@prisma/ \
+  && cp -rL "$CLIENT/.prisma" apps/web/.next/standalone/node_modules/
+
 # ---------- runtime ----------
 FROM node:22-slim AS runner
 WORKDIR /app
