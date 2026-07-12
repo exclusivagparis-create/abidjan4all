@@ -31,14 +31,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Rubriques", icon: "◫" },
     { label: "Live-blog", href: "/admin/live", icon: "◉" },
   ];
+  // Facturation et audience : liens actifs pour l'administration seulement.
+  const isAdmin = user.role === "admin";
   const communaute: NavItem[] = [
     { label: "Commentaires", href: "/admin/comments", icon: "◎", badge: pendingComments, badgeColor: "var(--orange)" },
-    { label: "Abonnés A4A+", icon: "◍" },
+    { label: "Abonnés A4A+", href: isAdmin ? "/admin/subscribers" : undefined, icon: "◍" },
     { label: "Utilisateurs", icon: "☺" },
   ];
   const business: NavItem[] = [
     { label: "Régie publicitaire", icon: "◈" },
-    { label: "Statistiques", icon: "▲" },
+    { label: "Statistiques", href: isAdmin ? "/admin/stats" : undefined, icon: "▲" },
   ];
 
   return (
