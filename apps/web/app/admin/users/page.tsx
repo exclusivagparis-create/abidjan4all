@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { prisma, type Role } from "@a4a/db";
 import { auth } from "@/auth";
 import { setUserRoleAction, toggleVerifiedAction } from "@/lib/actions/user-admin-actions";
+import { CreateUserForm, UserDeleteButton } from "@/components/admin/user-forms";
 import { formatDate, initials } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Utilisateurs · Studio" };
@@ -53,6 +54,7 @@ export default async function AdminUsers({
   return (
     <div>
       <h1 className="mb-6 text-lg font-bold">Utilisateurs</h1>
+      <CreateUserForm />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {(
@@ -152,9 +154,12 @@ export default async function AdminUsers({
                     {self ? (
                       <span className="text-[11px] text-ink-3">— votre compte —</span>
                     ) : (
-                      <form action={setUserRoleAction.bind(null, u.id)}>
-                        <RoleButtons current={u.role} />
-                      </form>
+                      <span className="flex flex-wrap items-start gap-1.5">
+                        <form action={setUserRoleAction.bind(null, u.id)}>
+                          <RoleButtons current={u.role} />
+                        </form>
+                        <UserDeleteButton id={u.id} name={u.name} />
+                      </span>
                     )}
                   </td>
                 </tr>
