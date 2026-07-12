@@ -4,14 +4,32 @@
 # TLS/CDN : Cloudflare ou reverse-proxy (caddy/traefik) devant le port 3000.
 
 services:
+  # TLS automatique (Let's Encrypt) + proxy vers le web.
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - a4a_caddy_data:/data
+      - a4a_caddy_config:/config
+    depends_on:
+      - web
+
   web:
     build:
       context: ../..
       dockerfile: apps/web/Dockerfile
+      args:
+        # Inlinés dans le bundle client au build (voir Dockerfile).
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
+        NEXT_PUBLIC_GA4_ID: ${NEXT_PUBLIC_GA4_ID:-}
     restart: unless-stopped
     ports:
-      - "80:3000" # HTTP public (TLS : Cloudflare ou reverse-proxy devant)
-      - "3000:3000"
+      - "3000:3000" # accès direct hors TLS (recette) — le public passe par caddy
     env_file: ../../.env
     depends_on:
       migrate:
@@ -55,3 +73,5 @@ services:
 volumes:
   a4a_pgdata_prod:
   a4a_redisdata_prod:
+  a4a_caddy_data:
+  a4a_caddy_config:

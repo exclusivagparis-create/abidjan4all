@@ -31,6 +31,14 @@ ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 ENV NEXT_TELEMETRY_DISABLED=1
 # active la sortie standalone (next.config.ts)
 ENV DOCKER_BUILD=1
+# NEXT_PUBLIC_* : inlinés dans le bundle client AU BUILD — le .env chargé au
+# runtime par compose ne suffit pas pour le navigateur. Passés en build args.
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
+ARG NEXT_PUBLIC_GA4_ID
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY=$NEXT_PUBLIC_VAPID_PUBLIC_KEY \
+    NEXT_PUBLIC_GA4_ID=$NEXT_PUBLIC_GA4_ID
 RUN pnpm --filter @a4a/web build
 
 # La sortie standalone ne trace pas le client Prisma généré (pnpm + monorepo,
