@@ -85,11 +85,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             ‹ Voir le site
           </Link>
           <span className="flex-1" />
-          <Link
-            href="/admin/articles/new"
-            className="inline-flex items-center gap-[7px] rounded-pill bg-red px-[18px] py-2.5 text-[13px] font-bold text-white"
-          >
-            <span className="text-[15px] leading-none">＋</span>Nouvel article
+          {/* création d'article : depuis le tableau de bord Articles */}
+          <Link href="/admin/articles" className="text-[12.5px] font-semibold text-ink-3 hover:text-ink">
+            Articles
           </Link>
         </div>
         <div className="px-[30px] pb-12 pt-7">{children}</div>

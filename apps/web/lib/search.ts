@@ -75,7 +75,7 @@ export async function searchArticles(params: SearchParams): Promise<SearchRespon
   const tsquery = Prisma.sql`websearch_to_tsquery('french_unaccent', ${q})`;
 
   // conditions communes (sans le filtre rubrique, réutilisées pour les facettes)
-  let base = Prisma.sql`a."status" = 'published' AND a."searchVector" @@ ${tsquery}`;
+  let base = Prisma.sql`a."status" = 'published' AND a."hidden" = false AND a."searchVector" @@ ${tsquery}`;
   if (params.period && PERIOD_SQL[params.period]) {
     base = Prisma.sql`${base} AND a."publishedAt" >= (now() at time zone 'utc') - ${PERIOD_SQL[params.period]}`;
   }

@@ -18,21 +18,31 @@ const FILTERS: { key: string; label: string; status?: ArticleStatus }[] = [
 export default async function AdminArticles({
   searchParams,
 }: {
-  searchParams: Promise<{ statut?: string }>;
+  searchParams: Promise<{ statut?: string; q?: string; rubrique?: string }>;
 }) {
-  const { statut = "tout" } = await searchParams;
+  const { statut = "tout", q = "", rubrique = "" } = await searchParams;
   const filter = FILTERS.find((f) => f.key === statut) ?? FILTERS[0]!;
+  const query = q.trim();
 
-  const [byStatus, articles] = await Promise.all([
+  const where = {
+    ...(filter.status ? { status: filter.status } : {}),
+    ...(rubrique ? { rubrique: { slug: rubrique } } : {}),
+    ...(query ? { title: { contains: query, mode: "insensitive" as const } } : {}),
+  };
+
+  const [byStatus, rubriques, articles] = await Promise.all([
     prisma.article.groupBy({ by: ["status"], _count: true }),
+    prisma.rubrique.findMany({ orderBy: { order: "asc" }, select: { slug: true, name: true } }),
     prisma.article.findMany({
-      where: filter.status ? { status: filter.status } : {},
+      where,
       orderBy: { updatedAt: "desc" },
       take: 50,
       select: {
         id: true,
         title: true,
         status: true,
+        hidden: true,
+        featuredRank: true,
         views: true,
         publishedAt: true,
         scheduledAt: true,
@@ -46,9 +56,52 @@ export default async function AdminArticles({
   const total = byStatus.reduce((sum, b) => sum + b._count, 0);
   const countOf = (s?: ArticleStatus) => (s ? (byStatus.find((b) => b.status === s)?._count ?? 0) : total);
 
+  const qs = (over: Record<string, string>) => {
+    const p = new URLSearchParams();
+    const merged = { statut: filter.key, q: query, rubrique, ...over };
+    for (const [k, v] of Object.entries(merged)) if (v && v !== "tout") p.set(k, v);
+    const s = p.toString();
+    return s ? `/admin/articles?${s}` : "/admin/articles";
+  };
+
   return (
     <div>
-      <h1 className="mb-5 text-lg font-bold">Articles</h1>
+      <div className="mb-5 flex items-center justify-between">
+        <h1 className="text-lg font-bold">Articles</h1>
+        <Link
+          href="/admin/articles/new"
+          className="inline-flex items-center gap-[7px] rounded-pill bg-red px-[18px] py-2.5 text-[13px] font-bold text-white"
+        >
+          <span className="text-[15px] leading-none">＋</span>Nouvel article
+        </Link>
+      </div>
+
+      {/* recherche + filtre rubrique */}
+      <form method="get" className="mb-3 flex flex-wrap items-center gap-2">
+        {filter.key !== "tout" ? <input type="hidden" name="statut" value={filter.key} /> : null}
+        <input
+          name="q"
+          defaultValue={query}
+          placeholder="Rechercher un titre…"
+          className="min-w-[220px] flex-1 rounded-pill border border-line bg-surface px-4 py-2 text-[13px] outline-none"
+        />
+        <select name="rubrique" defaultValue={rubrique} className="rounded-pill border border-line bg-surface px-3 py-2 text-[13px]">
+          <option value="">Toutes rubriques</option>
+          {rubriques.map((r) => (
+            <option key={r.slug} value={r.slug}>
+              {r.name}
+            </option>
+          ))}
+        </select>
+        <button type="submit" className="rounded-pill bg-navy px-4 py-2 text-[13px] font-semibold text-white">
+          Rechercher
+        </button>
+        {query || rubrique ? (
+          <Link href={qs({ q: "", rubrique: "" })} className="text-[12.5px] font-semibold text-ink-3">
+            Réinitialiser
+          </Link>
+        ) : null}
+      </form>
 
       {/* filtres par statut */}
       <div className="mb-[18px] flex flex-wrap items-center gap-2">
@@ -57,7 +110,7 @@ export default async function AdminArticles({
           return (
             <Link
               key={f.key}
-              href={f.key === "tout" ? "/admin/articles" : `/admin/articles?statut=${f.key}`}
+              href={qs({ statut: f.key })}
               className={`rounded-pill px-[15px] py-2 text-[13px] font-semibold ${
                 active ? "bg-navy text-white" : "border border-line bg-surface text-ink-2"
               }`}
@@ -84,7 +137,11 @@ export default async function AdminArticles({
             href={`/admin/articles/${a.id}`}
             className="grid grid-cols-[1fr_130px_150px_110px_110px_70px] items-center gap-4 border-b border-line-2 px-[22px] py-[15px] last:border-b-0 hover:bg-surface-2/60"
           >
-            <span className="font-serif text-base font-semibold leading-[1.2]">{a.title}</span>
+            <span className="font-serif text-base font-semibold leading-[1.2]">
+              {a.featuredRank ? <span className="mr-1.5 rounded bg-orange px-1.5 py-0.5 align-middle text-[9px] font-bold text-white">UNE {a.featuredRank}</span> : null}
+              {a.hidden ? <span className="mr-1.5 rounded bg-ink-3 px-1.5 py-0.5 align-middle text-[9px] font-bold text-white">MASQUÉ</span> : null}
+              {a.title}
+            </span>
             <span
               className="justify-self-start rounded-pill px-[9px] py-[3px] text-[10.5px] font-bold uppercase"
               style={{ color: a.rubrique.color, background: `color-mix(in srgb, ${a.rubrique.color} 12%, transparent)` }}

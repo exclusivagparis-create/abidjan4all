@@ -5,6 +5,8 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Ticker } from "@/components/ticker";
 import { PlaceholderMedia } from "@/components/placeholder-media";
+import { RichTitle, plainTitle } from "@/components/rich-title";
+import { ShareButtons } from "@/components/share-buttons";
 import { articleListSelect } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 
@@ -20,13 +22,22 @@ const MARCHES = [
   { label: "EUR / FCFA", value: "655,96", delta: "=", tone: "text-ink-3" },
 ];
 
+const PUBLIC_ARTICLE = { status: "published" as const, hidden: false };
+
 export default async function HomePage() {
-  const [articles, liveUpdates, plusLus] = await Promise.all([
+  const [featured, articles, liveUpdates, plusLus] = await Promise.all([
+    // « À la Une » piloté depuis le Studio (positions 1 à 5).
     prisma.article.findMany({
-      where: { status: "published" },
+      where: { ...PUBLIC_ARTICLE, featuredRank: { not: null } },
+      select: articleListSelect,
+      orderBy: { featuredRank: "asc" },
+      take: 5,
+    }),
+    prisma.article.findMany({
+      where: PUBLIC_ARTICLE,
       select: articleListSelect,
       orderBy: { publishedAt: "desc" },
-      take: 12,
+      take: 14,
     }),
     prisma.liveUpdate.findMany({
       where: { liveBlog: { status: "live" } },
@@ -35,17 +46,21 @@ export default async function HomePage() {
       select: { title: true, body: true, liveBlog: { select: { title: true } } },
     }),
     prisma.article.findMany({
-      where: { status: "published" },
+      where: PUBLIC_ARTICLE,
       select: { slug: true, title: true, rubrique: { select: { slug: true } } },
       orderBy: { views: "desc" },
       take: 3,
     }),
   ]);
 
-  const [lead, ...reste] = articles;
-  const rail = reste.slice(0, 2);
-  const cacao = articles.filter((a) => a.rubrique.slug === "cacao-marches" && a !== lead).slice(0, 3);
-  const grille = reste.slice(2, 8);
+  // À la Une = positions choisies ; à défaut, les plus récents. Le n°1 fait la tête d'affiche.
+  const aLaUne = featured.length > 0 ? featured : articles.slice(0, 5);
+  const featuredIds = new Set(aLaUne.map((a) => a.id));
+  const lead = aLaUne[0];
+  const rail = aLaUne.slice(1, 3);
+  const grilleUne = aLaUne.slice(1, 5); // les 4 autres positions (le n°1 est en tête d'affiche)
+  const cacao = articles.filter((a) => a.rubrique.slug === "cacao-marches" && a.id !== lead?.id).slice(0, 3);
+  const grille = articles.filter((a) => !featuredIds.has(a.id)).slice(0, 6);
   const tickerItems = liveUpdates.map((u) => u.title ?? u.liveBlog.title);
 
   const url = (a: { slug: string; rubrique: { slug: string } }) => `/${a.rubrique.slug}/${a.slug}`;
@@ -70,17 +85,20 @@ export default async function HomePage() {
                     {lead.rubrique.name}
                   </span>
                 </div>
-                <h1 className="mb-3.5 font-serif text-[46px] font-medium leading-[1.04] tracking-tight group-hover:underline">
-                  {lead.title}
+                <h1 className="mb-3.5 font-serif text-[46px] font-extrabold leading-[1.04] tracking-tight group-hover:underline">
+                  <RichTitle text={lead.title} />
                 </h1>
               </Link>
               <p className="mb-4 max-w-[60ch] font-serif text-xl leading-[1.5] text-ink-2">{lead.dek}</p>
-              <div className="flex items-center gap-2.5 text-[13px] text-ink-3">
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-3 text-[13px] text-ink-3">
                 <span className="font-bold text-ink">{lead.author.name}</span>
                 <span>
                   · {formatDate(lead.publishedAt)} · {lead.readingTime} min
                 </span>
                 {lead.premium ? <PremiumChip /> : null}
+                <span className="ml-auto">
+                  <ShareButtons path={url(lead)} title={plainTitle(lead.title)} />
+                </span>
               </div>
             </article>
 
@@ -179,9 +197,32 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      {/* GRILLE À LA UNE */}
+      {/* 4 ARTICLES À LA UNE (positions choisies dans le Studio) */}
+      {grilleUne.length > 0 ? (
+        <section className="mx-auto max-w-[1200px] px-8 pt-12">
+          <SectionHeader name="À la une" color="var(--orange)" />
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {grilleUne.map((a) => (
+              <article key={a.slug}>
+                <Link href={url(a)} className="group block">
+                  <PlaceholderMedia url={a.coverAsset?.url} alt={a.coverAsset?.alt} className="mb-3 h-[160px] w-full rounded-[10px]" />
+                  <RubriqueBadge slug={a.rubrique.slug} label={a.rubrique.name} color={a.rubrique.color} />
+                  <h4 className="mt-[7px] font-serif text-[19px] font-semibold leading-[1.2] group-hover:underline">
+                    <RichTitle text={a.title} />
+                  </h4>
+                </Link>
+                <div className="mt-1.5 flex items-center gap-2 text-xs text-ink-3">
+                  {a.author.name} · {a.readingTime} min {a.premium ? <PremiumChip /> : null}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* DERNIERS ARTICLES */}
       <section className="mx-auto max-w-[1200px] px-8 pt-12">
-        <SectionHeader name="À la une" color="var(--orange)" />
+        <SectionHeader name="Derniers articles" color="var(--ink-3)" />
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {grille.map((a) => (
             <article key={a.slug}>

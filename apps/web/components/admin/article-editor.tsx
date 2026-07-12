@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { ArticleStatus } from "@a4a/db";
-import { saveArticle, transitionArticle, type ArticleInput } from "@/lib/actions/article-actions";
+import { saveArticle, setArticleHidden, transitionArticle, type ArticleInput } from "@/lib/actions/article-actions";
 import { STATUS_META } from "./status-chip";
 
 type BlockType = "paragraph" | "h2" | "quote" | "callout" | "image" | "kpi" | "note";
@@ -28,6 +28,8 @@ export type EditorArticle = {
   status: ArticleStatus;
   scheduledAt: string | null; // valeur pour <input datetime-local>
   coverAssetId: string | null;
+  featuredRank: number | null;
+  hidden: boolean;
   slug: string | null;
   blocks: Block[];
 };
@@ -110,6 +112,7 @@ export function ArticleEditor({
       tags: article.tags,
       scheduledAt: article.scheduledAt ? new Date(article.scheduledAt).toISOString() : null,
       coverAssetId: article.coverAssetId,
+      featuredRank: article.featuredRank,
       blocks: article.blocks,
     };
   }
@@ -347,6 +350,17 @@ export function ArticleEditor({
             </p>
           ) : null}
 
+          {article.slug ? (
+            <a
+              href={`/${rubrique?.slug ?? "article"}/${article.slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="mb-2 block rounded-pill border border-line bg-surface-2 px-4 py-2 text-center text-[12.5px] font-semibold text-ink"
+            >
+              👁 Prévisualiser dans un onglet
+            </a>
+          ) : null}
+
           <div className="mt-2 flex flex-wrap gap-2.5">
             <ActionBtn onClick={() => run()} disabled={pending} variant="secondary">
               Enregistrer
@@ -373,11 +387,80 @@ export function ArticleEditor({
             ) : null}
             {canPublish && article.status === "published" ? (
               <ActionBtn onClick={() => run("unpublish")} disabled={pending} variant="secondary">
-                Dépublier
+                Repasser en brouillon
               </ActionBtn>
             ) : null}
           </div>
+
+          {/* Masquer / réafficher (rédaction en chef + admin) */}
+          {canPublish && article.id && article.status === "published" ? (
+            <label className="mt-3 flex items-center justify-between border-t border-line-2 pt-3">
+              <span>
+                <span className="block text-[13px] font-semibold">Masquer du public</span>
+                <span className="text-[11.5px] text-ink-3">Reste consultable en aperçu</span>
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={article.hidden}
+                disabled={pending}
+                onClick={() =>
+                  startTransition(async () => {
+                    const r = await setArticleHidden(article.id!, !article.hidden);
+                    if (r.ok) {
+                      set("hidden", !article.hidden);
+                      if (!article.hidden) set("featuredRank", null);
+                    }
+                    router.refresh();
+                  })
+                }
+                className="relative h-[23px] w-10 rounded-pill transition-colors"
+                style={{ background: article.hidden ? "var(--orange)" : "var(--line)" }}
+              >
+                <span
+                  className="absolute top-0.5 h-[19px] w-[19px] rounded-pill bg-white transition-all"
+                  style={{ left: article.hidden ? "auto" : 2, right: article.hidden ? 2 : "auto" }}
+                />
+              </button>
+            </label>
+          ) : null}
         </Panel>
+
+        {/* Mise en Une : 5 positions, la n°1 = tête d'affiche de l'accueil */}
+        {canPublish ? (
+          <Panel title="À la Une">
+            <p className="mb-2.5 text-[11.5px] text-ink-3">
+              Position sur l&apos;accueil. La n°1 est la tête d&apos;affiche ; les positions 2 à 5 forment
+              le bloc « À la une ».
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => set("featuredRank", null)}
+                className={`rounded-pill px-3 py-1.5 text-[12px] font-semibold ${
+                  article.featuredRank == null ? "bg-navy text-white" : "border border-line bg-surface-2 text-ink-2"
+                }`}
+              >
+                Aucune
+              </button>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => set("featuredRank", n)}
+                  className={`h-8 w-8 rounded-pill text-[13px] font-bold ${
+                    article.featuredRank === n ? "bg-orange text-white" : "border border-line bg-surface-2 text-ink-2"
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2.5 text-[11px] text-ink-3">
+              Une position déjà occupée est libérée automatiquement à l&apos;enregistrement.
+            </p>
+          </Panel>
+        ) : null}
 
         <Panel title="Classement">
           <label className="mb-1.5 block text-xs font-semibold text-ink-2">Rubrique</label>

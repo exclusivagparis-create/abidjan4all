@@ -227,9 +227,11 @@ model Article {
   coverAsset   MediaAsset? @relation("ArticleCover", fields: [coverAssetId], references: [id])
   coverAssetId String?
 
-  tags        String[]
-  readingTime Int      @default(0)
-  views       Int      @default(0)
+  tags         String[]
+  readingTime  Int      @default(0)
+  views        Int      @default(0)
+  featuredRank Int? // position à la Une (1 à 5) — null = pas en Une
+  hidden       Boolean  @default(false) // publié mais masqué du public (éditeur/admin)
   seo         Json     @default("{}") // { slug, metaTitle, metaDescription, ogImage }
   aiSummary   Json? // { keyPoints: string[], long: string }
 

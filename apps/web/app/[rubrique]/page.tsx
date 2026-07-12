@@ -25,7 +25,7 @@ export default async function RubriquePage({ params }: Props) {
   if (!rubrique) notFound();
 
   const articles = await prisma.article.findMany({
-    where: { status: "published", rubriqueId: rubrique.id },
+    where: { status: "published", hidden: false, rubriqueId: rubrique.id },
     select: articleListSelect,
     orderBy: { publishedAt: "desc" },
     take: 24,

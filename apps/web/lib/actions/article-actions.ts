@@ -25,6 +25,7 @@ const ArticleInputSchema = z.object({
   tags: z.array(z.string().trim().min(1)).max(12),
   scheduledAt: z.string().nullable().optional(), // ISO ou null
   coverAssetId: z.string().nullable().optional(),
+  featuredRank: z.number().int().min(1).max(5).nullable().optional(),
   blocks: z.array(BlockSchema).max(200),
 });
 
@@ -80,11 +81,19 @@ export async function saveArticle(raw: unknown): Promise<ActionResult> {
     tags: input.tags,
     scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
     coverAssetId: input.coverAssetId ?? null,
+    featuredRank: input.featuredRank ?? null,
     body: input.blocks as Prisma.InputJsonValue,
     readingTime: computeReadingTime(input.blocks),
   };
 
   if (input.id) {
+    // Une position à la Une est unique : la libérer sur l'article qui la détient.
+    if (data.featuredRank != null) {
+      await prisma.article.updateMany({
+        where: { featuredRank: data.featuredRank, id: { not: input.id } },
+        data: { featuredRank: null },
+      });
+    }
     const updated = await prisma.article.update({
       where: { id: input.id },
       data: {
@@ -158,5 +167,21 @@ export async function transitionArticle(id: string, action: Transition): Promise
   if (action === "publish" && !article.publishedAt) {
     sendArticleAlert(id).catch((e) => console.error("[push]", e));
   }
+  return { ok: true, id };
+}
+
+/**
+ * Masque / réaffiche un article publié — rédaction en chef et admin. Masqué,
+ * il disparaît du public (accueil, rubrique, recherche) et libère sa position
+ * à la Une, mais reste consultable en aperçu par la rédaction.
+ */
+export async function setArticleHidden(id: string, hidden: boolean): Promise<ActionResult> {
+  const user = await requireRole(PUBLISH_ROLES);
+  if (!user) return { ok: false, error: "Rôle insuffisant." };
+  await prisma.article.update({
+    where: { id },
+    data: { hidden, ...(hidden ? { featuredRank: null } : {}) },
+  });
+  revalidatePublic();
   return { ok: true, id };
 }

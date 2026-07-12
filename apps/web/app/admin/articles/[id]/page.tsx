@@ -41,6 +41,8 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
     status: article.status,
     scheduledAt: toLocalInput(article.scheduledAt),
     coverAssetId: article.coverAssetId,
+    featuredRank: article.featuredRank,
+    hidden: article.hidden,
     slug: article.slug,
     blocks: Array.isArray(article.body) ? (article.body as EditorArticle["blocks"]) : [],
   };

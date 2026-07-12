@@ -30,6 +30,8 @@ export default async function NewArticlePage() {
     status: "draft",
     scheduledAt: null,
     coverAssetId: null,
+    featuredRank: null,
+    hidden: false,
     slug: null,
     blocks: [{ type: "paragraph", text: "" }],
   };

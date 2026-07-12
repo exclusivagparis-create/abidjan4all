@@ -6,6 +6,8 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PlaceholderMedia } from "@/components/placeholder-media";
 import { ArticleBody } from "@/components/article-body";
+import { RichTitle, plainTitle } from "@/components/rich-title";
+import { ShareButtons } from "@/components/share-buttons";
 import { CommentsSection } from "@/components/comments-section";
 import { formatDateFull, initials } from "@/lib/format";
 import { auth } from "@/auth";
@@ -39,7 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       : undefined;
 
   return {
-    title: seo.metaTitle ?? article.title,
+    title: seo.metaTitle ?? plainTitle(article.title),
     description: seo.metaDescription ?? article.dek ?? undefined,
     alternates: { canonical: path },
     openGraph: {
@@ -70,6 +72,13 @@ export default async function ArticlePage({ params }: Props) {
 
   // paywall : débloqué pour les abonnés A4A+ en cours de validité (DF-03)
   const session = await auth();
+  // Article masqué : invisible au public, consultable par la rédaction (aperçu).
+  if (article.hidden) {
+    const viewer = session?.user
+      ? await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } })
+      : null;
+    if (!viewer || !["editor", "admin"].includes(viewer.role)) notFound();
+  }
   const unlocked = session?.user ? await hasActiveSubscription(session.user.id) : false;
   const blocks = Array.isArray(article.body) ? article.body : [];
   const gated = article.premium && !unlocked;
@@ -135,7 +144,7 @@ export default async function ArticlePage({ params }: Props) {
           </div>
 
           <h1 className="mb-[18px] font-serif text-[clamp(30px,5vw,46px)] font-extrabold leading-[1.12] tracking-tight">
-            {article.title}
+            <RichTitle text={article.title} />
           </h1>
           {article.dek ? (
             <p className="mb-6 border-l-4 border-[#F47920] pl-4 font-serif text-[18px] italic leading-[1.55] text-ink-2">
@@ -162,6 +171,9 @@ export default async function ArticlePage({ params }: Props) {
               style={{ background: article.rubrique.color }}
             >
               {article.rubrique.name}
+            </span>
+            <span className="ml-auto">
+              <ShareButtons path={`/${article.rubrique.slug}/${article.slug}`} title={plainTitle(article.title)} />
             </span>
           </div>
         </div>
