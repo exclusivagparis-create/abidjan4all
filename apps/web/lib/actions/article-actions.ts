@@ -7,11 +7,12 @@ import { auth, PUBLISH_ROLES, STUDIO_ROLES } from "@/auth";
 import { sendArticleAlert } from "@/lib/push";
 
 const BlockSchema = z.object({
-  type: z.enum(["paragraph", "h2", "quote", "callout", "image"]),
+  type: z.enum(["paragraph", "h2", "quote", "callout", "image", "kpi", "note"]),
   text: z.string().optional(),
   cite: z.string().optional(),
   url: z.string().optional(),
   alt: z.string().optional(),
+  variant: z.enum(["orange", "blue", "teal", "red", "green", "purple"]).optional(), // encadré coloré
 });
 
 const ArticleInputSchema = z.object({

@@ -6,7 +6,16 @@ import type { ArticleStatus } from "@a4a/db";
 import { saveArticle, transitionArticle, type ArticleInput } from "@/lib/actions/article-actions";
 import { STATUS_META } from "./status-chip";
 
-type Block = { type: "paragraph" | "h2" | "quote" | "callout" | "image"; text?: string; cite?: string; url?: string; alt?: string };
+type BlockType = "paragraph" | "h2" | "quote" | "callout" | "image" | "kpi" | "note";
+type CalloutVariant = "orange" | "blue" | "teal" | "red" | "green" | "purple";
+type Block = {
+  type: BlockType;
+  text?: string;
+  cite?: string;
+  url?: string;
+  alt?: string;
+  variant?: CalloutVariant;
+};
 
 export type EditorArticle = {
   id: string | null;
@@ -26,13 +35,24 @@ export type EditorArticle = {
 export type RubriqueOption = { id: string; slug: string; name: string; color: string };
 export type MediaOption = { id: string; url: string; alt: string | null };
 
-const BLOCK_LABEL: Record<Block["type"], string> = {
+const BLOCK_LABEL: Record<BlockType, string> = {
   paragraph: "Paragraphe",
   h2: "Intertitre",
   quote: "Citation",
   callout: "Encadré",
+  kpi: "Chiffres clés",
+  note: "Vérification",
   image: "Média",
 };
+
+const CALLOUT_COLORS: Array<[CalloutVariant, string]> = [
+  ["orange", "#F47920"],
+  ["blue", "#1a3a5c"],
+  ["teal", "#006e5a"],
+  ["red", "#a01520"],
+  ["green", "#006633"],
+  ["purple", "#7C3A8C"],
+];
 
 export function ArticleEditor({
   initial,
@@ -137,7 +157,7 @@ export function ArticleEditor({
 
         {/* toolbar : ajout de blocs */}
         <div className="flex flex-wrap items-center gap-1 border-b border-line-2 px-5 py-2.5">
-          {(Object.keys(BLOCK_LABEL) as Block["type"][]).map((type) => (
+          {(Object.keys(BLOCK_LABEL) as BlockType[]).map((type) => (
             <button
               key={type}
               type="button"
@@ -211,12 +231,54 @@ export function ArticleEditor({
                   />
                 </div>
               ) : block.type === "callout" ? (
-                <AutoTextarea
-                  value={block.text ?? ""}
-                  onChange={(v) => setBlock(i, { text: v })}
-                  placeholder="Encadré contextuel…"
-                  className="w-full resize-none rounded-md border border-line bg-surface-2 p-4 font-serif text-[16px] leading-relaxed text-ink-2 outline-none placeholder:text-ink-3"
-                />
+                <div
+                  className="rounded-r-md border-l-4 bg-surface-2 p-4"
+                  style={{ borderColor: CALLOUT_COLORS.find(([v]) => v === (block.variant ?? "orange"))![1] }}
+                >
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-3">Couleur :</span>
+                    {CALLOUT_COLORS.map(([variant, color]) => (
+                      <button
+                        key={variant}
+                        type="button"
+                        onClick={() => setBlock(i, { variant })}
+                        title={variant}
+                        className={`h-4 w-4 rounded-full border ${(block.variant ?? "orange") === variant ? "border-ink ring-1 ring-ink" : "border-line"}`}
+                        style={{ background: color }}
+                      />
+                    ))}
+                  </div>
+                  <AutoTextarea
+                    value={block.text ?? ""}
+                    onChange={(v) => setBlock(i, { text: v })}
+                    placeholder="Titre de l'encadré (1re ligne), puis contenu — une info par ligne…"
+                    className="w-full resize-none bg-transparent font-serif text-[15px] leading-relaxed text-ink outline-none placeholder:text-ink-3"
+                  />
+                </div>
+              ) : block.type === "kpi" ? (
+                <div className="rounded-md bg-ink p-4">
+                  <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[#F5C24B]">
+                    Barre de chiffres clés — une ligne « Libellé | Valeur »
+                  </div>
+                  <AutoTextarea
+                    value={block.text ?? ""}
+                    onChange={(v) => setBlock(i, { text: v })}
+                    placeholder={"Taux national 2026 | 40,60 %\nAdmis | 122 360 / 301 364"}
+                    className="w-full resize-none bg-transparent font-mono text-[13px] leading-relaxed text-white outline-none placeholder:text-white/40"
+                  />
+                </div>
+              ) : block.type === "note" ? (
+                <div className="rounded-md border border-dashed border-green bg-[rgba(0,102,51,0.05)] p-4">
+                  <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-green">
+                    Note de vérification des sources
+                  </div>
+                  <AutoTextarea
+                    value={block.text ?? ""}
+                    onChange={(v) => setBlock(i, { text: v })}
+                    placeholder="Chiffres confirmés par l'AIP, Abidjan.net, RTI — multisources convergentes."
+                    className="w-full resize-none bg-transparent text-[13.5px] leading-relaxed text-[#2a5a2a] outline-none placeholder:text-ink-3"
+                  />
+                </div>
               ) : (
                 <div className="rounded-[10px] border border-dashed border-line bg-surface-2 p-4">
                   <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">

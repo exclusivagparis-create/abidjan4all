@@ -6,7 +6,25 @@ type Block = {
   cite?: string;
   url?: string;
   alt?: string;
+  variant?: string;
 };
+
+/** Teintes des encadrés (callout) — reprises du modèle éditorial. */
+const CALLOUT_TINT: Record<string, { border: string; bg: string; head: string }> = {
+  orange: { border: "#F47920", bg: "rgba(244,121,32,0.07)", head: "#c85d10" },
+  blue: { border: "#1a3a5c", bg: "rgba(26,58,92,0.07)", head: "#1a3a5c" },
+  teal: { border: "#006e5a", bg: "rgba(0,110,90,0.07)", head: "#006e5a" },
+  red: { border: "#a01520", bg: "rgba(160,21,32,0.06)", head: "#a01520" },
+  green: { border: "#006633", bg: "rgba(0,102,51,0.07)", head: "#006633" },
+  purple: { border: "#7C3A8C", bg: "rgba(124,58,140,0.07)", head: "#7C3A8C" },
+};
+
+/** Un encadré peut porter un titre en première ligne « Titre | corps… ». */
+function splitHeading(text: string): { heading?: string; body: string } {
+  const nl = text.indexOf("\n");
+  if (nl > 0 && nl < 80) return { heading: text.slice(0, nl).trim(), body: text.slice(nl + 1).trim() };
+  return { body: text };
+}
 
 /**
  * Rendu des blocs WYSIWYG (`Article.body`) — style éditorial du modèle
@@ -62,12 +80,60 @@ export function ArticleBody({ blocks, dropCap = true }: { blocks: unknown; dropC
                 ) : null}
               </blockquote>
             );
-          case "callout":
+          case "callout": {
+            const tint = CALLOUT_TINT[block.variant ?? "orange"] ?? CALLOUT_TINT.orange!;
+            const { heading, body } = splitHeading(block.text ?? "");
             return (
               <div
                 key={i}
-                className="my-8 rounded-r-md border-l-4 border-[#F47920] bg-[rgba(244,121,32,0.07)] px-6 py-5 font-serif text-[15.5px] leading-relaxed text-ink"
+                className="my-8 rounded-r-md border-l-4 px-6 py-5"
+                style={{ borderColor: tint.border, background: tint.bg }}
               >
+                {heading ? (
+                  <div
+                    className="mb-2.5 text-[12.5px] font-bold uppercase tracking-[0.1em]"
+                    style={{ color: tint.head }}
+                  >
+                    {heading}
+                  </div>
+                ) : null}
+                {body.split("\n").map((line, k) => (
+                  <p key={k} className="mb-1.5 font-serif text-[15px] leading-relaxed text-ink last:mb-0">
+                    {line}
+                  </p>
+                ))}
+              </div>
+            );
+          }
+          case "kpi": {
+            // barre de chiffres clés (modèle : fond sombre, labels orange).
+            // une ligne « Label | Valeur » par item.
+            const items = (block.text ?? "")
+              .split("\n")
+              .map((l) => l.split("|").map((s) => s.trim()))
+              .filter((pair) => pair[0]);
+            if (items.length === 0) return null;
+            return (
+              <div key={i} className="my-8 flex flex-wrap gap-x-10 gap-y-4 rounded-md bg-ink px-7 py-6">
+                {items.map(([label, value], k) => (
+                  <div key={k}>
+                    <div className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#F5C24B]">
+                      {label}
+                    </div>
+                    <div className="text-[15px] font-bold leading-tight text-bg">{value ?? ""}</div>
+                  </div>
+                ))}
+              </div>
+            );
+          }
+          case "note":
+            // note de vérification des sources (modèle : vert à tirets).
+            return (
+              <div
+                key={i}
+                className="my-6 rounded-md border border-dashed border-[#006633] bg-[rgba(0,102,51,0.05)] px-5 py-3.5 text-[13.5px] leading-relaxed text-[#2a5a2a]"
+              >
+                <strong className="font-bold text-[#006633]">✅ Vérification : </strong>
                 {block.text}
               </div>
             );
