@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { confirmPaydunyaInvoice, verifyPaydunyaHash, verifyWebhookSignature } from "@a4a/payments";
+import {
+  confirmPaydunyaInvoice,
+  verifyPaydunyaHash,
+  verifyStripeSignature,
+  verifyWebhookSignature,
+} from "@a4a/payments";
 import { apiError } from "@/lib/api";
 import { failPayment, fulfillPayment } from "@/lib/billing";
 
@@ -27,6 +32,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   const rawBody = await request.text();
 
   if (provider === "paydunya") return handlePaydunyaIpn(rawBody);
+  if (provider === "stripe") return handleStripeEvent(rawBody, request.headers.get("stripe-signature"));
 
   const secret = process.env.PAYMENTS_WEBHOOK_SECRET;
   if (secret) {
@@ -92,4 +98,40 @@ async function handlePaydunyaIpn(rawBody: string) {
   }
   // pending : on accuse réception, l'IPN final arrivera plus tard
   return Response.json({ received: true, pending: true });
+}
+
+/** Événements Stripe : signature obligatoire, fulfillment sur session complétée. */
+async function handleStripeEvent(rawBody: string, signatureHeader: string | null) {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) {
+    console.warn("[webhook:stripe] STRIPE_WEBHOOK_SECRET absent — événement refusé");
+    return apiError("not_configured", "Webhook Stripe non configuré.", 503);
+  }
+  const verdict = verifyStripeSignature(rawBody, signatureHeader, secret);
+  if (!verdict.ok) {
+    console.warn(`[webhook:stripe] rejeté — ${verdict.reason}`);
+    return apiError("invalid_signature", "Signature Stripe invalide.", 401);
+  }
+
+  let event: { type?: string; data?: { object?: { id?: string } } };
+  try {
+    event = JSON.parse(rawBody);
+  } catch {
+    return apiError("invalid_input", "Événement illisible.", 400);
+  }
+  const sessionId = event.data?.object?.id;
+  if (!event.type || !sessionId) return apiError("invalid_input", "Événement incomplet.", 400);
+
+  if (event.type === "checkout.session.completed") {
+    const result = await fulfillPayment(sessionId);
+    if (!result.ok) return apiError("fulfillment_failed", result.error, 422);
+    console.log(`[webhook:stripe] paiement confirmé — facture ${result.invoiceNumber}`);
+    return Response.json({ received: true, invoice: result.invoiceNumber });
+  }
+  if (event.type === "checkout.session.expired" || event.type === "checkout.session.async_payment_failed") {
+    await failPayment(sessionId);
+    return Response.json({ received: true });
+  }
+  // autres événements : accusé de réception sans action
+  return Response.json({ received: true, ignored: event.type });
 }

@@ -233,13 +233,106 @@ export function verifyPaydunyaHash(hash: string | null | undefined): boolean {
   return hash.trim().toLowerCase() === expected.toLowerCase();
 }
 
-/** Sélection du prestataire actif (PAYMENT_PROVIDER=paydunya | mock). */
+// ---------------------------------------------------------------------------
+// Stripe — Checkout Sessions (carte / PayPal, diaspora hors zone Mobile Money)
+// Appels REST directs (pas de SDK) : XOF est une devise zéro-décimale chez
+// Stripe, le montant part tel quel.
+// ---------------------------------------------------------------------------
+
+export const stripeProvider: PaymentProvider = {
+  id: "stripe",
+  async createCheckout(request) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) throw new Error("STRIPE_SECRET_KEY manquante.");
+
+    const form = new URLSearchParams({
+      mode: "payment",
+      customer_email: request.customerEmail,
+      success_url: publicUrl(request.returnUrl),
+      cancel_url: publicUrl("/abonnement"),
+      "line_items[0][quantity]": "1",
+      "line_items[0][price_data][currency]": "xof",
+      "line_items[0][price_data][unit_amount]": String(request.amount),
+      "line_items[0][price_data][product_data][name]": "Abonnement A4A+ — Abidjan4All",
+      "metadata[paymentId]": request.paymentId,
+      "metadata[method]": request.method,
+    });
+
+    const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" },
+      body: form.toString(),
+    });
+    const json = (await res.json().catch(() => ({}))) as {
+      id?: string;
+      url?: string;
+      error?: { message?: string };
+    };
+    if (!res.ok || !json.id || !json.url) {
+      throw new Error(`Stripe create a échoué (HTTP ${res.status}) : ${json.error?.message ?? "réponse inattendue"}`);
+    }
+    return { provider: "stripe", providerRef: json.id, checkoutUrl: json.url };
+  },
+};
+
+/**
+ * Vérifie l'en-tête Stripe-Signature (`t=…,v1=…`) : HMAC-SHA256 de
+ * `${t}.${corps brut}` avec STRIPE_WEBHOOK_SECRET, anti-rejeu 5 min.
+ */
+export function verifyStripeSignature(
+  rawBody: string,
+  header: string | null,
+  secret: string,
+  nowS = Math.floor(Date.now() / 1000)
+): WebhookVerification {
+  if (!header) return { ok: false, reason: "en-tête Stripe-Signature absent" };
+  const parts = new Map(
+    header.split(",").map((p) => {
+      const [k, ...v] = p.split("=");
+      return [k?.trim() ?? "", v.join("=")] as const;
+    })
+  );
+  const t = Number(parts.get("t"));
+  const v1 = parts.get("v1");
+  if (!Number.isFinite(t) || !v1) return { ok: false, reason: "en-tête Stripe-Signature illisible" };
+  if (Math.abs(nowS - t) > WEBHOOK_TOLERANCE_S) return { ok: false, reason: "timestamp hors fenêtre (rejeu ?)" };
+
+  const expected = createHmac("sha256", secret).update(`${t}.${rawBody}`).digest();
+  let provided: Buffer;
+  try {
+    provided = Buffer.from(v1, "hex");
+  } catch {
+    return { ok: false, reason: "signature illisible" };
+  }
+  if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+    return { ok: false, reason: "signature invalide" };
+  }
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Sélection du prestataire
+// ---------------------------------------------------------------------------
+
+/** Prestataire par défaut (PAYMENT_PROVIDER=paydunya | mock). */
 export function getProvider(): PaymentProvider {
   if (process.env.PAYMENT_PROVIDER?.toLowerCase() === "paydunya") return paydunyaProvider;
   return mockProvider;
 }
-// TODO(DF-03 prod) : stripeProvider (STRIPE_SECRET_KEY, Checkout Sessions)
-// pour les paiements internationaux hors zone XOF.
+
+/**
+ * Routage par moyen de paiement : MoMo/Orange → PayDunya ; carte/PayPal →
+ * Stripe dès que STRIPE_SECRET_KEY est configurée (diaspora hors zone FCFA),
+ * sinon PayDunya prend aussi la carte. Sans PAYMENT_PROVIDER : mock (dev).
+ */
+export function getProviderForMethod(method: PaymentMethodId): PaymentProvider {
+  const base = getProvider();
+  if (base.id === "mock") return base;
+  if ((method === "card" || method === "paypal") && process.env.STRIPE_SECRET_KEY) {
+    return stripeProvider;
+  }
+  return base;
+}
 
 // ---------------------------------------------------------------------------
 // Signature des webhooks

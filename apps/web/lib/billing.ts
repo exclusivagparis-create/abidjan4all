@@ -1,5 +1,5 @@
 import { prisma } from "@a4a/db";
-import { getProvider, planById, type PaymentMethodId, type PlanId } from "@a4a/payments";
+import { getProviderForMethod, planById, type PaymentMethodId, type PlanId } from "@a4a/payments";
 
 /**
  * Abonnement payant en cours de validité (paywall, espace membre).
@@ -33,18 +33,19 @@ export async function startCheckout(
     update: { method },
   });
 
+  const provider = getProviderForMethod(method);
   const payment = await prisma.payment.create({
     data: {
       subscriptionId: subscription.id,
       amount: plan.price,
       currency: "XOF",
-      provider: getProvider().id,
+      provider: provider.id,
       providerRef: "", // renseignée juste après par la session prestataire
       status: "pending",
     },
   });
 
-  const session = await getProvider().createCheckout({
+  const session = await provider.createCheckout({
     paymentId: payment.id,
     amount: plan.price,
     currency: "XOF",
