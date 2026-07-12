@@ -17,12 +17,22 @@ export async function POST(request: Request) {
   const parsed = SubscribeInput.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return apiError("invalid_input", "Offre ou moyen de paiement invalide.", 400);
 
-  const { checkoutUrl } = await startCheckout(
-    session.user.id,
-    session.user.email ?? "",
-    parsed.data.plan,
-    parsed.data.method
-  );
+  let checkoutUrl: string;
+  try {
+    ({ checkoutUrl } = await startCheckout(
+      session.user.id,
+      session.user.email ?? "",
+      parsed.data.plan,
+      parsed.data.method
+    ));
+  } catch (e) {
+    console.error(`[billing] checkout ${parsed.data.method} refusé :`, e);
+    return apiError(
+      "provider_error",
+      "Ce moyen de paiement est momentanément indisponible — réessayez ou choisissez-en un autre.",
+      502
+    );
+  }
   const subscription = await prisma.subscription.findUnique({ where: { userId: session.user.id } });
   return Response.json({ subscription, checkoutUrl });
 }

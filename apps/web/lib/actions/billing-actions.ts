@@ -18,12 +18,21 @@ export async function subscribeAction(formData: FormData): Promise<void> {
     redirect("/abonnement"); // saisie hors formulaire officiel
   }
 
-  const { checkoutUrl } = await startCheckout(
-    session.user.id,
-    session.user.email ?? "",
-    plan as Exclude<PlanId, "corporate">,
-    method
-  );
+  // Un refus du PSP (moyen non activé, panne…) ne doit pas finir en 500 :
+  // retour à /abonnement avec un message. redirect() lance une exception
+  // interne Next — il reste hors du try.
+  let checkoutUrl: string | null = null;
+  try {
+    ({ checkoutUrl } = await startCheckout(
+      session.user.id,
+      session.user.email ?? "",
+      plan as Exclude<PlanId, "corporate">,
+      method
+    ));
+  } catch (e) {
+    console.error(`[billing] checkout ${method} refusé :`, e);
+  }
+  if (!checkoutUrl) redirect(`/abonnement?indisponible=${method}`);
   redirect(checkoutUrl);
 }
 

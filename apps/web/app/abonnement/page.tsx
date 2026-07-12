@@ -11,9 +11,9 @@ export const dynamic = "force-dynamic";
 export default async function AbonnementPage({
   searchParams,
 }: {
-  searchParams: Promise<{ echec?: string }>;
+  searchParams: Promise<{ echec?: string; indisponible?: string }>;
 }) {
-  const [{ echec }, session] = await Promise.all([searchParams, auth()]);
+  const [{ echec, indisponible }, session] = await Promise.all([searchParams, auth()]);
 
   return (
     <div className="min-h-screen bg-bg text-ink">
@@ -32,6 +32,12 @@ export default async function AbonnementPage({
           {echec ? (
             <p className="mx-auto mt-4 max-w-[420px] rounded-md bg-[rgba(214,40,45,0.1)] px-4 py-2.5 text-[13px] font-semibold text-red">
               Le paiement n&apos;a pas abouti — aucun montant n&apos;a été débité. Vous pouvez réessayer.
+            </p>
+          ) : null}
+          {indisponible ? (
+            <p className="mx-auto mt-4 max-w-[440px] rounded-md bg-[rgba(232,100,26,0.1)] px-4 py-2.5 text-[13px] font-semibold text-orange">
+              Ce moyen de paiement est momentanément indisponible — aucun montant n&apos;a été débité.
+              Choisissez-en un autre ou réessayez plus tard.
             </p>
           ) : null}
         </div>
