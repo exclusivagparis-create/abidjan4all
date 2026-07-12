@@ -5,10 +5,9 @@ abidjan4all.info {
 	encode gzip
 }
 
-# À activer quand l'enregistrement DNS www existera :
-# www.abidjan4all.info {
-# 	redir https://abidjan4all.info{uri} permanent
-# }
+www.abidjan4all.info {
+	redir https://abidjan4all.info{uri} permanent
+}
 
 # Accès direct par IP (recette/debug) — HTTP simple, pas de certificat possible.
 http://212.227.205.163 {
