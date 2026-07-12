@@ -239,11 +239,22 @@ export function verifyPaydunyaHash(hash: string | null | undefined): boolean {
 // Stripe, le montant part tel quel.
 // ---------------------------------------------------------------------------
 
+/** Parité fixe UEMOA : 1 EUR = 655,957 XOF (le XOF est arrimé à l'euro). */
+export const XOF_PER_EUR = 655.957;
+
 export const stripeProvider: PaymentProvider = {
   id: "stripe",
   async createCheckout(request) {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error("STRIPE_SECRET_KEY manquante.");
+
+    // PayPal ne supporte pas le XOF : la session part en euros à la parité
+    // fixe (Payment.amount reste en XOF, le fulfillment n'y voit que du feu).
+    const paypal = request.method === "paypal";
+    const currency = paypal ? "eur" : "xof";
+    const unitAmount = paypal
+      ? Math.round((request.amount / XOF_PER_EUR) * 100) // centimes d'euro
+      : request.amount; // XOF : zéro-décimale
 
     const form = new URLSearchParams({
       mode: "payment",
@@ -251,12 +262,14 @@ export const stripeProvider: PaymentProvider = {
       success_url: publicUrl(request.returnUrl),
       cancel_url: publicUrl("/abonnement"),
       "line_items[0][quantity]": "1",
-      "line_items[0][price_data][currency]": "xof",
-      "line_items[0][price_data][unit_amount]": String(request.amount),
-      "line_items[0][price_data][product_data][name]": "Abonnement A4A+ — Abidjan4All",
+      "line_items[0][price_data][currency]": currency,
+      "line_items[0][price_data][unit_amount]": String(unitAmount),
+      "line_items[0][price_data][product_data][name]": `Abonnement A4A+ — Abidjan4All (${formatXOF(request.amount)})`,
       "metadata[paymentId]": request.paymentId,
       "metadata[method]": request.method,
+      "metadata[amount_xof]": String(request.amount),
     });
+    if (paypal) form.set("payment_method_types[0]", "paypal");
 
     const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
