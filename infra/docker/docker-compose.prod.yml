@@ -31,6 +31,8 @@ services:
     ports:
       - "3000:3000" # accès direct hors TLS (recette) — le public passe par caddy
     env_file: ../../.env
+    volumes:
+      - a4a_uploads:/data/uploads # médiathèque : survit aux redéploiements
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -75,3 +77,4 @@ volumes:
   a4a_redisdata_prod:
   a4a_caddy_data:
   a4a_caddy_config:
+  a4a_uploads:

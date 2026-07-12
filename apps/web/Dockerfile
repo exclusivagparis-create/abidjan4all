@@ -73,6 +73,11 @@ COPY --from=builder --chown=a4a:a4a /app/apps/web/public ./apps/web/public
 RUN ln -s /app/node_modules/.prisma /app/apps/web/.prisma
 ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node
 
+# Médiathèque : répertoire d'uploads persistant (volume compose) — créé avec
+# le bon propriétaire pour que le volume nommé en hérite au premier montage.
+RUN mkdir -p /data/uploads && chown -R a4a:a4a /data
+ENV UPLOADS_DIR=/data/uploads
+
 USER a4a
 EXPOSE 3000
 ENV PORT=3000 HOSTNAME=0.0.0.0

@@ -9,11 +9,12 @@ import { auth, STUDIO_ROLES } from "@/auth";
 export type MediaResult = { ok: true } | { ok: false; error: string };
 
 /**
- * Stockage local (public/uploads) pour le développement.
- * TODO(infra) : adaptateur S3 IONOS Object Storage + CDN via services/,
+ * Stockage fichiers : UPLOADS_DIR (volume Docker persistant en production,
+ * servi par la route /uploads/[name]) — repli public/uploads en dev, où Next
+ * les sert statiquement. TODO(infra) : adaptateur S3 IONOS Object Storage,
  * variables S3_ENDPOINT/S3_BUCKET/S3_KEY/S3_SECRET du README.
  */
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
+const UPLOAD_DIR = process.env.UPLOADS_DIR ?? path.join(process.cwd(), "public", "uploads");
 const MAX_SIZE = 8 * 1024 * 1024; // 8 Mo
 
 const MIME_EXT: Record<string, { ext: string; type: MediaType }> = {
@@ -74,7 +75,7 @@ export async function deleteMedia(id: string): Promise<MediaResult> {
 
   await prisma.mediaAsset.delete({ where: { id } });
   if (asset.url.startsWith("/uploads/")) {
-    await unlink(path.join(process.cwd(), "public", asset.url)).catch(() => {});
+    await unlink(path.join(UPLOAD_DIR, path.basename(asset.url))).catch(() => {});
   }
   revalidatePath("/admin/media");
   return { ok: true };
