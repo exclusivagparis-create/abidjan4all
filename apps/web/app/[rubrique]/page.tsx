@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { AdSlot } from "@/components/ad-slot";
 import { PlaceholderMedia } from "@/components/placeholder-media";
 import { articleListSelect } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -49,6 +50,8 @@ export default async function RubriquePage({ params }: Props) {
             {articles.length} article{articles.length > 1 ? "s" : ""}
           </span>
         </div>
+
+        <AdSlot rubrique={rubrique.slug} />
 
         {articles.length === 0 ? (
           <p className="py-16 text-center font-serif text-lg text-ink-3">

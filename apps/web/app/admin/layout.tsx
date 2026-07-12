@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@a4a/db";
-import { auth, STUDIO_ROLES } from "@/auth";
+import { auth, PUBLISH_ROLES, STUDIO_ROLES } from "@/auth";
 import { AdminNavLink, type NavItem } from "@/components/admin/admin-nav";
 import { logout } from "@/lib/actions/auth-actions";
 import { initials } from "@/lib/format";
@@ -28,7 +28,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Tableau de bord", href: "/admin", icon: "▦" },
     { label: "Articles", href: "/admin/articles", icon: "≣", badge: reviewCount },
     { label: "Médiathèque", href: "/admin/media", icon: "▤" },
-    { label: "Rubriques", icon: "◫" },
+    {
+      label: "Rubriques",
+      href: PUBLISH_ROLES.includes(user.role as (typeof PUBLISH_ROLES)[number]) ? "/admin/rubriques" : undefined,
+      icon: "◫",
+    },
     { label: "Live-blog", href: "/admin/live", icon: "◉" },
   ];
   // Facturation et audience : liens actifs pour l'administration seulement.
@@ -36,10 +40,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const communaute: NavItem[] = [
     { label: "Commentaires", href: "/admin/comments", icon: "◎", badge: pendingComments, badgeColor: "var(--orange)" },
     { label: "Abonnés A4A+", href: isAdmin ? "/admin/subscribers" : undefined, icon: "◍" },
-    { label: "Utilisateurs", icon: "☺" },
+    { label: "Utilisateurs", href: isAdmin ? "/admin/users" : undefined, icon: "☺" },
   ];
   const business: NavItem[] = [
-    { label: "Régie publicitaire", icon: "◈" },
+    { label: "Régie publicitaire", href: isAdmin ? "/admin/ads" : undefined, icon: "◈" },
     { label: "Statistiques", href: isAdmin ? "/admin/stats" : undefined, icon: "▲" },
   ];
 

@@ -156,6 +156,37 @@ async function main() {
     }),
   ]);
 
+  // ---- Régie publicitaire (démonstration — encart AdSlot sur les rubriques)
+  await Promise.all([
+    prisma.adCampaign.create({
+      data: {
+        advertiser: "Air Côte d'Ivoire",
+        format: "leaderboard_728x90",
+        cpm: 2500,
+        headline: "Abidjan–Paris : vols directs dès 450 000 FCFA",
+        linkUrl: "https://www.aircotedivoire.com",
+        targeting: { rubriques: ["cacao-marches", "economie", "business"], geo: ["CI", "FR"] },
+        startAt: new Date("2026-07-01T00:00:00Z"),
+        endAt: new Date("2026-09-30T00:00:00Z"),
+        status: "active",
+        impressions: 12480,
+        clicks: 187,
+      },
+    }),
+    prisma.adCampaign.create({
+      data: {
+        advertiser: "SIB — Société Ivoirienne de Banque",
+        format: "native",
+        cpm: 1800,
+        headline: "Épargnez en FCFA depuis la diaspora",
+        targeting: { rubriques: ["diaspora"], geo: ["FR", "CA", "US"] },
+        startAt: new Date("2026-08-01T00:00:00Z"),
+        endAt: new Date("2026-10-31T00:00:00Z"),
+        status: "draft",
+      },
+    }),
+  ]);
+
   // abonné A4A+ Essentiel avec un paiement et sa facture
   const sub = await prisma.subscription.create({
     data: {
