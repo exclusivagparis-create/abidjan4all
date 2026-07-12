@@ -36,9 +36,11 @@ ENV DOCKER_BUILD=1
 ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
 ARG NEXT_PUBLIC_GA4_ID
-ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
-    NEXT_PUBLIC_VAPID_PUBLIC_KEY=$NEXT_PUBLIC_VAPID_PUBLIC_KEY \
-    NEXT_PUBLIC_GA4_ID=$NEXT_PUBLIC_GA4_ID
+# Repli localhost si l'arg est vide (cible migrate, CI) : une chaîne vide
+# n'est pas nullish et casserait new URL() pendant le build.
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-http://localhost:3000} \
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-} \
+    NEXT_PUBLIC_GA4_ID=${NEXT_PUBLIC_GA4_ID:-}
 RUN pnpm --filter @a4a/web build
 
 # La sortie standalone ne trace pas le client Prisma généré (pnpm + monorepo,
