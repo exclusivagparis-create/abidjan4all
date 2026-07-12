@@ -115,20 +115,137 @@ export const mockProvider: PaymentProvider = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// PayDunya — API Checkout-invoice (MoMo / Orange Money / carte, XOF)
+// Format d'après la librairie officielle paydunya-node : en-têtes
+// PAYDUNYA-MASTER-KEY / PAYDUNYA-PRIVATE-KEY / PAYDUNYA-TOKEN,
+// POST {base}/checkout-invoice/create, GET {base}/checkout-invoice/confirm/:token.
+// ---------------------------------------------------------------------------
+
+function paydunyaBase(): string {
+  return process.env.PAYDUNYA_MODE?.toLowerCase() === "test"
+    ? "https://app.paydunya.com/sandbox-api/v1"
+    : "https://app.paydunya.com/api/v1";
+}
+
+function paydunyaHeaders(): Record<string, string> {
+  const master = process.env.PAYDUNYA_MASTER_KEY;
+  const priv = process.env.PAYDUNYA_PRIVATE_KEY;
+  const token = process.env.PAYDUNYA_TOKEN;
+  if (!master || !priv || !token) {
+    throw new Error("PAYDUNYA_MASTER_KEY / PAYDUNYA_PRIVATE_KEY / PAYDUNYA_TOKEN manquants.");
+  }
+  return {
+    "PAYDUNYA-MASTER-KEY": master,
+    "PAYDUNYA-PRIVATE-KEY": priv,
+    "PAYDUNYA-TOKEN": token,
+    "Content-Type": "application/json",
+  };
+}
+
+/** Domaine public absolu — PayDunya exige des URLs complètes. */
+function publicUrl(path: string): string {
+  const site = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
+  if (!site) throw new Error("NEXT_PUBLIC_SITE_URL requis pour les URLs de retour PayDunya.");
+  return path.startsWith("http") ? path : `${site}${path}`;
+}
+
+export const paydunyaProvider: PaymentProvider = {
+  id: "paydunya",
+  async createCheckout(request) {
+    const body = {
+      invoice: {
+        total_amount: request.amount,
+        description: `Abonnement A4A+ — Abidjan4All (${request.customerEmail})`,
+      },
+      store: {
+        name: "Abidjan4All — Exclusiv'AG",
+        website_url: publicUrl("/"),
+      },
+      actions: {
+        return_url: publicUrl(request.returnUrl),
+        cancel_url: publicUrl("/abonnement"),
+        callback_url: publicUrl("/api/v1/webhooks/payments/paydunya"),
+      },
+      custom_data: { paymentId: request.paymentId, method: request.method },
+    };
+
+    const res = await fetch(`${paydunyaBase()}/checkout-invoice/create`, {
+      method: "POST",
+      headers: paydunyaHeaders(),
+      body: JSON.stringify(body),
+    });
+    const json = (await res.json().catch(() => ({}))) as {
+      response_code?: string;
+      response_text?: string;
+      description?: string;
+      token?: string;
+    };
+    if (!res.ok || json.response_code !== "00" || !json.token || !json.response_text) {
+      throw new Error(
+        `PayDunya create a échoué (HTTP ${res.status}, code ${json.response_code ?? "?"}) : ${json.response_text ?? json.description ?? "réponse inattendue"}`
+      );
+    }
+    return {
+      provider: "paydunya",
+      providerRef: json.token, // le token de facture — reçu ensuite par l'IPN
+      checkoutUrl: json.response_text, // page de paiement hébergée PayDunya
+    };
+  },
+};
+
+export type PaydunyaConfirmation = {
+  status: "completed" | "pending" | "cancelled";
+  totalAmount: number;
+  receiptUrl?: string;
+};
+
 /**
- * TODO(DF-03 prod) : paydunyaProvider (PAYDUNYA_MASTER_KEY/PRIVATE_KEY/TOKEN,
- * API Checkout-invoice) et stripeProvider (STRIPE_SECRET_KEY, Checkout Sessions).
- * Sélection par variable d'environnement PAYMENT_PROVIDER.
+ * Vérité serveur-à-serveur sur une facture PayDunya : l'IPN ne fait jamais
+ * foi seul, le statut est toujours confirmé auprès de l'API.
  */
+export async function confirmPaydunyaInvoice(token: string): Promise<PaydunyaConfirmation> {
+  const res = await fetch(`${paydunyaBase()}/checkout-invoice/confirm/${encodeURIComponent(token)}`, {
+    headers: paydunyaHeaders(),
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    response_code?: string;
+    status?: string;
+    invoice?: { total_amount?: number | string };
+    receipt_url?: string;
+  };
+  if (!res.ok || json.response_code !== "00" || !json.status) {
+    throw new Error(`PayDunya confirm a échoué (HTTP ${res.status}, code ${json.response_code ?? "?"}).`);
+  }
+  const status = json.status === "completed" || json.status === "cancelled" ? json.status : "pending";
+  return {
+    status,
+    totalAmount: Number(json.invoice?.total_amount ?? 0),
+    receiptUrl: json.receipt_url,
+  };
+}
+
+/** L'IPN PayDunya signe avec data[hash] = SHA-512 hexadécimal du master key. */
+export function verifyPaydunyaHash(hash: string | null | undefined): boolean {
+  const master = process.env.PAYDUNYA_MASTER_KEY;
+  if (!master || !hash) return false;
+  const expected = createHash("sha512").update(master).digest("hex");
+  return hash.trim().toLowerCase() === expected.toLowerCase();
+}
+
+/** Sélection du prestataire actif (PAYMENT_PROVIDER=paydunya | mock). */
 export function getProvider(): PaymentProvider {
+  if (process.env.PAYMENT_PROVIDER?.toLowerCase() === "paydunya") return paydunyaProvider;
   return mockProvider;
 }
+// TODO(DF-03 prod) : stripeProvider (STRIPE_SECRET_KEY, Checkout Sessions)
+// pour les paiements internationaux hors zone XOF.
 
 // ---------------------------------------------------------------------------
 // Signature des webhooks
 // ---------------------------------------------------------------------------
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 /** Fenêtre de validité d'un webhook signé (anti-rejeu). */
 export const WEBHOOK_TOLERANCE_S = 300;

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { verifyWebhookSignature } from "@a4a/payments";
+import { confirmPaydunyaInvoice, verifyPaydunyaHash, verifyWebhookSignature } from "@a4a/payments";
 import { apiError } from "@/lib/api";
 import { failPayment, fulfillPayment } from "@/lib/billing";
 
@@ -11,12 +11,12 @@ const WebhookInput = z.object({
 /**
  * POST /api/v1/webhooks/payments/:provider — met à jour Subscription/Payment (contrat).
  *
- * Signature : schéma générique HMAC-SHA256 (`x-a4a-signature` hexadécimal sur
- * `${x-a4a-timestamp}.${corps brut}`, fenêtre anti-rejeu 5 min) exigé dès que
- * PAYMENTS_WEBHOOK_SECRET est renseigné ; sans secret (dev), passage avec
- * avertissement. TODO(prod) : brancher le schéma natif de chaque PSP dans son
- * adaptateur @a4a/payments (PayDunya : hash SHA-512 du master key ; Stripe :
- * en-tête Stripe-Signature).
+ * - `paydunya` : IPN form-encodé (`data[...]`), hash SHA-512 du master key
+ *   vérifié, puis statut TOUJOURS reconfirmé serveur-à-serveur via l'API
+ *   confirm/:token — l'IPN seul ne fait jamais foi.
+ * - autres : schéma générique HMAC-SHA256 (`x-a4a-signature` sur
+ *   `${x-a4a-timestamp}.${corps brut}`, anti-rejeu 5 min) exigé dès que
+ *   PAYMENTS_WEBHOOK_SECRET est renseigné. TODO(prod) : Stripe-Signature.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ provider: string }> }) {
   const { provider } = await params;
@@ -25,6 +25,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   }
 
   const rawBody = await request.text();
+
+  if (provider === "paydunya") return handlePaydunyaIpn(rawBody);
 
   const secret = process.env.PAYMENTS_WEBHOOK_SECRET;
   if (secret) {
@@ -61,4 +63,33 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
 
   await failPayment(parsed.data.providerRef);
   return Response.json({ received: true });
+}
+
+/** IPN PayDunya : form-encodé `data[hash]`, `data[invoice][token]`, `data[status]`… */
+async function handlePaydunyaIpn(rawBody: string) {
+  const form = new URLSearchParams(rawBody);
+  const hash = form.get("data[hash]") ?? form.get("hash");
+  if (!verifyPaydunyaHash(hash)) {
+    console.warn("[webhook:paydunya] rejeté — hash SHA-512 du master key invalide ou absent");
+    return apiError("invalid_signature", "Signature IPN invalide.", 401);
+  }
+
+  const token = form.get("data[invoice][token]") ?? form.get("data[token]") ?? form.get("invoice[token]");
+  if (!token) return apiError("invalid_input", "Token de facture absent de l'IPN.", 400);
+
+  // Vérité serveur-à-serveur : on ne croit pas le statut porté par l'IPN.
+  const confirmation = await confirmPaydunyaInvoice(token);
+
+  if (confirmation.status === "completed") {
+    const result = await fulfillPayment(token);
+    if (!result.ok) return apiError("fulfillment_failed", result.error, 422);
+    console.log(`[webhook:paydunya] paiement confirmé — facture ${result.invoiceNumber}`);
+    return Response.json({ received: true, invoice: result.invoiceNumber });
+  }
+  if (confirmation.status === "cancelled") {
+    await failPayment(token);
+    return Response.json({ received: true });
+  }
+  // pending : on accuse réception, l'IPN final arrivera plus tard
+  return Response.json({ received: true, pending: true });
 }
