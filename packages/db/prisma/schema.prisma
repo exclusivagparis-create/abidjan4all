@@ -217,6 +217,17 @@ model Page {
   createdAt DateTime @default(now())
 }
 
+/// Message envoyé via le formulaire de contact public — reçu dans le Studio.
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  body      String
+  handled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
 // ---------------------------------------------------------------------------
 // Éditorial
 // ---------------------------------------------------------------------------

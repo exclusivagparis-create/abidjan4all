@@ -27,6 +27,8 @@ export async function SiteFooter() {
           <Link href="/en-direct" className="hover:text-ink">Nos directs</Link>
           <Link href="/podcasts" className="hover:text-ink">Podcasts</Link>
           <Link href="/groupes" className="hover:text-ink">Groupes</Link>
+          <Link href="/verifie" className="hover:text-ink">A4A Vérifie</Link>
+          <Link href="/contact" className="hover:text-ink">Contact</Link>
           <Link href="/formation" className="hover:text-ink">A4A Formation</Link>
           <Link href="/recherche" className="hover:text-ink">Recherche</Link>
           <Link href="/abonnement" className="hover:text-ink">S&apos;abonner à A4A+</Link>

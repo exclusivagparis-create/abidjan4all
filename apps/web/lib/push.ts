@@ -56,6 +56,22 @@ async function sendToSubscriptions(
 }
 
 /**
+ * Alerte « breaking news » manuelle : notification envoyée à TOUS les
+ * abonnés push (le Studio compose titre, message et destination). Renvoie le
+ * nombre de notifications réellement envoyées.
+ */
+export async function sendBroadcast(payload: { title: string; body: string; url: string }): Promise<number> {
+  if (!pushConfigured) return 0;
+  const subs = await prisma.pushSubscription.findMany({
+    select: { id: true, endpoint: true, p256dh: true, auth: true },
+  });
+  if (subs.length === 0) return 0;
+  const sent = await sendToSubscriptions(subs, payload);
+  console.log(`[push] alerte « ${payload.title} » : ${sent}/${subs.length} notification(s) envoyée(s)`);
+  return sent;
+}
+
+/**
  * Alerte de publication d'un article : abonnés anonymes et comptes sans
  * intérêts reçoivent tout ; les comptes avec intérêts ne reçoivent que
  * leurs rubriques suivies.

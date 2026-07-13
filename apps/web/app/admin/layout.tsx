@@ -33,12 +33,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Nos directs", href: "/admin/live", icon: "◉" },
     { label: "Podcasts", href: canPublish ? "/admin/podcasts" : undefined, icon: "▶" },
     { label: "A4A Formation", href: canPublish ? "/admin/formation" : undefined, icon: "🎓" },
+    { label: "A4A Vérifie", href: canPublish ? "/admin/factchecks" : undefined, icon: "✓" },
     { label: "Pages", href: canPublish ? "/admin/pages" : undefined, icon: "▧" },
+    { label: "Alertes push", href: canPublish ? "/admin/alertes" : undefined, icon: "🔔" },
   ];
   // Facturation et audience : liens actifs pour l'administration seulement.
   const isAdmin = user.role === "admin";
   const communaute: NavItem[] = [
     { label: "Commentaires", href: "/admin/comments", icon: "◎", badge: pendingComments, badgeColor: "var(--orange)" },
+    { label: "Messages", href: canPublish ? "/admin/contact" : undefined, icon: "✍" },
     { label: "Newsletters", href: canPublish ? "/admin/newsletters" : undefined, icon: "✉" },
     { label: "Groupes", href: isAdmin ? "/admin/community" : undefined, icon: "◉" },
     { label: "Abonnés A4A+", href: isAdmin ? "/admin/subscribers" : undefined, icon: "◍" },
