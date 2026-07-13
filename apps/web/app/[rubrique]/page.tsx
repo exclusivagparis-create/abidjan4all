@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { AdSlot } from "@/components/ad-slot";
 import { PlaceholderMedia } from "@/components/placeholder-media";
+import { StaticPageView } from "@/components/static-page-view";
 import { articleListSelect } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 
@@ -16,13 +17,20 @@ type Props = { params: Promise<{ rubrique: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { rubrique: slug } = await params;
   const rubrique = await prisma.rubrique.findUnique({ where: { slug } });
-  return rubrique ? { title: rubrique.name } : {};
+  if (rubrique) return { title: rubrique.name };
+  const page = await prisma.page.findFirst({ where: { slug, published: true }, select: { title: true } });
+  return page ? { title: page.title } : {};
 }
 
 export default async function RubriquePage({ params }: Props) {
   const { rubrique: slug } = await params;
   const rubrique = await prisma.rubrique.findUnique({ where: { slug } });
-  if (!rubrique) notFound();
+  if (!rubrique) {
+    // Repli : une page statique publiée à cette adresse (ex. /mentions-legales).
+    const page = await prisma.page.findFirst({ where: { slug, published: true } });
+    if (page) return <StaticPageView title={page.title} body={page.body} />;
+    notFound();
+  }
 
   const articles = await prisma.article.findMany({
     where: { status: "published", hidden: false, rubriqueId: rubrique.id },

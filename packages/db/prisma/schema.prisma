@@ -202,6 +202,22 @@ model Group {
 }
 
 // ---------------------------------------------------------------------------
+// Pages statiques (À propos, Mentions légales, Contact, CGU, Confidentialité)
+// ---------------------------------------------------------------------------
+
+model Page {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  body      String // HTML nettoyé (éditeur enrichi)
+  published Boolean  @default(true)
+  inFooter  Boolean  @default(true)
+  order     Int      @default(0)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
 // Éditorial
 // ---------------------------------------------------------------------------
 

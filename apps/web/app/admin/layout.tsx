@@ -33,6 +33,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Nos directs", href: "/admin/live", icon: "◉" },
     { label: "Podcasts", href: canPublish ? "/admin/podcasts" : undefined, icon: "▶" },
     { label: "A4A Formation", href: canPublish ? "/admin/formation" : undefined, icon: "🎓" },
+    { label: "Pages", href: canPublish ? "/admin/pages" : undefined, icon: "▧" },
   ];
   // Facturation et audience : liens actifs pour l'administration seulement.
   const isAdmin = user.role === "admin";

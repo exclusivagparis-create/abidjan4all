@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Archivo, Newsreader } from "next/font/google";
 import { ThemeProvider, ThemeScript } from "@a4a/ui";
+import { CookieConsent } from "@/components/cookie-consent";
 import { organizationJsonLd, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
@@ -62,14 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd()) }}
         />
         <ThemeProvider>{children}</ThemeProvider>
-        {GA4_ID ? (
-          <>
-            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`} strategy="afterInteractive" />
-            <Script id="ga4" strategy="afterInteractive">
-              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)};gtag('js',new Date());gtag('config','${GA4_ID}');`}
-            </Script>
-          </>
-        ) : null}
+        <CookieConsent ga4Id={GA4_ID} />
       </body>
     </html>
   );
