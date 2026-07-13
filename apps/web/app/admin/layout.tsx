@@ -39,6 +39,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const isAdmin = user.role === "admin";
   const communaute: NavItem[] = [
     { label: "Commentaires", href: "/admin/comments", icon: "◎", badge: pendingComments, badgeColor: "var(--orange)" },
+    { label: "Newsletters", href: canPublish ? "/admin/newsletters" : undefined, icon: "✉" },
     { label: "Groupes", href: isAdmin ? "/admin/community" : undefined, icon: "◉" },
     { label: "Abonnés A4A+", href: isAdmin ? "/admin/subscribers" : undefined, icon: "◍" },
     { label: "Utilisateurs", href: isAdmin ? "/admin/users" : undefined, icon: "☺" },
