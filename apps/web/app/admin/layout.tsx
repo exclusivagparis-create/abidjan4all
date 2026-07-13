@@ -24,21 +24,21 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     prisma.comment.count({ where: { status: "pending" } }),
   ]);
 
+  const canPublish = PUBLISH_ROLES.includes(user.role as (typeof PUBLISH_ROLES)[number]);
   const contenu: NavItem[] = [
     { label: "Tableau de bord", href: "/admin", icon: "▦" },
     { label: "Articles", href: "/admin/articles", icon: "≣", badge: reviewCount },
     { label: "Médiathèque", href: "/admin/media", icon: "▤" },
-    {
-      label: "Rubriques",
-      href: PUBLISH_ROLES.includes(user.role as (typeof PUBLISH_ROLES)[number]) ? "/admin/rubriques" : undefined,
-      icon: "◫",
-    },
-    { label: "Live-blog", href: "/admin/live", icon: "◉" },
+    { label: "Rubriques", href: canPublish ? "/admin/rubriques" : undefined, icon: "◫" },
+    { label: "Nos directs", href: "/admin/live", icon: "◉" },
+    { label: "Podcasts", href: canPublish ? "/admin/podcasts" : undefined, icon: "▶" },
+    { label: "A4A Formation", href: canPublish ? "/admin/formation" : undefined, icon: "🎓" },
   ];
   // Facturation et audience : liens actifs pour l'administration seulement.
   const isAdmin = user.role === "admin";
   const communaute: NavItem[] = [
     { label: "Commentaires", href: "/admin/comments", icon: "◎", badge: pendingComments, badgeColor: "var(--orange)" },
+    { label: "Groupes", href: isAdmin ? "/admin/community" : undefined, icon: "◉" },
     { label: "Abonnés A4A+", href: isAdmin ? "/admin/subscribers" : undefined, icon: "◍" },
     { label: "Utilisateurs", href: isAdmin ? "/admin/users" : undefined, icon: "☺" },
   ];
