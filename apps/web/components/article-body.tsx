@@ -3,6 +3,7 @@ import { PlaceholderMedia } from "./placeholder-media";
 type Block = {
   type: string;
   text?: string;
+  html?: string;
   cite?: string;
   url?: string;
   alt?: string;
@@ -39,6 +40,15 @@ export function ArticleBody({ blocks, dropCap = true }: { blocks: unknown; dropC
     <>
       {(blocks as Block[]).map((block, i) => {
         switch (block.type) {
+          case "richtext":
+            // HTML déjà nettoyé au save (liste blanche serveur) — styles éditoriaux.
+            return (
+              <div
+                key={i}
+                className="mb-[22px] font-serif text-[17.5px] leading-[1.78] text-ink [&_a]:text-blue [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-line [&_blockquote]:pl-4 [&_blockquote]:italic [&_h3]:mt-6 [&_h3]:font-serif [&_h3]:text-[22px] [&_h3]:font-bold [&_h4]:mt-5 [&_h4]:font-serif [&_h4]:text-[19px] [&_h4]:font-semibold [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_table]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-line [&_td]:px-2.5 [&_td]:py-1.5 [&_th]:border [&_th]:border-line [&_th]:bg-surface-2 [&_th]:px-2.5 [&_th]:py-1.5 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6"
+                dangerouslySetInnerHTML={{ __html: block.html ?? "" }}
+              />
+            );
           case "paragraph": {
             const text = block.text ?? "";
             // premier paragraphe = « lead » du modèle : plus grand, semi-gras

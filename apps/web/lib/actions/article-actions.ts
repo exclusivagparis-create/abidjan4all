@@ -5,10 +5,12 @@ import { z } from "zod";
 import { prisma, Prisma, type ArticleStatus } from "@a4a/db";
 import { auth, PUBLISH_ROLES, STUDIO_ROLES } from "@/auth";
 import { sendArticleAlert } from "@/lib/push";
+import { sanitizeArticleHtml } from "@/lib/sanitize-html";
 
 const BlockSchema = z.object({
-  type: z.enum(["paragraph", "h2", "quote", "callout", "image", "kpi", "note"]),
+  type: z.enum(["paragraph", "richtext", "h2", "quote", "callout", "image", "kpi", "note"]),
   text: z.string().optional(),
+  html: z.string().optional(), // bloc « Texte enrichi » (nettoyé au save)
   cite: z.string().optional(),
   url: z.string().optional(),
   alt: z.string().optional(),
@@ -42,10 +44,15 @@ function slugify(title: string): string {
     .slice(0, 80);
 }
 
-/** ~200 mots/min, minimum 1 min. */
+/** Nettoie les blocs « Texte enrichi » (liste blanche HTML) avant stockage. */
+function sanitizeBlocks(blocks: ArticleInput["blocks"]): ArticleInput["blocks"] {
+  return blocks.map((b) => (b.type === "richtext" ? { ...b, html: sanitizeArticleHtml(b.html ?? "") } : b));
+}
+
+/** ~200 mots/min, minimum 1 min. Le HTML enrichi est compté texte nu. */
 function computeReadingTime(blocks: ArticleInput["blocks"]): number {
   const words = blocks
-    .map((b) => b.text ?? "")
+    .map((b) => (b.type === "richtext" ? (b.html ?? "").replace(/<[^>]+>/g, " ") : (b.text ?? "")))
     .join(" ")
     .split(/\s+/)
     .filter(Boolean).length;
@@ -70,7 +77,7 @@ export async function saveArticle(raw: unknown): Promise<ActionResult> {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Saisie invalide." };
   }
-  const input = parsed.data;
+  const input = { ...parsed.data, blocks: sanitizeBlocks(parsed.data.blocks) };
 
   const data = {
     title: input.title,

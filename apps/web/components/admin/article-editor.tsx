@@ -4,13 +4,15 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { ArticleStatus } from "@a4a/db";
 import { saveArticle, setArticleHidden, transitionArticle, type ArticleInput } from "@/lib/actions/article-actions";
+import { RichTextEditor } from "./rich-text-editor";
 import { STATUS_META } from "./status-chip";
 
-type BlockType = "paragraph" | "h2" | "quote" | "callout" | "image" | "kpi" | "note";
+type BlockType = "paragraph" | "richtext" | "h2" | "quote" | "callout" | "image" | "kpi" | "note";
 type CalloutVariant = "orange" | "blue" | "teal" | "red" | "green" | "purple";
 type Block = {
   type: BlockType;
   text?: string;
+  html?: string;
   cite?: string;
   url?: string;
   alt?: string;
@@ -38,7 +40,8 @@ export type RubriqueOption = { id: string; slug: string; name: string; color: st
 export type MediaOption = { id: string; url: string; alt: string | null };
 
 const BLOCK_LABEL: Record<BlockType, string> = {
-  paragraph: "Paragraphe",
+  richtext: "Texte enrichi",
+  paragraph: "Paragraphe simple",
   h2: "Intertitre",
   quote: "Citation",
   callout: "Encadré",
@@ -204,7 +207,9 @@ export function ArticleEditor({
                 <BlockBtn onClick={() => removeBlock(i)} label="✕" />
               </div>
 
-              {block.type === "paragraph" ? (
+              {block.type === "richtext" ? (
+                <RichTextEditor value={block.html ?? ""} onChange={(html) => setBlock(i, { html })} />
+              ) : block.type === "paragraph" ? (
                 <AutoTextarea
                   value={block.text ?? ""}
                   onChange={(v) => setBlock(i, { text: v })}
