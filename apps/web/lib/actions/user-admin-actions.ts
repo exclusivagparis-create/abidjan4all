@@ -6,6 +6,28 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma, type Role } from "@a4a/db";
 import { auth } from "@/auth";
+import { emailConfigured, emailLayout, sendEmail } from "@/lib/email";
+import { SITE_URL } from "@/lib/seo";
+
+/** Jeton de définition de mot de passe (valide 7 jours) + e-mail d'invitation. */
+async function inviteToSetPassword(userId: string, name: string, email: string): Promise<boolean> {
+  const token = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000);
+  await prisma.passwordSetToken.create({ data: { token, userId, expiresAt } });
+
+  const url = `${SITE_URL}/definir-mot-de-passe?token=${token}`;
+  return sendEmail({
+    to: email,
+    subject: "Bienvenue sur Abidjan4All — activez votre compte",
+    html: emailLayout(
+      `Bonjour ${name},`,
+      `<p>Un compte vient d'être créé pour vous sur <b>Abidjan4All</b> (${email}).</p>
+       <p>Pour l'activer, définissez votre mot de passe personnel en cliquant sur le bouton ci-dessous. Ce lien est valable 7 jours.</p>`,
+      { label: "Définir mon mot de passe", url }
+    ),
+    text: `Bonjour ${name}, un compte a été créé pour vous sur Abidjan4All (${email}). Définissez votre mot de passe ici (valable 7 jours) : ${url}`,
+  });
+}
 
 const ASSIGNABLE_ROLES: Role[] = ["reader", "member", "journalist", "editor", "admin", "partner"];
 
@@ -33,7 +55,7 @@ export async function setUserRoleAction(userId: string, formData: FormData): Pro
 }
 
 export type CreateUserResult =
-  | { ok: true; email: string; password: string }
+  | { ok: true; email: string; password?: string; invited: boolean }
   | { ok: false; error: string };
 
 /**
@@ -59,12 +81,18 @@ export async function createUserAction(
     return { ok: false, error: "Un compte existe déjà avec cet email." };
   }
 
+  // Mot de passe initial aléatoire : le compte est valide même sans e-mail,
+  // et l'utilisateur le remplacera via le lien d'invitation.
   const password = randomBytes(9).toString("base64url"); // 12 caractères
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: { name, email, role: role as Role, passwordHash: hashSync(password, 10) },
   });
   revalidatePath("/admin/users");
-  return { ok: true, email, password };
+
+  // E-mail d'invitation si le SMTP est configuré ; sinon repli : mot de passe
+  // initial affiché à l'admin (comportement précédent).
+  const invited = emailConfigured ? await inviteToSetPassword(user.id, name, email) : false;
+  return { ok: true, email, invited, ...(invited ? {} : { password }) };
 }
 
 export type DeleteUserResult = { ok: true } | { ok: false; error: string };

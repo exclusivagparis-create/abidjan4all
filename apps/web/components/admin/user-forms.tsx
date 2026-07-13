@@ -54,13 +54,22 @@ export function CreateUserForm() {
       ) : null}
       {result?.ok ? (
         <div className="mt-3 rounded-md bg-[rgba(14,138,95,0.1)] px-4 py-3 text-[12.5px]">
-          <p className="font-semibold text-green">
-            Compte {result.email} créé. Mot de passe initial (affiché une seule fois — transmettez-le de façon
-            sécurisée) :
-          </p>
-          <code className="mt-1 inline-block rounded bg-surface px-2.5 py-1 font-mono text-[13px] font-bold text-ink">
-            {result.password}
-          </code>
+          {result.invited ? (
+            <p className="font-semibold text-green">
+              Compte {result.email} créé. Un e-mail d&apos;invitation vient d&apos;être envoyé : la personne y
+              définira elle-même son mot de passe (lien valable 7 jours).
+            </p>
+          ) : (
+            <>
+              <p className="font-semibold text-green">
+                Compte {result.email} créé. Mot de passe initial (affiché une seule fois — transmettez-le de façon
+                sécurisée) :
+              </p>
+              <code className="mt-1 inline-block rounded bg-surface px-2.5 py-1 font-mono text-[13px] font-bold text-ink">
+                {result.password}
+              </code>
+            </>
+          )}
         </div>
       ) : null}
     </form>

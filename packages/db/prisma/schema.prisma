@@ -158,6 +158,19 @@ model User {
   enrollments             Enrollment[]
   newsletterSubscriptions NewsletterSubscription[]
   pushSubscriptions       PushSubscription[]
+  passwordSetTokens       PasswordSetToken[]
+}
+
+/// Jeton à usage unique pour définir/réinitialiser son mot de passe
+/// (invitation envoyée par e-mail à la création d'un compte).
+model PasswordSetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
 }
 
 /// Abonnement Web Push (VAPID) — anonyme ou rattaché à un compte pour
