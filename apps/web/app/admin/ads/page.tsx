@@ -1,8 +1,11 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type AdFormat, type AdStatus } from "@a4a/db";
 import { auth } from "@/auth";
-import { createCampaignAction, setCampaignStatusAction } from "@/lib/actions/ad-actions";
+import { createCampaignAction, deleteCampaignAction, setCampaignStatusAction } from "@/lib/actions/ad-actions";
+import { CampaignForm } from "@/components/admin/campaign-form";
+import { PlaceholderMedia } from "@/components/placeholder-media";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Régie publicitaire · Studio" };
@@ -71,69 +74,16 @@ export default async function AdminAds({ searchParams }: { searchParams: Promise
 
       {erreur ? (
         <p className="mb-4 rounded-md bg-[rgba(214,40,45,0.1)] px-4 py-2.5 text-[13px] font-semibold text-red">
-          Campagne invalide — vérifiez l&apos;annonceur, le format, le CPM, les dates et l&apos;URL (https).
+          {erreur === "image"
+            ? "Visuel refusé — format image (JPG/PNG/WebP/GIF/SVG) et 8 Mo maximum."
+            : "Campagne invalide — vérifiez l'annonceur, le format, le CPM, les dates et l'URL (https)."}
         </p>
       ) : null}
 
       {/* Création */}
       <section className="mb-6 rounded-[14px] border border-line bg-surface px-6 py-[22px] shadow-[var(--shadow-sm)]">
         <h2 className="mb-4 text-sm font-bold">Nouvelle campagne</h2>
-        <form action={createCampaignAction} className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="grid gap-1 text-[11.5px] font-semibold text-ink-2">
-            Annonceur
-            <input name="advertiser" required maxLength={80} placeholder="Air Côte d'Ivoire" className="rounded border border-line bg-bg px-2.5 py-2 text-[13px]" />
-          </label>
-          <label className="grid gap-1 text-[11.5px] font-semibold text-ink-2">
-            Format
-            <select name="format" className="rounded border border-line bg-bg px-2.5 py-2 text-[13px]">
-              {(Object.keys(FORMAT_LABEL) as AdFormat[]).map((f) => (
-                <option key={f} value={f}>
-                  {FORMAT_LABEL[f]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-[11.5px] font-semibold text-ink-2">
-            CPM (XOF)
-            <input name="cpm" type="number" min={1} required defaultValue={1500} className="rounded border border-line bg-bg px-2.5 py-2 text-[13px]" />
-          </label>
-          <label className="grid gap-1 text-[11.5px] font-semibold text-ink-2 sm:col-span-2">
-            Accroche (affichée dans l&apos;encart)
-            <input name="headline" maxLength={120} placeholder="Abidjan–Paris dès 450 000 FCFA" className="rounded border border-line bg-bg px-2.5 py-2 text-[13px]" />
-          </label>
-          <label className="grid gap-1 text-[11.5px] font-semibold text-ink-2">
-            URL de destination
-            <input name="linkUrl" type="url" placeholder="https://…" className="rounded border border-line bg-bg px-2.5 py-2 text-[13px]" />
-          </label>
-          <label className="grid gap-1 text-[11.5px] font-semibold text-ink-2">
-            Début
-            <input name="startAt" type="date" required className="rounded border border-line bg-bg px-2.5 py-2 text-[13px]" />
-          </label>
-          <label className="grid gap-1 text-[11.5px] font-semibold text-ink-2">
-            Fin
-            <input name="endAt" type="date" required className="rounded border border-line bg-bg px-2.5 py-2 text-[13px]" />
-          </label>
-          <label className="grid gap-1 text-[11.5px] font-semibold text-ink-2">
-            Rubriques ciblées (slugs, vide = toutes)
-            <input name="rubriques" placeholder="cacao-marches, economie" list="rubrique-slugs" className="rounded border border-line bg-bg px-2.5 py-2 text-[13px]" />
-            <datalist id="rubrique-slugs">
-              {rubriques.map((r) => (
-                <option key={r.slug} value={r.slug}>
-                  {r.name}
-                </option>
-              ))}
-            </datalist>
-          </label>
-          <label className="grid gap-1 text-[11.5px] font-semibold text-ink-2">
-            Zones (codes, vide = monde)
-            <input name="geo" placeholder="CI, FR, CEDEAO" className="rounded border border-line bg-bg px-2.5 py-2 text-[13px]" />
-          </label>
-          <div className="flex items-end">
-            <button type="submit" className="rounded-pill bg-brand-fill px-5 py-2.5 text-xs font-bold text-brand-on">
-              Créer (brouillon)
-            </button>
-          </div>
-        </form>
+        <CampaignForm action={createCampaignAction} rubriques={rubriques} submitLabel="Créer (brouillon)" />
       </section>
 
       {/* Campagnes */}
@@ -159,8 +109,15 @@ export default async function AdminAds({ searchParams }: { searchParams: Promise
               return (
                 <tr key={c.id} className="border-b border-line-2 last:border-b-0">
                   <td className="px-5 py-3">
-                    <div className="font-bold">{c.advertiser}</div>
-                    {c.headline ? <div className="text-[11.5px] text-ink-3">{c.headline}</div> : null}
+                    <div className="flex items-center gap-2.5">
+                      {c.imageUrl ? (
+                        <PlaceholderMedia url={c.imageUrl} alt="" className="h-10 w-16 flex-none rounded border border-line" />
+                      ) : null}
+                      <div>
+                        <div className="font-bold">{c.advertiser}</div>
+                        {c.headline ? <div className="text-[11.5px] text-ink-3">{c.headline}</div> : null}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-3 py-3 text-ink-2">{FORMAT_LABEL[c.format]}</td>
                   <td className="px-3 py-3 text-[12px] text-ink-2">
@@ -183,19 +140,29 @@ export default async function AdminAds({ searchParams }: { searchParams: Promise
                     </span>
                   </td>
                   <td className="px-3 py-3">
-                    <form action={setCampaignStatusAction.bind(null, c.id)} className="flex gap-1.5">
-                      {NEXT_STATUS[c.status].map((n) => (
-                        <button
-                          key={n.to}
-                          type="submit"
-                          name="status"
-                          value={n.to}
-                          className="rounded-pill border border-line bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-ink-2 hover:bg-surface-3"
-                        >
-                          {n.label}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <form action={setCampaignStatusAction.bind(null, c.id)} className="flex gap-1.5">
+                        {NEXT_STATUS[c.status].map((n) => (
+                          <button
+                            key={n.to}
+                            type="submit"
+                            name="status"
+                            value={n.to}
+                            className="rounded-pill border border-line bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-ink-2 hover:bg-surface-3"
+                          >
+                            {n.label}
+                          </button>
+                        ))}
+                      </form>
+                      <Link href={`/admin/ads/${c.id}`} className="rounded-pill border border-line bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-ink-2">
+                        Modifier
+                      </Link>
+                      <form action={deleteCampaignAction.bind(null, c.id)}>
+                        <button type="submit" className="rounded-pill border border-[rgba(214,40,45,0.4)] bg-surface px-2.5 py-1 text-[11px] font-semibold text-red">
+                          Suppr.
                         </button>
-                      ))}
-                    </form>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               );

@@ -430,6 +430,7 @@ model AdCampaign {
   targeting  Json // { geo:["CI","FR","CEDEAO"], rubriques:[], device:"mobile" }
   headline   String? // accroche affichée dans l'encart
   linkUrl    String? // destination du clic (comptée par /api/v1/ads/click/:id)
+  imageUrl   String? // visuel du bandeau/pavé/natif (servi par /uploads/:name)
 
   startAt DateTime
   endAt   DateTime

@@ -17,6 +17,7 @@ export async function GET(request: Request) {
       advertiser: campaign.advertiser,
       format: campaign.format,
       headline: campaign.headline,
+      imageUrl: campaign.imageUrl,
       clickUrl: `/api/v1/ads/click/${campaign.id}`,
     },
   ]);

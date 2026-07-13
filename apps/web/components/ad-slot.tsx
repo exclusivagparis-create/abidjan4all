@@ -9,7 +9,15 @@ export async function AdSlot({ rubrique }: { rubrique?: string }) {
   if (!campaign) return null;
 
   countImpression(campaign.id);
-  const inner = (
+  // Visuel fourni : on l'affiche pleine largeur (bandeau/pavé/natif). Sinon,
+  // l'encart texte de repli (accroche + annonceur).
+  const inner = campaign.imageUrl ? (
+    <div className="overflow-hidden rounded-[14px] border border-line">
+      <div className="bg-surface-2 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-ink-3">Publicité</div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={campaign.imageUrl} alt={campaign.headline ?? campaign.advertiser} className="block max-h-[280px] w-full object-cover" />
+    </div>
+  ) : (
     <div className="flex items-center justify-between gap-4 rounded-[14px] border border-line bg-surface-2 px-6 py-4">
       <div className="min-w-0">
         <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-ink-3">Publicité</div>
