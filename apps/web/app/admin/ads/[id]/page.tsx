@@ -49,6 +49,13 @@ export default async function EditCampaign({
         {campaign.advertiser} — les modifications s&apos;appliquent immédiatement, même en cours de diffusion.
       </p>
 
+      {campaign.status === "ended" ? (
+        <p className="mb-4 rounded-md bg-[rgba(232,100,26,0.1)] px-4 py-2.5 text-[13px] font-semibold text-orange">
+          Campagne terminée — enregistrez avec une <b>date de fin future</b> pour la reconduire :
+          elle repassera en brouillon, prête à être réactivée.
+        </p>
+      ) : null}
+
       {erreur ? (
         <p className="mb-4 rounded-md bg-[rgba(214,40,45,0.1)] px-4 py-2.5 text-[13px] font-semibold text-red">
           {erreur === "image"

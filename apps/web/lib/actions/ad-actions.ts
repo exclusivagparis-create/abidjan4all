@@ -90,7 +90,7 @@ export async function updateCampaignAction(id: string, formData: FormData): Prom
   const { valid, data } = parseCampaignForm(formData);
   if (!valid) redirect(`/admin/ads/${id}?erreur=1`);
 
-  const current = await prisma.adCampaign.findUnique({ where: { id }, select: { imageUrl: true } });
+  const current = await prisma.adCampaign.findUnique({ where: { id }, select: { imageUrl: true, status: true } });
   if (!current) redirect("/admin/ads");
 
   let imageUrl = current.imageUrl;
@@ -107,7 +107,13 @@ export async function updateCampaignAction(id: string, formData: FormData): Prom
     imageUrl = null;
   }
 
-  await prisma.adCampaign.update({ where: { id }, data: { ...data, imageUrl } });
+  // Reconduction : modifier une campagne terminée avec une nouvelle échéance
+  // future la repasse en brouillon, prête à être réactivée.
+  const reconduite = current.status === "ended" && data.endAt > new Date();
+  await prisma.adCampaign.update({
+    where: { id },
+    data: { ...data, imageUrl, ...(reconduite ? { status: "draft" as const } : {}) },
+  });
   revalidatePath("/admin/ads");
   revalidatePath(`/admin/ads/${id}`);
   redirect("/admin/ads");

@@ -93,12 +93,20 @@ export default async function EspaceMembrePage({
               ))}
             </div>
           </div>
-          <Link
-            href={`/membre/${user.id}`}
-            className="ml-auto rounded-pill border border-line bg-surface-2 px-4 py-2 text-xs font-semibold text-ink"
-          >
-            Voir mon profil public
-          </Link>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <Link
+              href={`/membre/${user.id}`}
+              className="rounded-pill border border-line bg-surface-2 px-4 py-2 text-xs font-semibold text-ink"
+            >
+              Voir mon profil public
+            </Link>
+            <Link
+              href="/parametres"
+              className="rounded-pill border border-line bg-surface-2 px-4 py-2 text-xs font-semibold text-ink"
+            >
+              ⚙ Paramètres
+            </Link>
+          </div>
         </div>
 
         {/* Stats (maquette : cartes chiffres) */}
