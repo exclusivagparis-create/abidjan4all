@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { SiteHeader } from "@/components/site-header";
@@ -26,9 +26,22 @@ export default async function RubriquePage({ params }: Props) {
   const { rubrique: slug } = await params;
   const rubrique = await prisma.rubrique.findUnique({ where: { slug } });
   if (!rubrique) {
-    // Repli : une page statique publiée à cette adresse (ex. /mentions-legales).
+    // Repli 1 : une page statique publiée à cette adresse (ex. /mentions-legales).
     const page = await prisma.page.findFirst({ where: { slug, published: true } });
     if (page) return <StaticPageView title={page.title} body={page.body} />;
+
+    // Repli 2 : une redirection 301 gérée depuis le Studio (anciennes URLs).
+    const rule = await prisma.redirect.findUnique({ where: { from: `/${slug}` } });
+    if (rule) {
+      await prisma.redirect.update({ where: { id: rule.id }, data: { hits: { increment: 1 } } }).catch(() => {});
+      permanentRedirect(rule.to);
+    }
+
+    // Repli 3 : toute autre URL héritée en .html (anciennes pages articles,
+    // rubriques disparues) → accueil plutôt qu'un 404. Après les règles du
+    // Studio, pour qu'une règle précise puisse toujours l'emporter.
+    if (slug.endsWith(".html")) permanentRedirect("/");
+
     notFound();
   }
 

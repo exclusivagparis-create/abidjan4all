@@ -47,9 +47,10 @@ const nextConfig: NextConfig = {
       { source: "/syndication.rss", destination: "/rss.xml", statusCode: 301 },
       { source: "/subscription", destination: "/abonnement", statusCode: 301 },
       { source: "/newsletter", destination: "/", statusCode: 301 },
-      // Repli : toute autre URL héritée en .html (rubriques sans équivalent,
-      // pages articles) → accueil, plutôt qu'un 404.
-      { source: "/:legacy(.*\\.html)", destination: "/", statusCode: 301 },
+      // NOTE : pas de repli générique `*.html → /` ici. Les redirects de
+      // next.config s'appliquent AVANT le routage et masqueraient les règles
+      // gérées depuis le Studio. Le repli est fait dans app/[rubrique]/page.tsx,
+      // après consultation de la table Redirect.
     ];
   },
 };

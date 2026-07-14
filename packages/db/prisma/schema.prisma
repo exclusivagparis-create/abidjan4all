@@ -217,6 +217,16 @@ model Page {
   createdAt DateTime @default(now())
 }
 
+/// Redirection 301 gérée depuis le Studio (migration d'anciennes URLs).
+/// Les redirections structurelles de l'ancien site restent dans next.config.
+model Redirect {
+  id        String   @id @default(cuid())
+  from      String   @unique // chemin source, ex. "/ancienne-page.html"
+  to        String // destination, chemin interne ou URL absolue
+  hits      Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
 /// Message envoyé via le formulaire de contact public — reçu dans le Studio.
 model ContactMessage {
   id        String   @id @default(cuid())

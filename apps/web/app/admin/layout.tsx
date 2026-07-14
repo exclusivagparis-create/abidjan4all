@@ -19,9 +19,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/login?next=/admin");
   }
 
-  const [reviewCount, pendingComments] = await Promise.all([
+  const [reviewCount, pendingComments, pendingListings] = await Promise.all([
     prisma.article.count({ where: { status: "review" } }),
     prisma.comment.count({ where: { status: "pending" } }),
+    prisma.listing.count({ where: { status: "pending" } }),
   ]);
 
   const canPublish = PUBLISH_ROLES.includes(user.role as (typeof PUBLISH_ROLES)[number]);
@@ -48,8 +49,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Utilisateurs", href: isAdmin ? "/admin/users" : undefined, icon: "☺" },
   ];
   const business: NavItem[] = [
+    { label: "Petites annonces", href: canPublish ? "/admin/annonces" : undefined, icon: "▤", badge: pendingListings, badgeColor: "var(--orange)" },
     { label: "Régie publicitaire", href: isAdmin ? "/admin/ads" : undefined, icon: "◈" },
     { label: "Statistiques", href: isAdmin ? "/admin/stats" : undefined, icon: "▲" },
+    { label: "Redirections", href: canPublish ? "/admin/redirections" : undefined, icon: "↪" },
   ];
 
   return (
