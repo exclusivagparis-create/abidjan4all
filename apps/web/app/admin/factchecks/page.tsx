@@ -8,7 +8,7 @@ import { formatDate } from "@/lib/format";
 export const metadata: Metadata = { title: "Fact-checking · Studio" };
 export const dynamic = "force-dynamic";
 
-export const VERDICT_META: Record<FactCheckVerdict, { label: string; color: string }> = {
+const VERDICT_META: Record<FactCheckVerdict, { label: string; color: string }> = {
   vrai: { label: "Vrai", color: "#0E8A5F" },
   faux: { label: "Faux", color: "#a01520" },
   trompeur: { label: "Trompeur", color: "#E8641A" },
