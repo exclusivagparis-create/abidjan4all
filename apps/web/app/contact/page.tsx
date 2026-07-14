@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "/contact" },
 };
 
+// Le pied de page interroge la base (rubriques, pages) — rendu à la requête.
+export const dynamic = "force-dynamic";
+
 export default function ContactPage() {
   return (
     <div className="min-h-screen bg-bg text-ink">

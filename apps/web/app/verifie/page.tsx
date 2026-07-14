@@ -9,7 +9,8 @@ export const metadata: Metadata = {
   description: "Nos vérifications : affirmations passées au crible, avec verdict et sources.",
   alternates: { canonical: "/verifie" },
 };
-export const revalidate = 120;
+// Rendu à la requête : la base n'est pas joignable au build (Docker/CI).
+export const dynamic = "force-dynamic";
 
 const VERDICT_META: Record<FactCheckVerdict, { label: string; color: string; icon: string }> = {
   vrai: { label: "Vrai", color: "#0E8A5F", icon: "✓" },
