@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { ThemeToggle } from "@a4a/ui";
+import { prisma } from "@a4a/db";
 
-const NAV = [
+/** Menu par défaut, servi tant qu'aucune entrée n'est définie au Studio. */
+const NAV_DEFAUT = [
   { label: "À la une", href: "/" },
   { label: "En Direct", href: "/en-direct" },
   { label: "Vidéos", href: "/videos" },
@@ -10,7 +12,14 @@ const NAV = [
 ];
 
 /** En-tête du portail — structure de Page Accueil.dc.html. */
-export function SiteHeader() {
+export async function SiteHeader() {
+  const items = await prisma.menuItem.findMany({
+    where: { visible: true },
+    orderBy: { order: "asc" },
+    select: { label: true, href: true },
+  });
+  const NAV = items.length > 0 ? items : NAV_DEFAUT;
+
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-[var(--topbar)] backdrop-blur-[12px]">
       <div className="mx-auto flex max-w-[1200px] items-center gap-6 px-8 py-3.5">

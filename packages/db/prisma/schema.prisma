@@ -227,6 +227,17 @@ model Redirect {
   createdAt DateTime @default(now())
 }
 
+/// Entrée du menu principal, gérée depuis le Studio.
+/// Si la table est vide, l'en-tête retombe sur le menu par défaut du code :
+/// une mauvaise manipulation ne peut donc pas laisser le site sans navigation.
+model MenuItem {
+  id      String  @id @default(cuid())
+  label   String
+  href    String // chemin interne ("/politique") ou URL absolue
+  order   Int     @default(0)
+  visible Boolean @default(true)
+}
+
 /// Message envoyé via le formulaire de contact public — reçu dans le Studio.
 model ContactMessage {
   id        String   @id @default(cuid())

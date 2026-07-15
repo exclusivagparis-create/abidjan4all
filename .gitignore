@@ -16,3 +16,6 @@ apps/web/public/uploads/
 .DS_Store
 npm-debug.log*
 pnpm-debug.log*
+
+# Configuration locale de l'assistant (serveur de dev)
+.claude/

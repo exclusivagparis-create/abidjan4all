@@ -36,6 +36,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "A4A Formation", href: canPublish ? "/admin/formation" : undefined, icon: "🎓" },
     { label: "A4A Vérifie", href: canPublish ? "/admin/factchecks" : undefined, icon: "✓" },
     { label: "Pages", href: canPublish ? "/admin/pages" : undefined, icon: "▧" },
+    { label: "Menu", href: canPublish ? "/admin/menu" : undefined, icon: "☰" },
     { label: "Alertes push", href: canPublish ? "/admin/alertes" : undefined, icon: "🔔" },
   ];
   // Facturation et audience : liens actifs pour l'administration seulement.
