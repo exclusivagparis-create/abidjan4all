@@ -22,14 +22,20 @@ export async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-[var(--topbar)] backdrop-blur-[12px]">
-      <div className="mx-auto flex max-w-[1200px] items-center gap-6 px-8 py-3.5">
+      {/* gap-4 (et non 6) : 7 entrées de menu + recherche + compte + S'abonner
+          dépassent sinon la largeur utile sur un portable 1280. */}
+      <div className="mx-auto flex max-w-[1200px] items-center gap-4 px-8 py-3.5">
         <Link href="/" className="flex items-center">
           <img src="/logo-mark-light.png" alt="Abidjan4All" className="h-[26px] [display:var(--show-light)]" />
           <img src="/logo-mark-dark.png" alt="" aria-hidden className="h-[26px] [display:var(--show-dark)]" />
         </Link>
-        <nav className="hidden gap-5 text-[13.5px] font-semibold text-ink-2 md:flex">
+        {/* nowrap : sinon les libellés en deux mots (« À la une », « Faits Divers »)
+            se cassent sur deux lignes dès que la barre est pleine. min-w-0 +
+            overflow-x-auto : le menu se comprime et défile au lieu de faire
+            déborder la page sur les écrans intermédiaires (tablette). */}
+        <nav className="hidden min-w-0 gap-5 overflow-x-auto text-[13.5px] font-semibold text-ink-2 [scrollbar-width:none] md:flex [&::-webkit-scrollbar]:hidden">
           {NAV.map((item) => (
-            <Link key={item.href} href={item.href} className="hover:text-ink first:text-ink">
+            <Link key={item.href} href={item.href} className="whitespace-nowrap hover:text-ink first:text-ink">
               {item.label}
             </Link>
           ))}
@@ -43,7 +49,7 @@ export async function SiteHeader() {
           <input
             name="q"
             placeholder="Rechercher…"
-            className="w-28 bg-transparent text-[12.5px] text-ink outline-none placeholder:text-ink-3"
+            className="w-20 bg-transparent text-[12.5px] text-ink outline-none placeholder:text-ink-3"
           />
         </form>
         <Link href="/espace-membre" className="hidden text-[12.5px] font-semibold text-ink-2 hover:text-ink sm:inline">
