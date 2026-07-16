@@ -4,7 +4,7 @@
  */
 
 export type PlanId = "essentiel" | "pro" | "corporate";
-export type PaymentMethodId = "momo" | "orange" | "wave" | "card" | "paypal";
+export type PaymentMethodId = "momo" | "orange" | "wave" | "moov" | "djamo" | "card" | "paypal";
 
 export interface Plan {
   id: PlanId;
@@ -67,6 +67,8 @@ export const METHODS: { id: PaymentMethodId; label: string }[] = [
   { id: "momo", label: "MTN Mobile Money" },
   { id: "orange", label: "Orange Money" },
   { id: "wave", label: "Wave" },
+  { id: "moov", label: "Moov Money" },
+  { id: "djamo", label: "Djamo" },
   { id: "card", label: "Carte bancaire" },
   { id: "paypal", label: "PayPal" },
 ];
@@ -341,9 +343,10 @@ export function getProvider(): PaymentProvider {
 }
 
 /**
- * Routage par moyen de paiement : MoMo/Orange/Wave → PayDunya ; carte/PayPal →
- * Stripe dès que STRIPE_SECRET_KEY est configurée (diaspora hors zone FCFA),
- * sinon PayDunya prend aussi la carte. Sans PAYMENT_PROVIDER : mock (dev).
+ * Routage par moyen de paiement : MoMo/Orange/Wave/Moov/Djamo → PayDunya ;
+ * carte/PayPal → Stripe dès que STRIPE_SECRET_KEY est configurée (diaspora
+ * hors zone FCFA), sinon PayDunya prend aussi la carte. Sans PAYMENT_PROVIDER :
+ * mock (dev).
  */
 export function getProviderForMethod(method: PaymentMethodId): PaymentProvider {
   const base = getProvider();

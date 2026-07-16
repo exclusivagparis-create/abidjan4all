@@ -83,6 +83,8 @@ enum PaymentMethod {
   momo
   orange
   wave
+  moov
+  djamo
   card
   paypal
 }

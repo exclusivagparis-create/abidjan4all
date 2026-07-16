@@ -121,6 +121,8 @@ export default async function AbonnementPage({
           <span className="rounded bg-[#FFCC00] px-2 py-[3px] text-[10px] font-extrabold text-[#111]">MTN MoMo</span>
           <span className="rounded bg-[#F16E00] px-2 py-[3px] text-[10px] font-extrabold text-white">Orange Money</span>
           <span className="rounded bg-[#1DC8FF] px-2 py-[3px] text-[10px] font-extrabold text-[#111]">Wave</span>
+          <span className="rounded bg-[#0057B8] px-2 py-[3px] text-[10px] font-extrabold text-white">Moov Money</span>
+          <span className="rounded bg-[#1B1B3A] px-2 py-[3px] text-[10px] font-extrabold text-white">Djamo</span>
           <span className="ml-2">· Résiliable à tout moment depuis l&apos;espace membre.</span>
         </div>
       </main>
