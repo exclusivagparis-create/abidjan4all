@@ -14,7 +14,9 @@ import { auth } from "@/auth";
 import { hasActiveSubscription } from "@/lib/billing";
 import { absoluteUrl, breadcrumbJsonLd, newsArticleJsonLd } from "@/lib/seo";
 
-export const revalidate = 60;
+// Idem page rubrique : l'en-tête dépend de la session, donc pas de cache
+// partagé. Le paywall A4A+ lisait déjà la session sur cette page.
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ rubrique: string; slug: string }> };
 

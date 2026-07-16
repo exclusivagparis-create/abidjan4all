@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ThemeToggle } from "@a4a/ui";
 import { prisma } from "@a4a/db";
+import { auth } from "@/auth";
 import { MobileMenu } from "@/components/mobile-menu";
 
 /** Menu par défaut, servi tant qu'aucune entrée n'est définie au Studio. */
@@ -26,12 +27,19 @@ const SECONDAIRES = [
 
 /** En-tête du portail — structure de Page Accueil.dc.html. */
 export async function SiteHeader() {
-  const items = await prisma.menuItem.findMany({
-    where: { visible: true },
-    orderBy: { order: "asc" },
-    select: { label: true, href: true },
-  });
+  const [items, session] = await Promise.all([
+    prisma.menuItem.findMany({
+      where: { visible: true },
+      orderBy: { order: "asc" },
+      select: { label: true, href: true },
+    }),
+    auth(),
+  ]);
   const NAV = items.length > 0 ? items : NAV_DEFAUT;
+  // « Mon compte » n'a de sens que pour qui en a un : un visiteur se voit
+  // proposer « Se connecter ». Les pages qui portent cet en-tête sont donc
+  // rendues à chaque requête (l'état de connexion ne peut pas être mis en cache).
+  const connecte = Boolean(session?.user);
   // Un lien déjà présent dans le menu principal ne se répète pas plus bas.
   const dejaAuMenu = new Set(NAV.map((n) => n.href));
   const secondaires = SECONDAIRES.filter((s) => !dejaAuMenu.has(s.href));
@@ -41,7 +49,7 @@ export async function SiteHeader() {
       {/* gap-4 (et non 6) : 7 entrées de menu + recherche + compte + S'abonner
           dépassent sinon la largeur utile sur un portable 1280. */}
       <div className="mx-auto flex max-w-[1200px] items-center gap-3 px-4 py-3.5 sm:px-6 md:gap-4 lg:px-8">
-        <MobileMenu entries={NAV} secondaires={secondaires} />
+        <MobileMenu entries={NAV} secondaires={secondaires} connecte={connecte} />
         <Link href="/" className="flex flex-none items-center">
           <img src="/logo-mark-light.png" alt="Abidjan4All" className="h-[21px] [display:var(--show-light)] sm:h-[26px]" />
           <img src="/logo-mark-dark.png" alt="" aria-hidden className="h-[21px] [display:var(--show-dark)] sm:h-[26px]" />
@@ -71,8 +79,11 @@ export async function SiteHeader() {
             className="w-20 bg-transparent text-[12.5px] text-ink outline-none placeholder:text-ink-3"
           />
         </form>
-        <Link href="/espace-membre" className="hidden whitespace-nowrap text-[12.5px] font-semibold text-ink-2 hover:text-ink xl:inline">
-          Mon compte
+        <Link
+          href={connecte ? "/espace-membre" : "/login"}
+          className="hidden whitespace-nowrap text-[12.5px] font-semibold text-ink-2 hover:text-ink xl:inline"
+        >
+          {connecte ? "Mon compte" : "Se connecter"}
         </Link>
         {/* La bascule de thème est reprise dans le panneau mobile : dans la
             barre, son libellé « 🌙 Sombre » faisait déborder « S'abonner »

@@ -11,7 +11,11 @@ import { StaticPageView } from "@/components/static-page-view";
 import { articleListSelect } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 
-export const revalidate = 60;
+// L'en-tête affiche « Mon compte » ou « Se connecter » selon la session :
+// un cache partagé servirait le mauvais lien à la moitié des visiteurs.
+// Cette page est donc rendue à chaque requête (cache CDN à mettre devant si
+// le trafic l'exige — cf. README infra).
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ rubrique: string }> };
 

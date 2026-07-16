@@ -14,7 +14,16 @@ export type MenuEntry = { label: string; href: string };
  * rubrique, ni à la recherche, ni à son compte — seulement au logo et au
  * bouton « S'abonner ».
  */
-export function MobileMenu({ entries, secondaires }: { entries: MenuEntry[]; secondaires: MenuEntry[] }) {
+export function MobileMenu({
+  entries,
+  secondaires,
+  connecte,
+}: {
+  entries: MenuEntry[];
+  secondaires: MenuEntry[];
+  /** Session ouverte : décide entre « Mon compte » et « Se connecter ». */
+  connecte: boolean;
+}) {
   const [ouvert, setOuvert] = useState(false);
   const [monte, setMonte] = useState(false);
   const chemin = usePathname();
@@ -99,18 +108,23 @@ export function MobileMenu({ entries, secondaires }: { entries: MenuEntry[]; sec
             ))}
           </nav>
 
-          <Link
-            href="/espace-membre"
-            className="mt-6 block rounded-pill border border-line bg-surface-2 py-3 text-center text-[14px] font-bold text-ink"
-          >
-            Mon compte
-          </Link>
-          <Link
-            href="/abonnement"
-            className="mt-2.5 block rounded-pill bg-red py-3 text-center text-[14px] font-bold text-white"
-          >
-            S&apos;abonner à A4A+
-          </Link>
+              <Link
+                href={connecte ? "/espace-membre" : "/login"}
+                className="mt-6 block rounded-pill border border-line bg-surface-2 py-3 text-center text-[14px] font-bold text-ink"
+              >
+                {connecte ? "Mon compte" : "Se connecter"}
+              </Link>
+              {!connecte ? (
+                <Link href="/inscription" className="mt-2.5 block py-1 text-center text-[13px] font-semibold text-blue">
+                  Créer un compte
+                </Link>
+              ) : null}
+              <Link
+                href="/abonnement"
+                className="mt-2.5 block rounded-pill bg-red py-3 text-center text-[14px] font-bold text-white"
+              >
+                S&apos;abonner à A4A+
+              </Link>
 
               {/* Reprise ici : la barre du haut est trop étroite sur téléphone. */}
               <div className="mt-5 flex justify-center">
