@@ -22,7 +22,6 @@ export function RichTitle({ text }: { text: string }) {
   );
 }
 
-/** Version texte nu (title HTML, méta, partages) — retire les astérisques. */
-export function plainTitle(text: string): string {
-  return text.replace(/\*([^*]+)\*/g, "$1");
-}
+// La version texte nu vit dans lib/format : elle sert aussi hors composants
+// (RSS, sitemap, newsletter). Réexportée ici pour les appelants existants.
+export { plainTitle } from "@/lib/format";

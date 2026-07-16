@@ -3,6 +3,8 @@
  * NEXT_PUBLIC_SITE_URL=https://abidjan4all.net en production.
  */
 
+import { plainTitle } from "@/lib/format";
+
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 export const SITE_NAME = "Abidjan4All";
 
@@ -52,7 +54,8 @@ export function newsArticleJsonLd(article: ArticleForSeo) {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
-    headline: article.title,
+    // Sans nettoyage, Google indexait le titre avec ses astérisques.
+    headline: plainTitle(article.title),
     description: article.dek ?? undefined,
     image,
     datePublished: article.publishedAt?.toISOString(),

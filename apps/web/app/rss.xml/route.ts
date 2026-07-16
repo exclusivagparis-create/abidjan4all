@@ -1,5 +1,6 @@
 import { prisma } from "@a4a/db";
 import { absoluteUrl, SITE_NAME, SITE_URL, xmlEscape } from "@/lib/seo";
+import { plainTitle } from "@/lib/format";
 
 export const revalidate = 600;
 
@@ -26,7 +27,7 @@ export async function GET() {
     .map((a) => {
       const url = absoluteUrl(`/${a.rubrique.slug}/${a.slug}`);
       return `    <item>
-      <title>${xmlEscape(a.title)}</title>
+      <title>${xmlEscape(plainTitle(a.title))}</title>
       <link>${url}</link>
       <guid isPermaLink="true">${url}</guid>
       ${a.dek ? `<description>${xmlEscape(a.dek)}</description>` : ""}

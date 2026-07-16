@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@a4a/ui";
@@ -15,7 +16,11 @@ export type MenuEntry = { label: string; href: string };
  */
 export function MobileMenu({ entries, secondaires }: { entries: MenuEntry[]; secondaires: MenuEntry[] }) {
   const [ouvert, setOuvert] = useState(false);
+  const [monte, setMonte] = useState(false);
   const chemin = usePathname();
+
+  // createPortal exige le DOM : on n'y touche qu'après le montage client.
+  useEffect(() => setMonte(true), []);
 
   // Referme au changement de page : sinon le panneau reste ouvert par-dessus
   // l'article que l'on vient d'ouvrir.
@@ -44,16 +49,21 @@ export function MobileMenu({ entries, secondaires }: { entries: MenuEntry[]; sec
         aria-expanded={ouvert}
         aria-controls="menu-mobile"
         aria-label={ouvert ? "Fermer le menu" : "Ouvrir le menu"}
-        className="flex h-10 w-10 flex-none items-center justify-center rounded-[8px] text-ink-2 hover:text-ink md:hidden"
+        className="flex h-10 w-10 flex-none items-center justify-center rounded-[8px] text-ink-2 hover:text-ink lg:hidden"
       >
         <span aria-hidden className="text-[19px] leading-none">{ouvert ? "✕" : "☰"}</span>
       </button>
 
-      {ouvert ? (
-        <div
-          id="menu-mobile"
-          className="fixed inset-x-0 bottom-0 top-[57px] z-50 overflow-y-auto overscroll-contain border-t border-line bg-bg px-5 pb-10 pt-4 md:hidden"
-        >
+      {/* Rendu dans <body> par un portail, et NON dans l'en-tête : celui-ci
+          porte un `backdrop-blur`, qui fait de lui le bloc conteneur de ses
+          descendants `fixed`. Le panneau y était enfermé — haut de 57 px au
+          lieu de l'écran entier, et masqué par le ruban Marchés. */}
+      {ouvert && monte
+        ? createPortal(
+            <div
+              id="menu-mobile"
+              className="fixed inset-x-0 bottom-0 top-[69px] z-[60] overflow-y-auto overscroll-contain border-t border-line bg-bg px-5 pb-10 pt-4 lg:hidden"
+            >
           <form action="/recherche" className="mb-4 flex items-center gap-2 rounded-pill border border-line bg-surface-2 px-4 py-2.5">
             <span aria-hidden className="text-[15px] text-ink-3">⌕</span>
             <input
@@ -102,12 +112,14 @@ export function MobileMenu({ entries, secondaires }: { entries: MenuEntry[]; sec
             S&apos;abonner à A4A+
           </Link>
 
-          {/* Reprise ici : la barre du haut est trop étroite sur téléphone. */}
-          <div className="mt-5 flex justify-center">
-            <ThemeToggle />
-          </div>
-        </div>
-      ) : null}
+              {/* Reprise ici : la barre du haut est trop étroite sur téléphone. */}
+              <div className="mt-5 flex justify-center">
+                <ThemeToggle />
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </>
   );
 }

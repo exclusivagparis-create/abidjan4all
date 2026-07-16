@@ -46,11 +46,10 @@ export async function SiteHeader() {
           <img src="/logo-mark-light.png" alt="Abidjan4All" className="h-[21px] [display:var(--show-light)] sm:h-[26px]" />
           <img src="/logo-mark-dark.png" alt="" aria-hidden className="h-[21px] [display:var(--show-dark)] sm:h-[26px]" />
         </Link>
-        {/* nowrap : sinon les libellés en deux mots (« À la une », « Faits Divers »)
-            se cassent sur deux lignes dès que la barre est pleine. min-w-0 +
-            overflow-x-auto : le menu se comprime et défile au lieu de faire
-            déborder la page sur les écrans intermédiaires (tablette). */}
-        <nav className="hidden min-w-0 gap-5 overflow-x-auto text-[13.5px] font-semibold text-ink-2 [scrollbar-width:none] md:flex [&::-webkit-scrollbar]:hidden">
+        {/* Barre horizontale à partir de `lg` seulement. En tablette, elle
+            n'obtenait que 231 px pour 506 nécessaires : le menu était tronqué
+            en une bande défilante. Sous 1024 px, c'est le panneau qui sert. */}
+        <nav className="hidden min-w-0 gap-5 overflow-x-auto text-[13.5px] font-semibold text-ink-2 [scrollbar-width:none] lg:flex [&::-webkit-scrollbar]:hidden">
           {NAV.map((item) => (
             <Link key={item.href} href={item.href} className="whitespace-nowrap hover:text-ink first:text-ink">
               {item.label}
@@ -58,9 +57,12 @@ export async function SiteHeader() {
           ))}
         </nav>
         <span className="flex-1" />
+        {/* Recherche et « Mon compte » à partir de `xl` : entre 1024 et 1280,
+            la place doit aller aux 7 entrées du menu. Ils restent joignables
+            depuis le panneau et le pied de page. */}
         <form
           action="/recherche"
-          className="hidden items-center gap-2 rounded-pill border border-line bg-surface-2 px-3.5 py-2 lg:flex"
+          className="hidden items-center gap-2 rounded-pill border border-line bg-surface-2 px-3.5 py-2 xl:flex"
         >
           <span className="text-[13px] text-ink-3">⌕</span>
           <input
@@ -69,13 +71,13 @@ export async function SiteHeader() {
             className="w-20 bg-transparent text-[12.5px] text-ink outline-none placeholder:text-ink-3"
           />
         </form>
-        <Link href="/espace-membre" className="hidden whitespace-nowrap text-[12.5px] font-semibold text-ink-2 hover:text-ink sm:inline">
+        <Link href="/espace-membre" className="hidden whitespace-nowrap text-[12.5px] font-semibold text-ink-2 hover:text-ink xl:inline">
           Mon compte
         </Link>
         {/* La bascule de thème est reprise dans le panneau mobile : dans la
             barre, son libellé « 🌙 Sombre » faisait déborder « S'abonner »
             hors de l'écran sur téléphone. */}
-        <span className="hidden flex-none sm:inline-flex">
+        <span className="hidden flex-none lg:inline-flex">
           <ThemeToggle />
         </span>
         <Link

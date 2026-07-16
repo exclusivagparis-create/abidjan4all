@@ -40,12 +40,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? [absoluteUrl(article.coverAsset.url)]
       : undefined;
 
+  // plainTitle partout : les astérisques d'emphase (`*texte*`) sont une
+  // convention d'affichage. Elles n'étaient retirées que du <title>, et
+  // seulement à défaut de metaTitle — or le Studio recopie le titre brut
+  // dans metaTitle. Résultat : elles fuyaient dans l'onglet, dans les
+  // partages Facebook/WhatsApp/X et dans les données lues par Google.
   return {
-    title: seo.metaTitle ?? plainTitle(article.title),
+    title: plainTitle(seo.metaTitle ?? article.title),
     description: seo.metaDescription ?? article.dek ?? undefined,
     alternates: { canonical: path },
     openGraph: {
-      title: article.title,
+      title: plainTitle(article.title),
       description: article.dek ?? undefined,
       type: "article",
       url: path,
@@ -58,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: article.title,
+      title: plainTitle(article.title),
       description: article.dek ?? undefined,
       images: image,
     },

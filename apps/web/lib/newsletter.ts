@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { SITE_URL } from "@/lib/seo";
+import { plainTitle } from "@/lib/format";
 
 /** Jeton de désabonnement : HMAC(newsletterId:email) avec AUTH_SECRET. */
 function unsubSecret(): string {
@@ -44,7 +45,7 @@ export function buildEditionHtml(params: {
       const url = `${SITE_URL}/${a.rubrique.slug}/${a.slug}`;
       return `<tr><td style="padding:14px 0;border-bottom:1px solid #eee">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:${a.rubrique.color}">${a.rubrique.name}</div>
-        <a href="${url}" style="display:block;margin:4px 0 6px;font-family:Georgia,serif;font-size:18px;font-weight:700;color:#1a1a1a;text-decoration:none;line-height:1.3">${escapeHtml(a.title)}</a>
+        <a href="${url}" style="display:block;margin:4px 0 6px;font-family:Georgia,serif;font-size:18px;font-weight:700;color:#1a1a1a;text-decoration:none;line-height:1.3">${escapeHtml(plainTitle(a.title))}</a>
         ${a.dek ? `<div style="font-size:14px;color:#555;line-height:1.5">${escapeHtml(a.dek)}</div>` : ""}
         <a href="${url}" style="display:inline-block;margin-top:6px;font-size:13px;font-weight:700;color:#a01520;text-decoration:none">Lire l'article →</a>
       </td></tr>`;

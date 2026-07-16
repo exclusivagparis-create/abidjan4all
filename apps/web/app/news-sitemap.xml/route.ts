@@ -1,5 +1,6 @@
 import { prisma } from "@a4a/db";
 import { absoluteUrl, SITE_NAME, xmlEscape } from "@/lib/seo";
+import { plainTitle } from "@/lib/format";
 
 export const revalidate = 300;
 
@@ -32,7 +33,7 @@ export async function GET() {
         <news:language>fr</news:language>
       </news:publication>
       <news:publication_date>${a.publishedAt?.toISOString()}</news:publication_date>
-      <news:title>${xmlEscape(a.title)}</news:title>
+      <news:title>${xmlEscape(plainTitle(a.title))}</news:title>
       ${a.tags.length ? `<news:keywords>${xmlEscape(a.tags.join(", "))}</news:keywords>` : ""}
     </news:news>
   </url>`
