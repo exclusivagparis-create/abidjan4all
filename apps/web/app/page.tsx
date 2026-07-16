@@ -80,16 +80,21 @@ export default async function HomePage() {
       <Ticker items={tickerItems} />
 
       {/* RUBAN MARCHÉS (statique — flux de cotation à brancher en DF-05) */}
-      <section className="mx-auto max-w-[1200px] px-8 pt-[22px]">
+      <section className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-[22px]">
         <div className="flex overflow-hidden rounded-md border border-line bg-surface shadow-[var(--shadow-sm)]">
-          <div className="flex flex-none items-center bg-navy px-5 text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-white">
+          <div className="flex flex-none items-center bg-navy px-3 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-white sm:px-5 sm:text-[11.5px]">
             Marchés
           </div>
-          <div className="grid flex-1 grid-cols-2 sm:grid-cols-5">
+          {/* Sur téléphone : une seule ligne qui défile du doigt. En grille 2
+              colonnes, les cotations s'empilaient sur quatre rangées. */}
+          <div className="flex flex-1 overflow-x-auto [scrollbar-width:none] sm:grid sm:grid-cols-5 sm:overflow-visible [&::-webkit-scrollbar]:hidden">
             {MARCHES.map((m, i) => (
-              <div key={m.label} className={`px-5 py-3 ${i < MARCHES.length - 1 ? "border-r border-line-2" : ""}`}>
-                <div className="text-[11px] text-ink-3">{m.label}</div>
-                <div className="text-[15px] font-bold">
+              <div
+                key={m.label}
+                className={`flex-none px-4 py-2.5 sm:px-5 sm:py-3 ${i < MARCHES.length - 1 ? "border-r border-line-2" : ""}`}
+              >
+                <div className="whitespace-nowrap text-[10.5px] text-ink-3 sm:text-[11px]">{m.label}</div>
+                <div className="whitespace-nowrap text-[13.5px] font-bold sm:text-[15px]">
                   {m.value} <span className={m.tone}>{m.delta}</span>
                 </div>
               </div>
@@ -100,23 +105,23 @@ export default async function HomePage() {
 
       {/* HERO */}
       {lead ? (
-        <section className="mx-auto max-w-[1200px] px-8 pt-8">
+        <section className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-8">
           <div className="grid grid-cols-1 gap-9 border-b-2 border-ink pb-8 lg:grid-cols-[1.6fr_1fr]">
             <article>
               <Link href={url(lead)} className="group block">
-                {/* Hauteur relevée : la fenêtre vidéo du rail rend la colonne
-                    de droite plus haute, une image trop courte laisserait un
-                    grand blanc sous cet article. */}
-                <div className="relative mb-5 h-[560px] overflow-hidden rounded-[14px]">
+                {/* 560px seulement à partir de `lg` : le rail (avec sa fenêtre
+                    vidéo) n'est à côté qu'en grand écran. Sur téléphone, cette
+                    hauteur mangeait 80 % de l'écran avant le premier mot. */}
+                <div className="relative mb-4 h-[210px] overflow-hidden rounded-[14px] sm:h-[320px] md:h-[420px] lg:mb-5 lg:h-[560px]">
                   <PlaceholderMedia url={lead.coverAsset?.url} alt={lead.coverAsset?.alt} className="h-full w-full" />
                   <span
-                    className="absolute left-4 top-4 rounded-[5px] px-3 py-1.5 text-[11.5px] font-bold uppercase tracking-[0.09em] text-white"
+                    className="absolute left-3 top-3 rounded-[5px] px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white sm:left-4 sm:top-4 sm:px-3 sm:py-1.5 sm:text-[11.5px]"
                     style={{ background: lead.rubrique.color }}
                   >
                     {lead.rubrique.name}
                   </span>
                 </div>
-                <h1 className="mb-3.5 font-serif text-[46px] font-extrabold leading-[1.04] tracking-tight group-hover:underline">
+                <h1 className="mb-3 font-serif text-[28px] font-extrabold leading-[1.08] tracking-tight group-hover:underline sm:text-[36px] lg:mb-3.5 lg:text-[46px] lg:leading-[1.04]">
                   <RichTitle text={lead.title} />
                 </h1>
               </Link>
@@ -175,7 +180,7 @@ export default async function HomePage() {
 
       {/* 4 ARTICLES À LA UNE (positions choisies dans le Studio) */}
       {grilleUne.length > 0 ? (
-        <section className="mx-auto max-w-[1200px] px-8 pt-12">
+        <section className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-12">
           <SectionHeader name="À la une" color="var(--orange)" />
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {grilleUne.map((a) => (
@@ -198,7 +203,7 @@ export default async function HomePage() {
 
       {/* BLOC CACAO & MARCHÉS */}
       {cacao.length > 0 ? (
-        <section className="mx-auto max-w-[1200px] px-8 pt-12">
+        <section className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-12">
           <SectionHeader name="Cacao & Marchés" color="#8A5A2B" href="/cacao-marches" />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
             <article className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
@@ -236,7 +241,7 @@ export default async function HomePage() {
       ) : null}
 
       {/* DERNIERS ARTICLES */}
-      <section className="mx-auto max-w-[1200px] px-8 pt-12">
+      <section className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-12">
         <SectionHeader name="Derniers articles" color="var(--ink-3)" />
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {grille.map((a) => (

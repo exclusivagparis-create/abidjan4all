@@ -23,7 +23,7 @@ export async function CommentsSection({ articleId }: { articleId: string }) {
   ]);
 
   return (
-    <section className="mx-auto max-w-[760px] px-8 pb-4 pt-10">
+    <section className="mx-auto max-w-[760px] px-4 sm:px-6 lg:px-8 pb-4 pt-10">
       <div className="mb-5 border-b-2 border-ink pb-3.5 font-serif text-2xl font-semibold">
         Commentaires <span className="text-ink-3">({comments.length})</span>
       </div>

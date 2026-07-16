@@ -43,7 +43,7 @@ export default async function AdminDashboard() {
         {kpis.map((k) => (
           <div key={k.label} className="rounded-[14px] border border-line bg-surface px-[22px] py-5 shadow-[var(--shadow-sm)]">
             <div className="mb-2.5 text-xs font-semibold text-ink-3">{k.label}</div>
-            <div className="text-[30px] font-extrabold tracking-tight">{k.value}</div>
+            <div className="text-[24px] sm:text-[27px] lg:text-[30px] font-extrabold tracking-tight">{k.value}</div>
             <div className="mt-1.5 text-xs font-medium text-ink-3">{k.note}</div>
           </div>
         ))}

@@ -24,10 +24,10 @@ export default async function GroupesPage() {
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[860px] px-8 pb-16 pt-10">
+      <main className="mx-auto max-w-[860px] px-4 sm:px-6 lg:px-8 pb-16 pt-10">
         <div className="mb-3 flex items-center gap-3.5 border-b-2 border-ink pb-6">
           <span className="h-[5px] w-[34px] rounded-[3px] bg-green" />
-          <h1 className="font-serif text-[40px] font-medium leading-none">Groupes</h1>
+          <h1 className="font-serif text-[27px] sm:text-[33px] lg:text-[40px] font-medium leading-none">Groupes</h1>
         </div>
         <p className="mb-8 font-serif text-[15px] text-ink-2">
           Rejoignez la communauté Abidjan4All : entraide, débats et rencontres entre lecteurs, d&apos;Abidjan à la

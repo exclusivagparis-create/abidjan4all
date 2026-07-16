@@ -18,12 +18,12 @@ export default async function AbonnementPage({
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[1080px] px-8 pb-20 pt-12">
+      <main className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8 pb-20 pt-12">
         <div className="mb-10 text-center">
           <span className="inline-flex items-center gap-1.5 rounded-pill bg-[linear-gradient(135deg,#F5C24B,#E8641A)] px-[13px] py-1.5 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[#16181D]">
             ★ A4A+
           </span>
-          <h1 className="mx-auto mt-4 max-w-[22ch] font-serif text-[44px] font-medium leading-[1.05] tracking-tight">
+          <h1 className="mx-auto mt-4 max-w-[22ch] font-serif text-[28px] sm:text-[36px] lg:text-[44px] font-medium leading-[1.05] tracking-tight">
             Le journalisme ivoirien de référence, sans limite.
           </h1>
           <p className="mx-auto mt-3 max-w-[52ch] font-serif text-lg text-ink-2">

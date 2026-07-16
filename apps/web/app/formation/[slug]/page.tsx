@@ -41,14 +41,14 @@ export default async function CoursePage({ params }: Props) {
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[860px] px-8 pb-16 pt-10">
+      <main className="mx-auto max-w-[860px] px-4 sm:px-6 lg:px-8 pb-16 pt-10">
         <nav className="mb-6 text-xs font-semibold uppercase tracking-[0.12em] text-ink-3">
           <Link href="/formation" className="hover:text-ink">A4A Formation</Link>
           <span className="mx-2">›</span>
           <span className="text-ink">{course.category}</span>
         </nav>
 
-        <h1 className="max-w-[24ch] font-serif text-[38px] font-medium leading-[1.08] tracking-tight">
+        <h1 className="max-w-[24ch] font-serif text-[26px] sm:text-[32px] lg:text-[38px] font-medium leading-[1.08] tracking-tight">
           {course.title}
         </h1>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-[13px] text-ink-3">

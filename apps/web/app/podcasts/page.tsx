@@ -21,10 +21,10 @@ export default async function PodcastsPage() {
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[1080px] px-8 pb-16 pt-10">
+      <main className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8 pb-16 pt-10">
         <div className="mb-8 flex items-center gap-3.5 border-b-2 border-ink pb-6">
           <span className="h-[5px] w-[34px] rounded-[3px] bg-[var(--rub-videos)]" />
-          <h1 className="font-serif text-[40px] font-medium leading-none">Podcasts</h1>
+          <h1 className="font-serif text-[27px] sm:text-[33px] lg:text-[40px] font-medium leading-none">Podcasts</h1>
         </div>
 
         {podcasts.map((pod) => (

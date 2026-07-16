@@ -71,7 +71,7 @@ export default async function EspaceMembrePage({
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[860px] px-8 pb-20 pt-10">
+      <main className="mx-auto max-w-[860px] px-4 sm:px-6 lg:px-8 pb-20 pt-10">
         {bienvenue ? (
           <p className="mb-6 rounded-md bg-[rgba(14,138,95,0.12)] px-4 py-3 text-[13.5px] font-semibold text-green">
             🎉 Bienvenue dans A4A+ — votre abonnement est actif, les articles premium sont débloqués.
@@ -83,7 +83,7 @@ export default async function EspaceMembrePage({
             {initials(user.name)}
           </div>
           <div>
-            <h1 className="font-serif text-[32px] font-medium leading-none">{user.name}</h1>
+            <h1 className="font-serif text-[24px] sm:text-[28px] lg:text-[32px] font-medium leading-none">{user.name}</h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-ink-3">
               {user.email}
               {user.badges.map((b) => (
@@ -120,7 +120,7 @@ export default async function EspaceMembrePage({
             ] as const
           ).map(([n, label]) => (
             <div key={label} className="rounded-[14px] border border-line bg-surface px-5 py-4 shadow-[var(--shadow-sm)]">
-              <div className="font-serif text-[32px] font-medium">{nf.format(n)}</div>
+              <div className="font-serif text-[24px] sm:text-[28px] lg:text-[32px] font-medium">{nf.format(n)}</div>
               <div className="mt-0.5 text-[12.5px] text-ink-3">{label}</div>
             </div>
           ))}

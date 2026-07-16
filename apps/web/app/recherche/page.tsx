@@ -67,7 +67,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[1100px] px-8 pb-16 pt-9">
+      <main className="mx-auto max-w-[1100px] px-4 sm:px-6 lg:px-8 pb-16 pt-9">
         {/* barre de recherche (Recherche.dc.html) */}
         <form
           action="/recherche"

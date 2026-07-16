@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES, STUDIO_ROLES } from "@/auth";
 import { AdminNavLink, type NavItem } from "@/components/admin/admin-nav";
+import { AdminDrawer } from "@/components/admin/admin-shell";
 import { logout } from "@/lib/actions/auth-actions";
 import { initials } from "@/lib/format";
 
@@ -57,50 +58,60 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Redirections", href: canPublish ? "/admin/redirections" : undefined, icon: "↪" },
   ];
 
+  // Contenu de la barre latérale, partagé entre l'affichage fixe (grand
+  // écran) et le tiroir (téléphone/tablette).
+  const sidebar = (
+    <>
+      <div className="flex items-center gap-2.5 px-2 pb-5">
+        <img src="/logo-dark.png" alt="Abidjan4All" className="h-5" />
+        <span className="border-l border-white/20 pl-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#F5C24B]">
+          Studio
+        </span>
+      </div>
+
+      <SidebarSection title="Contenu" items={contenu} />
+      <SidebarSection title="Communauté" items={communaute} />
+      <SidebarSection title="Business" items={business} />
+
+      <div className="mt-auto flex items-center gap-2.5 border-t border-white/10 px-2 pt-3">
+        <div className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-pill bg-[linear-gradient(135deg,#E8641A,#D6282D)] text-[13px] font-bold text-white">
+          {initials(user.name ?? "?")}
+        </div>
+        <div className="min-w-0">
+          <div className="truncate text-[13px] font-semibold text-white">{user.name}</div>
+          <div className="text-[11px] text-[#6C7791]">{ROLE_LABEL[user.role] ?? user.role}</div>
+        </div>
+        <form action={logout} className="ml-auto">
+          <button type="submit" title="Se déconnecter" className="text-[#6C7791] hover:text-white">
+            ⏻
+          </button>
+        </form>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex min-h-screen bg-bg text-ink">
-      {/* SIDEBAR (Back-office CMS.dc.html) */}
-      <aside className="sticky top-0 flex h-screen w-[246px] flex-none flex-col bg-navy px-4 py-5">
-        <div className="flex items-center gap-2.5 px-2 pb-5">
-          <img src="/logo-dark.png" alt="Abidjan4All" className="h-5" />
-          <span className="border-l border-white/20 pl-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#F5C24B]">
-            Studio
-          </span>
-        </div>
-
-        <SidebarSection title="Contenu" items={contenu} />
-        <SidebarSection title="Communauté" items={communaute} />
-        <SidebarSection title="Business" items={business} />
-
-        <div className="mt-auto flex items-center gap-2.5 border-t border-white/10 px-2 pt-3">
-          <div className="flex h-[34px] w-[34px] items-center justify-center rounded-pill bg-[linear-gradient(135deg,#E8641A,#D6282D)] text-[13px] font-bold text-white">
-            {initials(user.name ?? "?")}
-          </div>
-          <div className="min-w-0">
-            <div className="truncate text-[13px] font-semibold text-white">{user.name}</div>
-            <div className="text-[11px] text-[#6C7791]">{ROLE_LABEL[user.role] ?? user.role}</div>
-          </div>
-          <form action={logout} className="ml-auto">
-            <button type="submit" title="Se déconnecter" className="text-[#6C7791] hover:text-white">
-              ⏻
-            </button>
-          </form>
-        </div>
+      {/* SIDEBAR (Back-office CMS.dc.html) — fixe à partir de lg seulement :
+          246 px sur un téléphone ne laissaient que 129 px au contenu. */}
+      <aside className="sticky top-0 hidden h-screen w-[246px] flex-none flex-col bg-navy px-4 py-5 lg:flex">
+        {sidebar}
       </aside>
 
       {/* MAIN */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="sticky top-0 z-20 flex items-center gap-4 border-b border-line bg-[var(--topbar)] px-[30px] py-3.5 backdrop-blur-[10px]">
-          <Link href="/" className="text-[12.5px] font-semibold text-ink-3 hover:text-ink">
+        <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-[var(--topbar)] px-4 py-3 backdrop-blur-[10px] sm:px-6 lg:gap-4 lg:px-[30px] lg:py-3.5">
+          <AdminDrawer>{sidebar}</AdminDrawer>
+          <Link href="/" className="whitespace-nowrap text-[12.5px] font-semibold text-ink-3 hover:text-ink">
             ‹ Voir le site
           </Link>
           <span className="flex-1" />
           {/* création d'article : depuis le tableau de bord Articles */}
-          <Link href="/admin/articles" className="text-[12.5px] font-semibold text-ink-3 hover:text-ink">
+          <Link href="/admin/articles" className="whitespace-nowrap text-[12.5px] font-semibold text-ink-3 hover:text-ink">
             Articles
           </Link>
         </div>
-        <div className="px-[30px] pb-12 pt-7">{children}</div>
+        <div className="min-w-0 px-4 pb-12 pt-5 sm:px-6 lg:px-[30px] lg:pt-7">{children}</div>
       </div>
     </div>
   );

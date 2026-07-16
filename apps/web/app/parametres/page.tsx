@@ -22,7 +22,7 @@ export default async function ParametresPage() {
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[720px] px-8 pb-20 pt-10">
+      <main className="mx-auto max-w-[720px] px-4 sm:px-6 lg:px-8 pb-20 pt-10">
         <nav className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-ink-3">
           <Link href="/espace-membre" className="hover:text-ink">
             Espace membre
@@ -30,7 +30,7 @@ export default async function ParametresPage() {
           <span className="mx-2">›</span>
           <span>Paramètres</span>
         </nav>
-        <h1 className="mb-8 border-b-2 border-ink pb-5 font-serif text-[32px] font-medium">Paramètres du profil</h1>
+        <h1 className="mb-8 border-b-2 border-ink pb-5 font-serif text-[24px] sm:text-[28px] lg:text-[32px] font-medium">Paramètres du profil</h1>
         <ProfileSettings name={user.name} email={user.email} />
       </main>
       <SiteFooter />

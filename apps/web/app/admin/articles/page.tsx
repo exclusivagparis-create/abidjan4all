@@ -122,8 +122,8 @@ export default async function AdminArticles({
       </div>
 
       {/* table (Back-office CMS.dc.html) */}
-      <div className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
-        <div className="grid grid-cols-[1fr_130px_150px_110px_110px_70px] gap-4 border-b border-line bg-surface-2 px-[22px] py-[13px] text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+      <div className="overflow-x-auto rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
+        <div className="grid grid-cols-[1fr_130px_150px_110px_110px_70px] min-w-[880px] gap-4 border-b border-line bg-surface-2 px-[22px] py-[13px] text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
           <span>Titre</span>
           <span>Rubrique</span>
           <span>Auteur</span>
@@ -135,7 +135,7 @@ export default async function AdminArticles({
           <Link
             key={a.id}
             href={`/admin/articles/${a.id}`}
-            className="grid grid-cols-[1fr_130px_150px_110px_110px_70px] items-center gap-4 border-b border-line-2 px-[22px] py-[15px] last:border-b-0 hover:bg-surface-2/60"
+            className="grid grid-cols-[1fr_130px_150px_110px_110px_70px] min-w-[880px] items-center gap-4 border-b border-line-2 px-[22px] py-[15px] last:border-b-0 hover:bg-surface-2/60"
           >
             <span className="font-serif text-base font-semibold leading-[1.2]">
               {a.featuredRank ? <span className="mr-1.5 rounded bg-orange px-1.5 py-0.5 align-middle text-[9px] font-bold text-white">UNE {a.featuredRank}</span> : null}

@@ -38,10 +38,10 @@ export default async function VideosPage() {
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[1200px] px-8 pt-10">
+      <main className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-10">
         <div className="mb-8 flex items-center gap-3.5 border-b-2 border-ink pb-6">
           <span className="h-[5px] w-[34px] rounded-[3px]" style={{ background: rubrique?.color ?? "#D6282D" }} />
-          <h1 className="font-serif text-[40px] font-medium leading-none">Vidéos</h1>
+          <h1 className="font-serif text-[27px] sm:text-[33px] lg:text-[40px] font-medium leading-none">Vidéos</h1>
           {une?.live ? (
             <span className="mt-1 flex items-center gap-1.5 rounded-pill bg-red px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-white">
               <span className="h-1.5 w-1.5 rounded-pill bg-white" />

@@ -54,13 +54,13 @@ export default async function MembrePage({ params }: { params: Promise<{ id: str
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[860px] px-8 pb-20 pt-10">
+      <main className="mx-auto max-w-[860px] px-4 sm:px-6 lg:px-8 pb-20 pt-10">
         <div className="mb-8 flex items-start gap-5 border-b-2 border-ink pb-6">
           <div className="flex h-16 w-16 flex-none items-center justify-center rounded-pill bg-[linear-gradient(135deg,#2E5AAC,#0E8A5F)] text-xl font-bold text-white">
             {initials(user.name)}
           </div>
           <div className="min-w-0">
-            <h1 className="font-serif text-[32px] font-medium leading-tight">
+            <h1 className="font-serif text-[24px] sm:text-[28px] lg:text-[32px] font-medium leading-tight">
               {user.name}
               {user.verified ? (
                 <span className="ml-2 align-middle text-[18px] text-blue" title="Profil vérifié">
@@ -79,16 +79,16 @@ export default async function MembrePage({ params }: { params: Promise<{ id: str
 
         <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
           <div className="rounded-[14px] border border-line bg-surface px-6 py-5 shadow-[var(--shadow-sm)]">
-            <div className="font-serif text-[32px] font-medium">{nf.format(user._count.comments)}</div>
+            <div className="font-serif text-[24px] sm:text-[28px] lg:text-[32px] font-medium">{nf.format(user._count.comments)}</div>
             <div className="mt-0.5 text-[12.5px] text-ink-3">Commentaires publiés</div>
           </div>
           <div className="rounded-[14px] border border-line bg-surface px-6 py-5 shadow-[var(--shadow-sm)]">
-            <div className="font-serif text-[32px] font-medium">{nf.format(user.groups.length)}</div>
+            <div className="font-serif text-[24px] sm:text-[28px] lg:text-[32px] font-medium">{nf.format(user.groups.length)}</div>
             <div className="mt-0.5 text-[12.5px] text-ink-3">Groupes</div>
           </div>
           {user._count.articles > 0 ? (
             <div className="rounded-[14px] border border-line bg-surface px-6 py-5 shadow-[var(--shadow-sm)]">
-              <div className="font-serif text-[32px] font-medium text-orange">{nf.format(user._count.articles)}</div>
+              <div className="font-serif text-[24px] sm:text-[28px] lg:text-[32px] font-medium text-orange">{nf.format(user._count.articles)}</div>
               <div className="mt-0.5 text-[12.5px] text-ink-3">Articles signés</div>
             </div>
           ) : null}

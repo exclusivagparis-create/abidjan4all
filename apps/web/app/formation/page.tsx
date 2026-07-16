@@ -17,9 +17,9 @@ export default async function FormationPage() {
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[1080px] px-8 pb-16 pt-10">
+      <main className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8 pb-16 pt-10">
         <div className="mb-3 text-[13px] font-bold uppercase tracking-[0.16em] text-accent">A4A Formation</div>
-        <h1 className="max-w-[24ch] font-serif text-[40px] font-medium leading-[1.05] tracking-tight">
+        <h1 className="max-w-[24ch] font-serif text-[27px] sm:text-[33px] lg:text-[40px] font-medium leading-[1.05] tracking-tight">
           Des compétences concrètes, pensées pour la Côte d&apos;Ivoire et la diaspora.
         </h1>
 

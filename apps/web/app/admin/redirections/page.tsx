@@ -51,12 +51,12 @@ export default async function AdminRedirections({ searchParams }: { searchParams
         </form>
       </section>
 
-      <div className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
-        <div className="grid grid-cols-[1fr_1fr_80px_110px_90px] gap-3 border-b border-line bg-surface-2 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+      <div className="overflow-x-auto rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
+        <div className="grid grid-cols-[1fr_1fr_80px_110px_90px] min-w-[720px] gap-3 border-b border-line bg-surface-2 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
           <span>Source</span><span>Destination</span><span className="text-right">Visites</span><span>Créée</span><span />
         </div>
         {rules.map((r) => (
-          <div key={r.id} className="grid grid-cols-[1fr_1fr_80px_110px_90px] items-center gap-3 border-b border-line-2 px-5 py-3 last:border-b-0">
+          <div key={r.id} className="grid grid-cols-[1fr_1fr_80px_110px_90px] min-w-[720px] items-center gap-3 border-b border-line-2 px-5 py-3 last:border-b-0">
             <span className="truncate font-mono text-[12.5px]">{r.from}</span>
             <span className="truncate font-mono text-[12.5px] text-ink-2">{r.to}</span>
             <span className="text-right text-[12.5px] font-bold">{r.hits}</span>

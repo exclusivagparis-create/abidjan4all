@@ -43,7 +43,7 @@ export default async function LiveBlogPage({ params }: Props) {
       <SiteHeader />
 
       {/* en-tête d'événement (Live Blog.dc.html) */}
-      <div className="mx-auto max-w-[1080px] px-8 pt-[30px]">
+      <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8 pt-[30px]">
         <div className="mb-3.5 flex items-center gap-2.5">
           {blog.status === "live" ? (
             <span className="inline-flex items-center gap-1.5 rounded-pill bg-red px-[13px] py-1.5 text-xs font-extrabold uppercase tracking-[0.06em] text-white">
@@ -63,7 +63,7 @@ export default async function LiveBlogPage({ params }: Props) {
             {blog.rubrique.name}
           </Link>
         </div>
-        <h1 className="mb-3 max-w-[22ch] font-serif text-[42px] font-medium leading-[1.06] tracking-tight">
+        <h1 className="mb-3 max-w-[22ch] font-serif text-[27px] sm:text-[34px] lg:text-[42px] font-medium leading-[1.06] tracking-tight">
           {blog.title}
         </h1>
         {blog.dek ? (
@@ -83,7 +83,7 @@ export default async function LiveBlogPage({ params }: Props) {
         </div>
       </div>
 
-      <main className="mx-auto max-w-[1080px] px-8 pb-16 pt-[26px]">
+      <main className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8 pb-16 pt-[26px]">
         <LiveFeed
           liveBlogId={blog.id}
           initialUpdates={updates.map(toLiveUpdateDTO)}

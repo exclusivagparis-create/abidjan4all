@@ -6,7 +6,7 @@ export function StaticPageView({ title, body }: { title: string; body: string })
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[760px] px-8 pb-24 pt-12">
+      <main className="mx-auto max-w-[760px] px-4 sm:px-6 lg:px-8 pb-24 pt-12">
         <h1 className="mb-8 border-b-2 border-ink pb-5 font-serif text-[clamp(28px,5vw,42px)] font-medium leading-tight">
           {title}
         </h1>

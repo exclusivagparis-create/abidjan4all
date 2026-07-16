@@ -8,7 +8,7 @@ export async function SiteFooter() {
   ]);
   return (
     <footer className="mt-16 border-t border-line bg-surface">
-      <div className="mx-auto max-w-[1200px] px-8 py-10">
+      <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex flex-wrap items-center gap-4">
           <img src="/logo-light.png" alt="Abidjan4All" className="h-8 [display:var(--show-light)]" />
           <img src="/logo-dark.png" alt="" aria-hidden className="h-8 [display:var(--show-dark)]" />

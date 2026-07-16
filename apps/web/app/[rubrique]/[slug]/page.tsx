@@ -112,7 +112,7 @@ export default async function ArticlePage({ params }: Props) {
       {/* Africa in English : contenu anglophone signalé aux lecteurs d'écran et moteurs (DF-05) */}
       <main lang={article.rubrique.slug === "africa-in-english" ? "en" : undefined}>
         {/* Bloc-titre (variante « Édition classique » de Page Article.dc.html) */}
-        <div className="mx-auto max-w-[760px] px-8 pt-11">
+        <div className="mx-auto max-w-[760px] px-4 sm:px-6 lg:px-8 pt-11">
           <nav className="mb-5 text-xs font-semibold uppercase tracking-[0.12em] text-ink-3">
             <Link href="/" className="hover:text-ink">
               Accueil
@@ -179,7 +179,7 @@ export default async function ArticlePage({ params }: Props) {
         </div>
 
         {article.coverAsset ? (
-          <div className="mx-auto max-w-[980px] px-8">
+          <div className="mx-auto max-w-[980px] px-4 sm:px-6 lg:px-8">
             <PlaceholderMedia url={article.coverAsset.url} alt={article.coverAsset.alt} className="h-[440px] w-full rounded-[3px]" />
             {/* Légende du modèle : « 📷 Illustration : … © crédit » */}
             {article.coverAsset.alt || article.coverAsset.credit ? (
@@ -200,7 +200,7 @@ export default async function ArticlePage({ params }: Props) {
           const summary = article.aiSummary as { keyPoints?: string[] } | null;
           if (!summary?.keyPoints?.length) return null;
           return (
-            <div className="mx-auto max-w-[760px] px-8 pt-8">
+            <div className="mx-auto max-w-[760px] px-4 sm:px-6 lg:px-8 pt-8">
               <div className="rounded-md border border-line bg-surface-2 px-5 py-4">
                 <div className="mb-2.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.1em] text-accent">
                   ✦ Les points clés
@@ -218,7 +218,7 @@ export default async function ArticlePage({ params }: Props) {
           );
         })()}
 
-        <article className="paywalled relative mx-auto max-w-[760px] px-8 pt-10">
+        <article className="paywalled relative mx-auto max-w-[760px] px-4 sm:px-6 lg:px-8 pt-10">
           <ArticleBody blocks={visibleBlocks} />
           {gated ? (
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[120px] bg-[linear-gradient(to_bottom,transparent,var(--bg))]" />
@@ -227,7 +227,7 @@ export default async function ArticlePage({ params }: Props) {
 
         {/* Signature (modèle : avatar vert + rôle) puis tags de pied d'article */}
         {!gated ? (
-          <div className="mx-auto max-w-[760px] px-8">
+          <div className="mx-auto max-w-[760px] px-4 sm:px-6 lg:px-8">
             <div className="mt-10 flex items-start gap-4 border-t-2 border-ink pt-5">
               <span className="flex h-[52px] w-[52px] flex-none items-center justify-center rounded-pill bg-[#006633] font-serif text-[19px] font-bold text-white">
                 {initials(article.author.name)}
@@ -295,7 +295,7 @@ export default async function ArticlePage({ params }: Props) {
         <CommentsSection articleId={article.id} />
 
         {/* À LIRE AUSSI */}
-        <div className="mx-auto max-w-[840px] px-8 pb-6 pt-8">
+        <div className="mx-auto max-w-[840px] px-4 sm:px-6 lg:px-8 pb-6 pt-8">
           <div className="mb-5 border-b-2 border-orange pb-3.5 font-serif text-2xl font-semibold">À lire aussi</div>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
             {related.map((a) => (

@@ -20,13 +20,13 @@ export default async function EnDirectPage() {
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[1080px] px-8 pb-16 pt-10">
+      <main className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8 pb-16 pt-10">
         <div className="mb-8 flex items-center gap-3.5 border-b-2 border-ink pb-6">
           <span className="inline-flex items-center gap-1.5 rounded-pill bg-red px-[13px] py-1.5 text-xs font-extrabold uppercase tracking-[0.06em] text-white">
             <span className="h-2 w-2 rounded-pill bg-white [animation:a4a-pulse_1.4s_infinite]" />
             En Direct
           </span>
-          <h1 className="font-serif text-[40px] font-medium leading-none">Nos directs</h1>
+          <h1 className="font-serif text-[27px] sm:text-[33px] lg:text-[40px] font-medium leading-none">Nos directs</h1>
         </div>
 
         {lives.length === 0 ? (

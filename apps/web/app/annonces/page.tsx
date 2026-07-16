@@ -45,10 +45,10 @@ export default async function AnnoncesPage({ searchParams }: { searchParams: Pro
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[900px] px-8 pb-24 pt-12">
+      <main className="mx-auto max-w-[900px] px-4 sm:px-6 lg:px-8 pb-24 pt-12">
         <div className="mb-3 flex items-center gap-3.5 border-b-2 border-ink pb-6">
           <span className="h-[5px] w-[34px] rounded-[3px] bg-green" />
-          <h1 className="font-serif text-[40px] font-medium leading-none">Petites annonces</h1>
+          <h1 className="font-serif text-[27px] sm:text-[33px] lg:text-[40px] font-medium leading-none">Petites annonces</h1>
         </div>
         <p className="mb-6 max-w-[62ch] font-serif text-[15px] text-ink-2">
           Emploi, immobilier et services — les annonces de la communauté Abidjan4All, en Côte d&apos;Ivoire et dans la

@@ -56,7 +56,7 @@ export default function DesignPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1180px] px-8 pb-24">
+      <main className="mx-auto max-w-[1180px] px-4 sm:px-6 lg:px-8 pb-24">
         <div className="pt-14">
           <div className="mb-4 text-[13px] font-bold uppercase tracking-[0.16em] text-accent">
             Système de design · v1.0 · 2026

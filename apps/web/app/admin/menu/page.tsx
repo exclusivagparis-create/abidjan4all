@@ -76,12 +76,12 @@ export default async function AdminMenu({ searchParams }: { searchParams: Promis
       </section>
 
       {items.length > 0 ? (
-        <div className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
-          <div className="grid grid-cols-[70px_1fr_1fr_210px] gap-3 border-b border-line bg-surface-2 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+        <div className="overflow-x-auto rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
+          <div className="grid grid-cols-[70px_1fr_1fr_210px] min-w-[740px] gap-3 border-b border-line bg-surface-2 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
             <span>Ordre</span><span>Libellé</span><span>Adresse</span><span />
           </div>
           {items.map((item, i) => (
-            <div key={item.id} className="grid grid-cols-[70px_1fr_1fr_210px] items-center gap-3 border-b border-line-2 px-5 py-2.5 last:border-b-0">
+            <div key={item.id} className="grid grid-cols-[70px_1fr_1fr_210px] min-w-[740px] items-center gap-3 border-b border-line-2 px-5 py-2.5 last:border-b-0">
               <div className="flex gap-1">
                 <form action={moveMenuItemAction.bind(null, item.id, "up")}>
                   <button type="submit" className={btn} disabled={i === 0} title="Monter">↑</button>

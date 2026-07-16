@@ -25,10 +25,10 @@ export default async function VerifiePage() {
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[820px] px-8 pb-24 pt-12">
+      <main className="mx-auto max-w-[820px] px-4 sm:px-6 lg:px-8 pb-24 pt-12">
         <div className="mb-3 flex items-center gap-3.5 border-b-2 border-ink pb-6">
           <span className="flex h-9 w-9 items-center justify-center rounded-pill bg-green text-white">✓</span>
-          <h1 className="font-serif text-[40px] font-medium leading-none">A4A Vérifie</h1>
+          <h1 className="font-serif text-[27px] sm:text-[33px] lg:text-[40px] font-medium leading-none">A4A Vérifie</h1>
         </div>
         <p className="mb-8 max-w-[62ch] font-serif text-[15px] text-ink-2">
           Le fact-checking d&apos;Abidjan4All : nous passons au crible les affirmations qui circulent, avec un verdict

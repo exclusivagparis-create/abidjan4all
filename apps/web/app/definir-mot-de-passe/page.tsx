@@ -22,8 +22,8 @@ export default async function SetPasswordPage({
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[460px] px-8 pb-24 pt-12">
-        <h1 className="mb-2 font-serif text-[30px] font-medium">Activez votre compte</h1>
+      <main className="mx-auto max-w-[460px] px-4 sm:px-6 lg:px-8 pb-24 pt-12">
+        <h1 className="mb-2 font-serif text-[24px] sm:text-[27px] lg:text-[30px] font-medium">Activez votre compte</h1>
         {valid ? (
           <>
             <p className="mb-6 font-serif text-[15px] text-ink-2">

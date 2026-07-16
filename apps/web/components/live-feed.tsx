@@ -136,7 +136,7 @@ function UpdateRow({ update: u, isLatest, flash }: { update: LiveUpdateDTO; isLa
         ) : u.type === "stat" ? (
           <div className="rounded-md border border-line bg-surface-2 px-5 py-[18px]">
             <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.1em] text-orange">Chiffre clé</div>
-            {u.title ? <div className="mb-1 font-serif text-[30px] font-medium leading-tight">{u.title}</div> : null}
+            {u.title ? <div className="mb-1 font-serif text-[24px] sm:text-[27px] lg:text-[30px] font-medium leading-tight">{u.title}</div> : null}
             <div className="font-serif text-[15px] text-ink-2">{u.body}</div>
           </div>
         ) : (

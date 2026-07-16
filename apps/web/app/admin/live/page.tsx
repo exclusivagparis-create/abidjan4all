@@ -22,8 +22,8 @@ export default async function AdminLive() {
       <h1 className="mb-6 text-lg font-bold">Live-blog</h1>
       <LiveCreateForm rubriques={rubriques} />
 
-      <div className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
-        <div className="grid grid-cols-[1fr_140px_110px_130px] gap-4 border-b border-line bg-surface-2 px-[22px] py-[13px] text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+      <div className="overflow-x-auto rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
+        <div className="grid grid-cols-[1fr_140px_110px_130px] min-w-[680px] gap-4 border-b border-line bg-surface-2 px-[22px] py-[13px] text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
           <span>Événement</span>
           <span>Rubrique</span>
           <span>Statut</span>
@@ -33,7 +33,7 @@ export default async function AdminLive() {
           <Link
             key={l.id}
             href={`/admin/live/${l.id}`}
-            className="grid grid-cols-[1fr_140px_110px_130px] items-center gap-4 border-b border-line-2 px-[22px] py-[15px] last:border-b-0 hover:bg-surface-2/60"
+            className="grid grid-cols-[1fr_140px_110px_130px] min-w-[680px] items-center gap-4 border-b border-line-2 px-[22px] py-[15px] last:border-b-0 hover:bg-surface-2/60"
           >
             <span className="font-serif text-base font-semibold leading-[1.2]">{l.title}</span>
             <span

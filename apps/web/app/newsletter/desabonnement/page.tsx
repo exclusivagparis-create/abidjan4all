@@ -34,10 +34,10 @@ export default async function UnsubscribePage({
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[560px] px-8 pb-24 pt-16 text-center">
+      <main className="mx-auto max-w-[560px] px-4 sm:px-6 lg:px-8 pb-24 pt-16 text-center">
         {done ? (
           <>
-            <h1 className="mb-3 font-serif text-[30px] font-medium">Désabonnement confirmé</h1>
+            <h1 className="mb-3 font-serif text-[24px] sm:text-[27px] lg:text-[30px] font-medium">Désabonnement confirmé</h1>
             <p className="font-serif text-[15px] text-ink-2">
               L&apos;adresse <b>{email}</b> ne recevra plus cette newsletter. Vous pouvez vous réabonner à tout
               moment depuis le site.
@@ -45,7 +45,7 @@ export default async function UnsubscribePage({
           </>
         ) : (
           <>
-            <h1 className="mb-3 font-serif text-[30px] font-medium">Lien invalide</h1>
+            <h1 className="mb-3 font-serif text-[24px] sm:text-[27px] lg:text-[30px] font-medium">Lien invalide</h1>
             <p className="font-serif text-[15px] text-ink-2">
               Ce lien de désabonnement est invalide ou incomplet.
             </p>

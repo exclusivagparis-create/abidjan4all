@@ -55,7 +55,7 @@ export default async function RubriquePage({ params }: Props) {
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <main className="mx-auto max-w-[1200px] px-8 pt-10">
+      <main className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-10">
         <nav className="mb-6 text-xs font-semibold uppercase tracking-[0.12em] text-ink-3">
           <Link href="/" className="hover:text-ink">
             Accueil
@@ -66,7 +66,7 @@ export default async function RubriquePage({ params }: Props) {
 
         <div className="mb-8 flex items-center gap-3.5 border-b-2 border-ink pb-6">
           <span className="h-[5px] w-[34px] rounded-[3px]" style={{ background: rubrique.color }} />
-          <h1 className="font-serif text-[40px] font-medium leading-none">{rubrique.name}</h1>
+          <h1 className="font-serif text-[27px] font-medium leading-none sm:text-[34px] lg:text-[40px]">{rubrique.name}</h1>
           <span className="mt-1 text-[13px] text-ink-3">
             {articles.length} article{articles.length > 1 ? "s" : ""}
           </span>

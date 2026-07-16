@@ -189,7 +189,7 @@ export function ArticleEditor({
             onChange={(e) => set("title", e.target.value)}
             placeholder="Titre de l'article"
             rows={2}
-            className="mb-4 w-full resize-none bg-transparent font-serif text-[38px] font-medium leading-[1.08] tracking-tight text-ink outline-none placeholder:text-ink-3"
+            className="mb-4 w-full resize-none bg-transparent font-serif text-[26px] sm:text-[32px] lg:text-[38px] font-medium leading-[1.08] tracking-tight text-ink outline-none placeholder:text-ink-3"
           />
           <textarea
             value={article.dek}
