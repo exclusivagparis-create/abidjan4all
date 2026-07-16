@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@a4a/db";
 import { METHODS, PLANS, type PaymentMethodId, type PlanId } from "@a4a/payments";
-import { auth } from "@/auth";
-import { failPayment, fulfillPayment, startCheckout } from "@/lib/billing";
+import { auth, signOut } from "@/auth";
+import { CompteIntrouvableError, failPayment, fulfillPayment, startCheckout } from "@/lib/billing";
 
 /** Depuis /abonnement : crée le paiement et redirige vers la page du PSP. */
 export async function subscribeAction(formData: FormData): Promise<void> {
@@ -22,6 +22,7 @@ export async function subscribeAction(formData: FormData): Promise<void> {
   // retour à /abonnement avec un message. redirect() lance une exception
   // interne Next — il reste hors du try.
   let checkoutUrl: string | null = null;
+  let sessionMorte = false;
   try {
     ({ checkoutUrl } = await startCheckout(
       session.user.id,
@@ -30,7 +31,20 @@ export async function subscribeAction(formData: FormData): Promise<void> {
       method
     ));
   } catch (e) {
-    console.error(`[billing] checkout ${method} refusé :`, e);
+    // Compte disparu : ce n'est PAS un problème de paiement. Le dire comme
+    // tel, sinon l'abonné essaie chaque moyen l'un après l'autre en vain.
+    if (e instanceof CompteIntrouvableError) {
+      console.warn(`[billing] session orpheline (compte supprimé) — déconnexion.`);
+      sessionMorte = true;
+    } else {
+      console.error(`[billing] checkout ${method} refusé :`, e);
+    }
+  }
+
+  if (sessionMorte) {
+    // Purge le jeton devenu invalide, sinon l'abonné boucle sur la même erreur.
+    await signOut({ redirect: false });
+    redirect("/login?next=/abonnement&raison=session_expiree");
   }
   if (!checkoutUrl) redirect(`/abonnement?indisponible=${method}`);
   redirect(checkoutUrl);

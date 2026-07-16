@@ -5,6 +5,7 @@ import { RubriqueBadge } from "@a4a/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PlaceholderMedia } from "@/components/placeholder-media";
+import { RichTitle } from "@/components/rich-title";
 import { VideoPlayer } from "@/components/video-player";
 import { thumbnailUrl } from "@/lib/video";
 import { articleListSelect } from "@/lib/api";
@@ -156,7 +157,7 @@ export default async function VideosPage() {
                     />
                     <RubriqueBadge slug={a.rubrique.slug} label={a.rubrique.name} color={a.rubrique.color} />
                     <h4 className="mt-[7px] font-serif text-[19px] font-semibold leading-[1.22] group-hover:underline">
-                      {a.title}
+                      <RichTitle text={a.title} />
                     </h4>
                   </Link>
                   <div className="mt-1.5 text-xs text-ink-3">

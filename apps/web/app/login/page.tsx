@@ -7,9 +7,9 @@ export const metadata: Metadata = { title: "Connexion" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; raison?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, raison } = await searchParams;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-bg px-6 text-ink">
@@ -23,6 +23,11 @@ export default async function LoginPage({
         <p className="mb-6 text-[13px] text-ink-3">
           Espace membre et studio éditorial Abidjan4All.
         </p>
+        {raison === "session_expiree" ? (
+          <p className="mb-5 rounded-[8px] bg-[rgba(232,100,26,0.1)] px-3.5 py-2.5 text-[12.5px] font-semibold text-orange">
+            Votre session n&apos;était plus valide et a été fermée. Reconnectez-vous pour continuer.
+          </p>
+        ) : null}
         <LoginForm next={next} />
       </div>
       {/* Les identifiants de démonstration du seed ne sont plus affichés ici :

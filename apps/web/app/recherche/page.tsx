@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PlaceholderMedia } from "@/components/placeholder-media";
+import { RichTitle } from "@/components/rich-title";
 import { formatDate } from "@/lib/format";
 import { answerFromSources } from "@a4a/ai";
 import {
@@ -232,7 +233,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                         </span>
                         <Link href={`/${r.rubriqueSlug}/${r.slug}`}>
                           <h3 className="my-1.5 font-serif text-[21px] font-semibold leading-[1.2] hover:underline">
-                            {r.title}
+                            <RichTitle text={r.title} />
                           </h3>
                         </Link>
                         <p

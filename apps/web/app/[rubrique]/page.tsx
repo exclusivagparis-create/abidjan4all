@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { AdSlot } from "@/components/ad-slot";
 import { PlaceholderMedia } from "@/components/placeholder-media";
+import { RichTitle } from "@/components/rich-title";
 import { StaticPageView } from "@/components/static-page-view";
 import { articleListSelect } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -93,7 +94,7 @@ export default async function RubriquePage({ params }: Props) {
                   ) : null}
                   <Link href={`/${rubrique.slug}/${a.slug}`}>
                     <h2 className="mb-1.5 mt-1 font-serif text-2xl font-semibold leading-[1.16] hover:underline">
-                      {a.title}
+                      <RichTitle text={a.title} />
                     </h2>
                   </Link>
                   <p className="mb-2.5 max-w-[70ch] font-serif text-[15.5px] leading-normal text-ink-2">{a.dek}</p>

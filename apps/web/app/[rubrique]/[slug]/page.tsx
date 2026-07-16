@@ -310,7 +310,7 @@ export default async function ArticlePage({ params }: Props) {
                   {a.rubrique.name}
                 </span>
                 <h4 className="mt-[7px] font-serif text-[17px] font-semibold leading-[1.22] group-hover:underline">
-                  {a.title}
+                  <RichTitle text={a.title} />
                 </h4>
               </Link>
             ))}

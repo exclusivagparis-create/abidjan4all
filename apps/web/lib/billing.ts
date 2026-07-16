@@ -15,6 +15,19 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
 }
 
 /**
+ * Le compte de la session n'existe plus en base : jeton signé encore valide
+ * mais utilisateur supprimé depuis. Distinguée d'un refus du prestataire,
+ * sinon l'abonné voit « moyen de paiement indisponible » et essaie en vain
+ * tous les moyens — le paiement n'a en réalité jamais été tenté.
+ */
+export class CompteIntrouvableError extends Error {
+  constructor() {
+    super("Le compte de cette session n'existe plus.");
+    this.name = "CompteIntrouvableError";
+  }
+}
+
+/**
  * Démarre un checkout : Subscription (sans toucher au plan actif) + Payment
  * `pending`, puis session chez le prestataire. Retourne l'URL de paiement.
  */
@@ -26,6 +39,11 @@ export async function startCheckout(
 ): Promise<{ checkoutUrl: string }> {
   const plan = planById(planId);
   if (!plan?.price) throw new Error("Offre invalide.");
+
+  // Contrôle avant écriture : sans lui, l'upsert viole la clé étrangère
+  // Subscription_userId_fkey et l'erreur remonte en « refus du prestataire ».
+  const compte = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+  if (!compte) throw new CompteIntrouvableError();
 
   const subscription = await prisma.subscription.upsert({
     where: { userId },

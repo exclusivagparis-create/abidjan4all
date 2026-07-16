@@ -144,7 +144,7 @@ export default async function HomePage() {
                   <RubriqueBadge slug={a.rubrique.slug} label={a.rubrique.name} color={a.rubrique.color} />
                   <Link href={url(a)}>
                     <h2 className="mb-1.5 mt-[7px] font-serif text-2xl font-semibold leading-[1.14] hover:underline">
-                      {a.title}
+                      <RichTitle text={a.title} />
                     </h2>
                   </Link>
                   <div className="text-xs text-ink-3">
@@ -167,7 +167,7 @@ export default async function HomePage() {
                     <span className="font-serif text-xl font-medium text-orange">{i + 1}</span>
                     <Link href={url(a)}>
                       <h4 className="font-serif text-[15px] font-semibold leading-[1.2] hover:underline">
-                        {a.title}
+                        <RichTitle text={a.title} />
                       </h4>
                     </Link>
                   </div>
@@ -214,7 +214,7 @@ export default async function HomePage() {
                 </span>
                 <Link href={url(cacao[0]!)}>
                   <h3 className="my-2 font-serif text-[27px] font-semibold leading-[1.14] hover:underline">
-                    {cacao[0]!.title}
+                    <RichTitle text={cacao[0]!.title} />
                   </h3>
                 </Link>
                 <p className="mb-3 max-w-[56ch] font-serif text-base leading-[1.5] text-ink-2">{cacao[0]!.dek}</p>
@@ -230,7 +230,9 @@ export default async function HomePage() {
                     {a.kicker ?? "Marchés"}
                   </span>
                   <Link href={url(a)}>
-                    <h4 className="my-1.5 font-serif text-[19px] font-semibold leading-[1.18] hover:underline">{a.title}</h4>
+                    <h4 className="my-1.5 font-serif text-[19px] font-semibold leading-[1.18] hover:underline">
+                      <RichTitle text={a.title} />
+                    </h4>
                   </Link>
                   <div className="text-[11.5px] text-ink-3">{a.readingTime} min</div>
                 </div>
@@ -250,7 +252,7 @@ export default async function HomePage() {
                 <PlaceholderMedia url={a.coverAsset?.url} alt={a.coverAsset?.alt} className="mb-3 h-[170px] w-full rounded-[10px]" />
                 <RubriqueBadge slug={a.rubrique.slug} label={a.rubrique.name} color={a.rubrique.color} />
                 <h4 className="mt-[7px] font-serif text-[19px] font-semibold leading-[1.22] group-hover:underline">
-                  {a.title}
+                  <RichTitle text={a.title} />
                 </h4>
               </Link>
               <div className="mt-1.5 flex items-center gap-2 text-xs text-ink-3">
