@@ -52,7 +52,7 @@ export async function SiteHeader() {
             className="w-20 bg-transparent text-[12.5px] text-ink outline-none placeholder:text-ink-3"
           />
         </form>
-        <Link href="/espace-membre" className="hidden text-[12.5px] font-semibold text-ink-2 hover:text-ink sm:inline">
+        <Link href="/espace-membre" className="hidden whitespace-nowrap text-[12.5px] font-semibold text-ink-2 hover:text-ink sm:inline">
           Mon compte
         </Link>
         <ThemeToggle />

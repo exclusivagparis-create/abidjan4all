@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { authenticate } from "@/lib/actions/auth-actions";
 
 export function LoginForm({ next }: { next?: string }) {
@@ -8,7 +9,10 @@ export function LoginForm({ next }: { next?: string }) {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <input type="hidden" name="redirectTo" value={next ?? "/admin"} />
+      {/* Défaut : l'espace membre, accessible à tous les rôles. Viser /admin
+          enfermait un simple membre dans une boucle (le Studio le renvoie au
+          login, qui le renvoie au Studio). La rédaction arrive avec next=/admin. */}
+      <input type="hidden" name="redirectTo" value={next ?? "/espace-membre"} />
       <label className="flex flex-col gap-1.5">
         <span className="text-xs font-semibold text-ink-2">Adresse e-mail</span>
         <input
@@ -45,6 +49,18 @@ export function LoginForm({ next }: { next?: string }) {
       >
         {pending ? "Connexion…" : "Se connecter"}
       </button>
+
+      <div className="mt-1 flex flex-col gap-2 text-center text-[12.5px] text-ink-3">
+        <Link href="/mot-de-passe-oublie" className="font-semibold text-blue hover:underline">
+          Mot de passe oublié ?
+        </Link>
+        <span>
+          Pas encore de compte ?{" "}
+          <Link href="/inscription" className="font-semibold text-blue hover:underline">
+            Créer un compte
+          </Link>
+        </span>
+      </div>
     </form>
   );
 }

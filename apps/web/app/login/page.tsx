@@ -25,11 +25,9 @@ export default async function LoginPage({
         </p>
         <LoginForm next={next} />
       </div>
-
-      <p className="mt-6 max-w-[400px] text-center text-xs leading-relaxed text-ink-3">
-        Comptes de démonstration (seed) : <b>mariam.toure@abidjan4all.net</b> (éditrice),{" "}
-        <b>awa.kone@abidjan4all.net</b> (journaliste) — mot de passe <b>abidjan2026</b>.
-      </p>
+      {/* Les identifiants de démonstration du seed ne sont plus affichés ici :
+          en production, cette page publique invitait à essayer un compte de
+          la rédaction avec son mot de passe. */}
     </div>
   );
 }

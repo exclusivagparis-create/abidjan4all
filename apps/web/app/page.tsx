@@ -7,6 +7,7 @@ import { Ticker } from "@/components/ticker";
 import { PlaceholderMedia } from "@/components/placeholder-media";
 import { RichTitle, plainTitle } from "@/components/rich-title";
 import { ShareButtons } from "@/components/share-buttons";
+import { VideoWindow } from "@/components/video-window";
 import { articleListSelect } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 
@@ -25,7 +26,7 @@ const MARCHES = [
 const PUBLIC_ARTICLE = { status: "published" as const, hidden: false };
 
 export default async function HomePage() {
-  const [featured, articles, liveUpdates, plusLus] = await Promise.all([
+  const [featured, articles, liveUpdates, plusLus, videos] = await Promise.all([
     // « À la Une » piloté depuis le Studio (positions 1 à 5).
     prisma.article.findMany({
       where: { ...PUBLIC_ARTICLE, featuredRank: { not: null } },
@@ -51,6 +52,14 @@ export default async function HomePage() {
       orderBy: { views: "desc" },
       take: 3,
     }),
+    // Fenêtre vidéo du rail : le direct d'abord, puis les plus récentes.
+    // 5 au total = la vidéo en tête + 4 d'historique.
+    prisma.video.findMany({
+      where: { published: true },
+      select: { id: true, title: true, provider: true, providerRef: true, live: true },
+      orderBy: [{ live: "desc" }, { publishedAt: "desc" }],
+      take: 5,
+    }),
   ]);
 
   // À la Une = positions choisies ; à défaut, les plus récents. Le n°1 fait la tête d'affiche.
@@ -70,13 +79,35 @@ export default async function HomePage() {
       <SiteHeader />
       <Ticker items={tickerItems} />
 
+      {/* RUBAN MARCHÉS (statique — flux de cotation à brancher en DF-05) */}
+      <section className="mx-auto max-w-[1200px] px-8 pt-[22px]">
+        <div className="flex overflow-hidden rounded-md border border-line bg-surface shadow-[var(--shadow-sm)]">
+          <div className="flex flex-none items-center bg-navy px-5 text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-white">
+            Marchés
+          </div>
+          <div className="grid flex-1 grid-cols-2 sm:grid-cols-5">
+            {MARCHES.map((m, i) => (
+              <div key={m.label} className={`px-5 py-3 ${i < MARCHES.length - 1 ? "border-r border-line-2" : ""}`}>
+                <div className="text-[11px] text-ink-3">{m.label}</div>
+                <div className="text-[15px] font-bold">
+                  {m.value} <span className={m.tone}>{m.delta}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* HERO */}
       {lead ? (
-        <section className="mx-auto max-w-[1200px] px-8 pt-[34px]">
+        <section className="mx-auto max-w-[1200px] px-8 pt-8">
           <div className="grid grid-cols-1 gap-9 border-b-2 border-ink pb-8 lg:grid-cols-[1.6fr_1fr]">
             <article>
               <Link href={url(lead)} className="group block">
-                <div className="relative mb-5 h-[420px] overflow-hidden rounded-[14px]">
+                {/* Hauteur relevée : la fenêtre vidéo du rail rend la colonne
+                    de droite plus haute, une image trop courte laisserait un
+                    grand blanc sous cet article. */}
+                <div className="relative mb-5 h-[560px] overflow-hidden rounded-[14px]">
                   <PlaceholderMedia url={lead.coverAsset?.url} alt={lead.coverAsset?.alt} className="h-full w-full" />
                   <span
                     className="absolute left-4 top-4 rounded-[5px] px-3 py-1.5 text-[11.5px] font-bold uppercase tracking-[0.09em] text-white"
@@ -116,6 +147,9 @@ export default async function HomePage() {
                   </div>
                 </div>
               ))}
+              {/* Comble le vide entre le 2e article du rail et « Les plus lus ». */}
+              <VideoWindow videos={videos} />
+
               <div className="mt-auto rounded-md border border-line bg-surface-2 px-5 py-4">
                 <div className="mb-1 border-b border-line pb-2.5 text-[11px] font-bold uppercase tracking-[0.1em]">
                   Les plus lus
@@ -139,24 +173,28 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      {/* RUBAN MARCHÉS (statique — flux de cotation à brancher en DF-05) */}
-      <section className="mx-auto max-w-[1200px] px-8 pt-[18px]">
-        <div className="flex overflow-hidden rounded-md border border-line bg-surface shadow-[var(--shadow-sm)]">
-          <div className="flex flex-none items-center bg-navy px-5 text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-white">
-            Marchés
-          </div>
-          <div className="grid flex-1 grid-cols-2 sm:grid-cols-5">
-            {MARCHES.map((m, i) => (
-              <div key={m.label} className={`px-5 py-3 ${i < MARCHES.length - 1 ? "border-r border-line-2" : ""}`}>
-                <div className="text-[11px] text-ink-3">{m.label}</div>
-                <div className="text-[15px] font-bold">
-                  {m.value} <span className={m.tone}>{m.delta}</span>
+      {/* 4 ARTICLES À LA UNE (positions choisies dans le Studio) */}
+      {grilleUne.length > 0 ? (
+        <section className="mx-auto max-w-[1200px] px-8 pt-12">
+          <SectionHeader name="À la une" color="var(--orange)" />
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {grilleUne.map((a) => (
+              <article key={a.slug}>
+                <Link href={url(a)} className="group block">
+                  <PlaceholderMedia url={a.coverAsset?.url} alt={a.coverAsset?.alt} className="mb-3 h-[160px] w-full rounded-[10px]" />
+                  <RubriqueBadge slug={a.rubrique.slug} label={a.rubrique.name} color={a.rubrique.color} />
+                  <h4 className="mt-[7px] font-serif text-[19px] font-semibold leading-[1.2] group-hover:underline">
+                    <RichTitle text={a.title} />
+                  </h4>
+                </Link>
+                <div className="mt-1.5 flex items-center gap-2 text-xs text-ink-3">
+                  {a.author.name} · {a.readingTime} min {a.premium ? <PremiumChip /> : null}
                 </div>
-              </div>
+              </article>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       {/* BLOC CACAO & MARCHÉS */}
       {cacao.length > 0 ? (
@@ -193,29 +231,6 @@ export default async function HomePage() {
                 </div>
               ))}
             </div>
-          </div>
-        </section>
-      ) : null}
-
-      {/* 4 ARTICLES À LA UNE (positions choisies dans le Studio) */}
-      {grilleUne.length > 0 ? (
-        <section className="mx-auto max-w-[1200px] px-8 pt-12">
-          <SectionHeader name="À la une" color="var(--orange)" />
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {grilleUne.map((a) => (
-              <article key={a.slug}>
-                <Link href={url(a)} className="group block">
-                  <PlaceholderMedia url={a.coverAsset?.url} alt={a.coverAsset?.alt} className="mb-3 h-[160px] w-full rounded-[10px]" />
-                  <RubriqueBadge slug={a.rubrique.slug} label={a.rubrique.name} color={a.rubrique.color} />
-                  <h4 className="mt-[7px] font-serif text-[19px] font-semibold leading-[1.2] group-hover:underline">
-                    <RichTitle text={a.title} />
-                  </h4>
-                </Link>
-                <div className="mt-1.5 flex items-center gap-2 text-xs text-ink-3">
-                  {a.author.name} · {a.readingTime} min {a.premium ? <PremiumChip /> : null}
-                </div>
-              </article>
-            ))}
           </div>
         </section>
       ) : null}

@@ -82,6 +82,7 @@ enum SubscriptionStatus {
 enum PaymentMethod {
   momo
   orange
+  wave
   card
   paypal
 }
@@ -139,7 +140,11 @@ model User {
   avatarUrl    String?
   country      String? // ex. "CI", "CA"
   bio          String?
-  verified     Boolean  @default(false)
+  verified     Boolean  @default(false) // badge « compte vérifié » (éditorial)
+  /// Date de validation de l'adresse e-mail. NULL = inscription libre non
+  /// confirmée : la connexion est refusée tant que le lien n'est pas cliqué.
+  /// Les comptes créés par l'administration sont validés d'office.
+  emailVerified DateTime?
   badges       Badge[]
   interests    String[] // ids de rubriques (feed "Pour vous")
   locale       String   @default("fr") // fr | en
@@ -159,6 +164,18 @@ model User {
   newsletterSubscriptions NewsletterSubscription[]
   pushSubscriptions       PushSubscription[]
   passwordSetTokens       PasswordSetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+}
+
+/// Jeton de confirmation d'adresse e-mail (inscription libre), usage unique.
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 }
 
 /// Jeton à usage unique pour définir/réinitialiser son mot de passe
@@ -225,6 +242,31 @@ model Redirect {
   to        String // destination, chemin interne ou URL absolue
   hits      Int      @default(0)
   createdAt DateTime @default(now())
+}
+
+/// Vidéo diffusée sur le site (rubrique « Vidéos »), gérée depuis le Studio.
+/// L'hébergement est délégué à la plateforme (YouTube/Facebook/Vimeo/Dailymotion) :
+/// le VPS ne sait ni stocker ni encoder de la vidéo, et le direct exigerait un
+/// serveur de streaming. On ne stocke donc qu'une URL, dont l'identifiant est
+/// extrait côté serveur — jamais de code d'intégration collé (faille XSS).
+model Video {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  /// URL publique d'origine, telle que saisie par la rédaction.
+  sourceUrl   String
+  /// Plateforme reconnue : youtube | facebook | vimeo | dailymotion.
+  provider    String
+  /// Identifiant extrait de l'URL — sert à construire l'URL d'intégration.
+  providerRef String
+  /// Direct/streaming en cours : mis en avant et badgé « EN DIRECT ».
+  live        Boolean  @default(false)
+  published   Boolean  @default(true)
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([published, publishedAt])
 }
 
 /// Entrée du menu principal, gérée depuis le Studio.

@@ -120,6 +120,7 @@ export default async function AbonnementPage({
           <span className="rounded border border-[#E3DFD4] bg-white px-2 py-[3px] text-[10px] font-extrabold text-[#003087]">PayPal</span>
           <span className="rounded bg-[#FFCC00] px-2 py-[3px] text-[10px] font-extrabold text-[#111]">MTN MoMo</span>
           <span className="rounded bg-[#F16E00] px-2 py-[3px] text-[10px] font-extrabold text-white">Orange Money</span>
+          <span className="rounded bg-[#1DC8FF] px-2 py-[3px] text-[10px] font-extrabold text-[#111]">Wave</span>
           <span className="ml-2">· Résiliable à tout moment depuis l&apos;espace membre.</span>
         </div>
       </main>

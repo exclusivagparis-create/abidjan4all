@@ -32,6 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Médiathèque", href: "/admin/media", icon: "▤" },
     { label: "Rubriques", href: canPublish ? "/admin/rubriques" : undefined, icon: "◫" },
     { label: "Nos directs", href: "/admin/live", icon: "◉" },
+    { label: "Vidéos", href: canPublish ? "/admin/videos" : undefined, icon: "▶" },
     { label: "Podcasts", href: canPublish ? "/admin/podcasts" : undefined, icon: "▶" },
     { label: "A4A Formation", href: canPublish ? "/admin/formation" : undefined, icon: "🎓" },
     { label: "A4A Vérifie", href: canPublish ? "/admin/factchecks" : undefined, icon: "✓" },

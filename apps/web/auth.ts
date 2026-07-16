@@ -1,8 +1,13 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@a4a/db";
 import { authConfig } from "./auth.config";
+
+/** Identifiants corrects mais adresse e-mail jamais confirmée. */
+export class EmailNonVerifieError extends CredentialsSignin {
+  code = "email_non_verifie";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -19,6 +24,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
+
+        // Inscription libre non confirmée : mot de passe bon, mais adresse non
+        // prouvée. Erreur distincte pour ne pas laisser croire à une faute de
+        // frappe — le contrôle n'est levé qu'après le clic sur le lien reçu.
+        if (!user.emailVerified) throw new EmailNonVerifieError();
 
         return { id: user.id, email: user.email, name: user.name, role: user.role };
       },

@@ -4,7 +4,7 @@
  */
 
 export type PlanId = "essentiel" | "pro" | "corporate";
-export type PaymentMethodId = "momo" | "orange" | "card" | "paypal";
+export type PaymentMethodId = "momo" | "orange" | "wave" | "card" | "paypal";
 
 export interface Plan {
   id: PlanId;
@@ -57,9 +57,16 @@ export const PLANS: Plan[] = [
   },
 ];
 
+/**
+ * Moyens proposés à l'abonné. Côté PayDunya, le choix fait ici n'impose PAS
+ * le canal : PayDunya affiche sa propre page où le client choisit son
+ * opérateur (vérifié sur le compte : Orange Money, Wave, MTN, Moov, Djamo).
+ * Ce champ sert donc à orienter le client et à router vers le bon prestataire.
+ */
 export const METHODS: { id: PaymentMethodId; label: string }[] = [
   { id: "momo", label: "MTN Mobile Money" },
   { id: "orange", label: "Orange Money" },
+  { id: "wave", label: "Wave" },
   { id: "card", label: "Carte bancaire" },
   { id: "paypal", label: "PayPal" },
 ];
@@ -334,7 +341,7 @@ export function getProvider(): PaymentProvider {
 }
 
 /**
- * Routage par moyen de paiement : MoMo/Orange → PayDunya ; carte/PayPal →
+ * Routage par moyen de paiement : MoMo/Orange/Wave → PayDunya ; carte/PayPal →
  * Stripe dès que STRIPE_SECRET_KEY est configurée (diaspora hors zone FCFA),
  * sinon PayDunya prend aussi la carte. Sans PAYMENT_PROVIDER : mock (dev).
  */
