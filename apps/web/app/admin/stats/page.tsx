@@ -5,7 +5,14 @@ import { prisma, Prisma } from "@a4a/db";
 import { formatXOF } from "@a4a/payments";
 import { auth } from "@/auth";
 import { AudienceMoisBloc } from "@/components/admin/audience-mois";
-import { audienceDuMois, moisDisponibles } from "@/lib/stats-audience";
+import { HistoriqueBloc } from "@/components/admin/historique";
+import {
+  anneesDisponibles,
+  audienceDuMois,
+  historiqueAnnee,
+  moisDisponibles,
+  syntheseAnnuelle,
+} from "@/lib/stats-audience";
 
 export const metadata: Metadata = { title: "Statistiques · Studio" };
 export const dynamic = "force-dynamic";
@@ -33,16 +40,30 @@ async function revenusParMois(): Promise<Array<{ mois: string; total: number }>>
   }));
 }
 
-export default async function AdminStats({ searchParams }: { searchParams: Promise<{ mois?: string }> }) {
-  const [{ mois: moisDemande }, session] = await Promise.all([searchParams, auth()]);
+export default async function AdminStats({
+  searchParams,
+}: {
+  searchParams: Promise<{ mois?: string; annee?: string }>;
+}) {
+  const [{ mois: moisDemande, annee: anneeDemandee }, session] = await Promise.all([searchParams, auth()]);
   // Chiffres d'audience et de revenus : administration uniquement.
   if (session?.user?.role !== "admin") redirect("/admin");
 
   // Le mois en cours par défaut ; on n'accepte que le format AAAA-MM.
   const mois = /^\d{4}-\d{2}$/.test(moisDemande ?? "") ? moisDemande! : moisCourant();
-  const [listeMois, audience] = await Promise.all([moisDisponibles(), audienceDuMois(mois)]);
+  const anneeChoisie = /^\d{4}$/.test(anneeDemandee ?? "") ? Number(anneeDemandee) : new Date().getUTCFullYear();
+
+  const [listeMois, audience, listeAnnees, synthese, histoAnnee] = await Promise.all([
+    moisDisponibles(),
+    audienceDuMois(mois),
+    anneesDisponibles(),
+    syntheseAnnuelle(),
+    historiqueAnnee(anneeChoisie),
+  ]);
   // Le mois en cours doit toujours être proposé, même sans aucune visite.
   const moisProposes = listeMois.includes(mois) ? listeMois : [mois, ...listeMois];
+  // Idem pour l'année en cours dans le sélecteur.
+  const anneesProposees = listeAnnees.includes(anneeChoisie) ? listeAnnees : [anneeChoisie, ...listeAnnees];
 
   const [vues, publies, commentaires, abonnes, topArticles, parRubrique, revenus] = await Promise.all([
     prisma.article.aggregate({ _sum: { views: true }, where: { status: "published" } }),
@@ -93,6 +114,9 @@ export default async function AdminStats({ searchParams }: { searchParams: Promi
 
       {/* Audience du mois — mesure maison, sans cookie ni service tiers. */}
       <AudienceMoisBloc data={audience} mois={moisProposes} choisi={mois} />
+
+      {/* Vue historique : annuelle, visites/pages vues/revenus par mois. */}
+      <HistoriqueBloc synthese={synthese} annee={histoAnnee} annees={anneesProposees} choisie={anneeChoisie} />
 
       <h2 className="mb-4 text-[15px] font-bold">Depuis le lancement</h2>
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -149,7 +173,11 @@ export default async function AdminStats({ searchParams }: { searchParams: Promi
 
       {/* Revenus */}
       <section className="mt-6 rounded-[14px] border border-line bg-surface px-6 py-[22px] shadow-[var(--shadow-sm)]">
-        <h2 className="mb-3 text-sm font-bold">Revenus encaissés par mois</h2>
+        <h2 className="mb-1 text-sm font-bold">Revenus — 12 derniers mois (glissant)</h2>
+        <p className="mb-3 text-[11.5px] text-ink-3">
+          Vue continue sur un an, toutes années confondues. Le détail par année calendaire est dans l&apos;Historique
+          ci-dessus.
+        </p>
         {revenus.length === 0 ? (
           <p className="text-[13px] text-ink-3">Aucun paiement encaissé pour l&apos;instant.</p>
         ) : (

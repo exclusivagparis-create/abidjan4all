@@ -52,6 +52,112 @@ export async function moisDisponibles(): Promise<string[]> {
   return liste.reverse();
 }
 
+// ---------------------------------------------------------------------------
+// Vue historique : par année et par mois (audience + revenus)
+// ---------------------------------------------------------------------------
+
+export type MoisHistorique = { mois: number; visites: number; pagesVues: number; revenus: number };
+
+export type AnneeHistorique = {
+  annee: number;
+  mois: MoisHistorique[]; // toujours 12 entrées (jan → déc), même vides
+  totalVisites: number;
+  totalPagesVues: number;
+  totalRevenus: number;
+};
+
+export type SyntheseAnnee = { annee: number; visites: number; pagesVues: number; revenus: number };
+
+/** Années couvertes par les données (audience OU revenus), de la plus récente. */
+export async function anneesDisponibles(): Promise<number[]> {
+  const [premierePv, premierPay] = await Promise.all([
+    prisma.pageView.findFirst({ orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
+    prisma.payment.findFirst({
+      where: { status: "succeeded" },
+      orderBy: { createdAt: "asc" },
+      select: { createdAt: true },
+    }),
+  ]);
+  const dates = [premierePv?.createdAt, premierPay?.createdAt].filter(Boolean) as Date[];
+  const debut = dates.length ? Math.min(...dates.map((d) => d.getUTCFullYear())) : new Date().getUTCFullYear();
+  const fin = new Date().getUTCFullYear();
+  const annees: number[] = [];
+  for (let a = fin; a >= debut; a--) annees.push(a);
+  return annees;
+}
+
+/** Total audience + revenus par année (le tableau « historique annuel »). */
+export async function syntheseAnnuelle(): Promise<SyntheseAnnee[]> {
+  const [pv, rev] = await Promise.all([
+    prisma.$queryRaw<Array<{ annee: number; visites: bigint; pages: bigint }>>(Prisma.sql`
+      SELECT EXTRACT(YEAR FROM "createdAt")::int AS annee,
+             COUNT(DISTINCT "sessionId")::bigint AS visites,
+             COUNT(*)::bigint AS pages
+      FROM "PageView" GROUP BY 1
+    `),
+    prisma.$queryRaw<Array<{ annee: number; total: bigint }>>(Prisma.sql`
+      SELECT EXTRACT(YEAR FROM "createdAt")::int AS annee, SUM(amount)::bigint AS total
+      FROM "Payment" WHERE status = 'succeeded' GROUP BY 1
+    `),
+  ]);
+  const map = new Map<number, SyntheseAnnee>();
+  const get = (a: number) => {
+    if (!map.has(a)) map.set(a, { annee: a, visites: 0, pagesVues: 0, revenus: 0 });
+    return map.get(a)!;
+  };
+  for (const r of pv) {
+    const e = get(r.annee);
+    e.visites = Number(r.visites);
+    e.pagesVues = Number(r.pages);
+  }
+  for (const r of rev) get(r.annee).revenus = Number(r.total);
+  return [...map.values()].sort((a, b) => b.annee - a.annee);
+}
+
+/** Détail mois par mois d'une année : visites, pages vues, revenus encaissés. */
+export async function historiqueAnnee(annee: number): Promise<AnneeHistorique> {
+  const debut = new Date(Date.UTC(annee, 0, 1));
+  const fin = new Date(Date.UTC(annee + 1, 0, 1));
+
+  const [audience, revenus] = await Promise.all([
+    prisma.$queryRaw<Array<{ mois: number; visites: bigint; pages: bigint }>>(Prisma.sql`
+      SELECT EXTRACT(MONTH FROM "createdAt")::int AS mois,
+             COUNT(DISTINCT "sessionId")::bigint AS visites,
+             COUNT(*)::bigint AS pages
+      FROM "PageView"
+      WHERE "createdAt" >= ${debut} AND "createdAt" < ${fin}
+      GROUP BY 1
+    `),
+    prisma.$queryRaw<Array<{ mois: number; total: bigint }>>(Prisma.sql`
+      SELECT EXTRACT(MONTH FROM "createdAt")::int AS mois, SUM(amount)::bigint AS total
+      FROM "Payment"
+      WHERE status = 'succeeded' AND "createdAt" >= ${debut} AND "createdAt" < ${fin}
+      GROUP BY 1
+    `),
+  ]);
+
+  const parMois = new Map(audience.map((r) => [r.mois, { visites: Number(r.visites), pages: Number(r.pages) }]));
+  const parMoisRev = new Map(revenus.map((r) => [r.mois, Number(r.total)]));
+
+  const mois: MoisHistorique[] = [];
+  for (let m = 1; m <= 12; m++) {
+    mois.push({
+      mois: m,
+      visites: parMois.get(m)?.visites ?? 0,
+      pagesVues: parMois.get(m)?.pages ?? 0,
+      revenus: parMoisRev.get(m) ?? 0,
+    });
+  }
+
+  return {
+    annee,
+    mois,
+    totalVisites: mois.reduce((s, m) => s + m.visites, 0),
+    totalPagesVues: mois.reduce((s, m) => s + m.pagesVues, 0),
+    totalRevenus: mois.reduce((s, m) => s + m.revenus, 0),
+  };
+}
+
 export async function audienceDuMois(mois: string): Promise<AudienceMois> {
   const { debut, fin } = bornesDuMois(mois);
   const periode = { gte: debut, lt: fin };
