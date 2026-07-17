@@ -107,12 +107,16 @@ export default async function HomePage() {
       {lead ? (
         <section className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-8">
           <div className="grid grid-cols-1 gap-9 border-b-2 border-ink pb-8 lg:grid-cols-[1.6fr_1fr]">
-            <article>
-              <Link href={url(lead)} className="group block">
-                {/* 560px seulement à partir de `lg` : le rail (avec sa fenêtre
-                    vidéo) n'est à côté qu'en grand écran. Sur téléphone, cette
-                    hauteur mangeait 80 % de l'écran avant le premier mot. */}
-                <div className="relative mb-4 h-[210px] overflow-hidden rounded-[14px] sm:h-[320px] md:h-[420px] lg:mb-5 lg:h-[560px]">
+            {/* Colonne en flex : l'image absorbe l'écart de hauteur avec le
+                rail. Sans cela, un article court laissait un grand blanc sous
+                la signature, et un rail court en laissait un dans la fenêtre
+                vidéo — selon la longueur du titre du jour. */}
+            <article className="flex flex-col">
+              <Link href={url(lead)} className="group flex min-h-0 flex-1 flex-col">
+                {/* Hauteur libre à partir de `lg` (l'image, en object-cover,
+                    montre simplement plus du cliché). Sur téléphone elle est
+                    bornée : 560 px y mangeaient 80 % de l'écran. */}
+                <div className="relative mb-4 h-[210px] flex-none overflow-hidden rounded-[14px] sm:h-[320px] md:h-[420px] lg:mb-5 lg:h-auto lg:min-h-[420px] lg:flex-1">
                   <PlaceholderMedia url={lead.coverAsset?.url} alt={lead.coverAsset?.alt} className="h-full w-full" />
                   <span
                     className="absolute left-3 top-3 rounded-[5px] px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white sm:left-4 sm:top-4 sm:px-3 sm:py-1.5 sm:text-[11.5px]"

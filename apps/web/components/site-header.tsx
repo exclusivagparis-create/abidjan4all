@@ -48,11 +48,11 @@ export async function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-line bg-[var(--topbar)] backdrop-blur-[12px]">
       {/* gap-4 (et non 6) : 7 entrées de menu + recherche + compte + S'abonner
           dépassent sinon la largeur utile sur un portable 1280. */}
-      <div className="mx-auto flex max-w-[1200px] items-center gap-3 px-4 py-3.5 sm:px-6 md:gap-4 lg:px-8">
+      <div className="mx-auto flex max-w-[1200px] items-center gap-2 px-3 py-3.5 sm:gap-3 sm:px-6 md:gap-4 lg:px-8">
         <MobileMenu entries={NAV} secondaires={secondaires} connecte={connecte} />
         <Link href="/" className="flex flex-none items-center">
-          <img src="/logo-mark-light.png" alt="Abidjan4All" className="h-[21px] [display:var(--show-light)] sm:h-[26px]" />
-          <img src="/logo-mark-dark.png" alt="" aria-hidden className="h-[21px] [display:var(--show-dark)] sm:h-[26px]" />
+          <img src="/logo-mark-light.png" alt="Abidjan4All" className="h-[19px] [display:var(--show-light)] sm:h-[26px]" />
+          <img src="/logo-mark-dark.png" alt="" aria-hidden className="h-[19px] [display:var(--show-dark)] sm:h-[26px]" />
         </Link>
         {/* Barre horizontale à partir de `lg` seulement. En tablette, elle
             n'obtenait que 231 px pour 506 nécessaires : le menu était tronqué
@@ -79,11 +79,20 @@ export async function SiteHeader() {
             className="w-20 bg-transparent text-[12.5px] text-ink outline-none placeholder:text-ink-3"
           />
         </form>
+        {/* Toujours visible, y compris sur téléphone : ce lien était réservé
+            au grand écran, un visiteur mobile n'avait donc aucun accès à la
+            connexion depuis la barre. En dessous de `sm`, la place manque pour
+            le libellé — une icône le remplace, le nom restant porté par
+            aria-label pour les lecteurs d'écran. */}
         <Link
           href={connecte ? "/espace-membre" : "/login"}
-          className="hidden whitespace-nowrap text-[12.5px] font-semibold text-ink-2 hover:text-ink xl:inline"
+          aria-label={connecte ? "Mon compte" : "Se connecter"}
+          className="flex flex-none items-center whitespace-nowrap text-[12.5px] font-semibold text-ink-2 hover:text-ink"
         >
-          {connecte ? "Mon compte" : "Se connecter"}
+          <span aria-hidden className="text-[17px] leading-none sm:hidden">
+            ☺
+          </span>
+          <span className="hidden sm:inline">{connecte ? "Mon compte" : "Se connecter"}</span>
         </Link>
         {/* La bascule de thème est reprise dans le panneau mobile : dans la
             barre, son libellé « 🌙 Sombre » faisait déborder « S'abonner »
@@ -93,7 +102,7 @@ export async function SiteHeader() {
         </span>
         <Link
           href="/abonnement"
-          className="flex-none whitespace-nowrap rounded-pill bg-red px-3.5 py-2 text-[12px] font-bold text-white sm:px-[18px] sm:py-[9px] sm:text-[12.5px]"
+          className="flex-none whitespace-nowrap rounded-pill bg-red px-2.5 py-1.5 text-[11.5px] font-bold text-white sm:px-[18px] sm:py-[9px] sm:text-[12.5px]"
         >
           S&apos;abonner
         </Link>
