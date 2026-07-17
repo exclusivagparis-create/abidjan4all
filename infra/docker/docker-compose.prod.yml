@@ -15,6 +15,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - a4a_caddy_data:/data
       - a4a_caddy_config:/config
+      - a4a_caddy_logs:/var/log/caddy # journal d'accès (sans IP) — survit aux redéploiements
     depends_on:
       - web
 
@@ -77,4 +78,5 @@ volumes:
   a4a_redisdata_prod:
   a4a_caddy_data:
   a4a_caddy_config:
+  a4a_caddy_logs:
   a4a_uploads:
