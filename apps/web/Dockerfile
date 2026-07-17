@@ -52,17 +52,21 @@ RUN CLIENT=$(ls -d node_modules/.pnpm/@prisma+client@*/node_modules) \
   && cp -rL "$CLIENT/@prisma/client" apps/web/.next/standalone/node_modules/@prisma/ \
   && cp -rL "$CLIENT/.prisma" apps/web/.next/standalone/node_modules/
 
-# Même problème pour geoip-lite (déclaré serverExternalPackages, donc non
-# empaqueté) : ni le module ni ses bases `.dat` ne sont tracés — vérifié sur la
-# sortie standalone. Sans cette copie, le pays des visites resterait vide.
+# geoip-lite (serverExternalPackages, donc non empaqueté) : Next trace bien son
+# code dans standalone, mais PAS ses bases `.dat`. La bibliothèque les cherche
+# dans SON propre dossier — celui du magasin pnpm, pas node_modules/ à plat
+# (constaté en prod : ENOENT sur .pnpm/geoip-lite@x/node_modules/geoip-lite/data).
+# Les bases doivent donc atterrir exactement là.
 #
 # Les bases « villes » (108 Mo sur 111) sont retirées : seul le pays est
-# exploité. Vérifié que la recherche fonctionne sans elles.
+# exploité, et la recherche fonctionne sans elles (vérifié).
 # Le `test -s` fait échouer le build plutôt que de livrer des pays vides.
 RUN GEO=$(ls -d node_modules/.pnpm/geoip-lite@*/node_modules/geoip-lite) \
-  && cp -rL "$GEO" apps/web/.next/standalone/node_modules/geoip-lite \
-  && rm -f apps/web/.next/standalone/node_modules/geoip-lite/data/geoip-city*.dat \
-  && test -s apps/web/.next/standalone/node_modules/geoip-lite/data/geoip-country.dat
+  && DEST="apps/web/.next/standalone/$GEO" \
+  && mkdir -p "$DEST/data" \
+  && cp -L "$GEO"/data/geoip-country*.dat "$GEO"/data/*.checksum "$DEST/data/" \
+  && test -s "$DEST/data/geoip-country.dat" \
+  && echo "geoip : bases pays copiees dans $DEST/data"
 
 # ---------- runtime ----------
 FROM node:22-slim AS runner
