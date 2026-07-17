@@ -52,6 +52,18 @@ RUN CLIENT=$(ls -d node_modules/.pnpm/@prisma+client@*/node_modules) \
   && cp -rL "$CLIENT/@prisma/client" apps/web/.next/standalone/node_modules/@prisma/ \
   && cp -rL "$CLIENT/.prisma" apps/web/.next/standalone/node_modules/
 
+# Même problème pour geoip-lite (déclaré serverExternalPackages, donc non
+# empaqueté) : ni le module ni ses bases `.dat` ne sont tracés — vérifié sur la
+# sortie standalone. Sans cette copie, le pays des visites resterait vide.
+#
+# Les bases « villes » (108 Mo sur 111) sont retirées : seul le pays est
+# exploité. Vérifié que la recherche fonctionne sans elles.
+# Le `test -s` fait échouer le build plutôt que de livrer des pays vides.
+RUN GEO=$(ls -d node_modules/.pnpm/geoip-lite@*/node_modules/geoip-lite) \
+  && cp -rL "$GEO" apps/web/.next/standalone/node_modules/geoip-lite \
+  && rm -f apps/web/.next/standalone/node_modules/geoip-lite/data/geoip-city*.dat \
+  && test -s apps/web/.next/standalone/node_modules/geoip-lite/data/geoip-country.dat
+
 # ---------- runtime ----------
 FROM node:22-slim AS runner
 WORKDIR /app

@@ -246,6 +246,34 @@ model Redirect {
   createdAt DateTime @default(now())
 }
 
+/// Une page vue. Base des statistiques d'audience du Studio.
+///
+/// RGPD : aucune adresse IP n'est stockée. `visitorHash` est une empreinte
+/// (IP + navigateur + sel du jour) : elle permet de distinguer les visiteurs
+/// SANS pouvoir remonter à quelqu'un, et devient inexploitable le lendemain
+/// puisque le sel change. Aucun cookie n'est posé — la mesure fonctionne donc
+/// pour tous les lecteurs, y compris ceux qui refusent le bandeau.
+model PageView {
+  id          String   @id @default(cuid())
+  path        String
+  /// article | video | podcast | rubrique | autre — pour les compteurs métier.
+  kind        String   @default("autre")
+  /// Empreinte anonyme du visiteur, valable une journée (voir lib/audience.ts).
+  visitorHash String
+  /// Regroupe les pages vues d'une même venue (30 min d'inactivité = nouvelle).
+  sessionId   String
+  /// mobile | desktop — déduit du navigateur annoncé.
+  device      String   @default("desktop")
+  /// Code pays ISO (CI, FR…), déduit de l'IP à la volée puis l'IP est jetée.
+  country     String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([visitorHash, createdAt])
+  @@index([sessionId])
+  @@index([kind, createdAt])
+}
+
 /// Vidéo diffusée sur le site (rubrique « Vidéos »), gérée depuis le Studio.
 /// L'hébergement est délégué à la plateforme (YouTube/Facebook/Vimeo/Dailymotion) :
 /// le VPS ne sait ni stocker ni encoder de la vidéo, et le direct exigerait un
@@ -517,6 +545,9 @@ model NewsletterEdition {
   introHtml    String   @default("") // texte d'intro (éditeur enrichi, nettoyé)
   articleIds   Json     @default("[]") // articles inclus, dans l'ordre
   status       String   @default("draft") // draft | sent
+  /// Destinataires choisis à la main (adresses). Vide = tous les inscrits
+  /// confirmés de cette newsletter — comportement d'origine préservé.
+  recipientEmails Json  @default("[]")
   recipientCount Int    @default(0)
   sentAt       DateTime?
   createdAt    DateTime @default(now())

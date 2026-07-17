@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import { NextResponse } from "next/server";
 import { authConfig } from "./auth.config";
 
 const STUDIO_ROLES = ["journalist", "editor", "admin"];
@@ -20,6 +21,17 @@ export default auth((req) => {
       return Response.redirect(new URL("/", req.nextUrl));
     }
   }
+
+  // Expose le chemin aux composants serveur : la mesure d'audience en a besoin
+  // et Next ne le transmet pas autrement. Un en-tête de requête, jamais renvoyé
+  // au navigateur.
+  const enTetes = new Headers(req.headers);
+  enTetes.set("x-a4a-path", pathname);
+  return NextResponse.next({ request: { headers: enTetes } });
 });
 
-export const config = { matcher: ["/admin/:path*"] };
+export const config = {
+  // Tout le site SAUF : l'API (webhooks PSP — surtout ne pas les gêner), les
+  // fichiers de Next, les téléversements et tout ce qui porte une extension.
+  matcher: ["/((?!api|_next/static|_next/image|uploads|.*\\.[a-zA-Z0-9]+$).*)"],
+};

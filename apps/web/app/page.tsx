@@ -8,6 +8,7 @@ import { PlaceholderMedia } from "@/components/placeholder-media";
 import { RichTitle, plainTitle } from "@/components/rich-title";
 import { ShareButtons } from "@/components/share-buttons";
 import { VideoWindow } from "@/components/video-window";
+import { NewsletterSignup } from "@/components/newsletter-signup";
 import { articleListSelect } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 
@@ -26,7 +27,7 @@ const MARCHES = [
 const PUBLIC_ARTICLE = { status: "published" as const, hidden: false };
 
 export default async function HomePage() {
-  const [featured, articles, liveUpdates, plusLus, videos] = await Promise.all([
+  const [featured, articles, liveUpdates, plusLus, videos, lettre] = await Promise.all([
     // « À la Une » piloté depuis le Studio (positions 1 à 5).
     prisma.article.findMany({
       where: { ...PUBLIC_ARTICLE, featuredRank: { not: null } },
@@ -60,6 +61,10 @@ export default async function HomePage() {
       orderBy: [{ live: "desc" }, { publishedAt: "desc" }],
       take: 5,
     }),
+    // Newsletter mise en avant sur l'accueil (CRM DF-03).
+    prisma.newsletter
+      .findUnique({ where: { slug: "essentiel-du-matin" }, select: { name: true, description: true } })
+      .then((n) => n ?? prisma.newsletter.findFirst({ orderBy: { slug: "asc" }, select: { name: true, description: true } })),
   ]);
 
   // À la Une = positions choisies ; à défaut, les plus récents. Le n°1 fait la tête d'affiche.
@@ -245,6 +250,8 @@ export default async function HomePage() {
           </div>
         </section>
       ) : null}
+
+      {lettre ? <NewsletterSignup nom={lettre.name} description={lettre.description} /> : null}
 
       {/* DERNIERS ARTICLES */}
       <section className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-12">

@@ -3,6 +3,7 @@ import { ThemeToggle } from "@a4a/ui";
 import { prisma } from "@a4a/db";
 import { auth } from "@/auth";
 import { MobileMenu } from "@/components/mobile-menu";
+import { AudienceTracker } from "@/components/audience-tracker";
 
 /** Menu par défaut, servi tant qu'aucune entrée n'est définie au Studio. */
 const NAV_DEFAUT = [
@@ -46,6 +47,8 @@ export async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-[var(--topbar)] backdrop-blur-[12px]">
+      {/* Mesure d'audience — n'affiche rien, écrit après l'envoi de la page. */}
+      <AudienceTracker />
       {/* gap-4 (et non 6) : 7 entrées de menu + recherche + compte + S'abonner
           dépassent sinon la largeur utile sur un portable 1280. */}
       <div className="mx-auto flex max-w-[1200px] items-center gap-2 px-3 py-3.5 sm:gap-3 sm:px-6 md:gap-4 lg:px-8">

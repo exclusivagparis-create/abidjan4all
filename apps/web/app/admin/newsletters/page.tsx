@@ -33,6 +33,20 @@ export default async function AdminNewsletters({ searchParams }: { searchParams:
     }),
   ]);
 
+  // Suivi des inscriptions : qui s'est inscrit, quand, à quelle lettre.
+  const inscrits = await prisma.newsletterSubscription.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    select: {
+      id: true,
+      email: true,
+      confirmed: true,
+      createdAt: true,
+      newsletter: { select: { name: true } },
+      user: { select: { id: true, name: true } },
+    },
+  });
+
   const inp = "rounded-[8px] border border-line bg-surface px-3 py-2 text-[13px]";
 
   return (
@@ -56,6 +70,48 @@ export default async function AdminNewsletters({ searchParams }: { searchParams:
           </div>
         ))}
       </div>
+
+      {/* Suivi des inscriptions (CRM) */}
+      <section className="mb-6 overflow-x-auto rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
+        <div className="flex items-center justify-between gap-3 border-b border-line bg-surface-2 px-5 py-3">
+          <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+            Inscriptions ({inscrits.length}{inscrits.length === 200 ? " dernières" : ""})
+          </span>
+          <span className="text-[11px] text-ink-3">Depuis le site, l&apos;espace membre ou l&apos;accueil</span>
+        </div>
+        {inscrits.length === 0 ? (
+          <p className="px-5 py-8 text-center text-[13px] text-ink-3">
+            Aucune inscription pour l&apos;instant. Le formulaire est en bas de la page d&apos;accueil.
+          </p>
+        ) : (
+          <>
+            <div className="grid min-w-[640px] grid-cols-[1fr_180px_120px_110px] gap-3 border-b border-line px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+              <span>Adresse</span><span>Newsletter</span><span>Compte</span><span>Inscrit le</span>
+            </div>
+            {inscrits.map((s) => (
+              <div key={s.id} className="grid min-w-[640px] grid-cols-[1fr_180px_120px_110px] items-center gap-3 border-b border-line-2 px-5 py-2.5 last:border-b-0">
+                <span className="truncate text-[12.5px] font-semibold">
+                  {s.email}
+                  {!s.confirmed ? (
+                    <span className="ml-2 rounded-pill border border-line px-1.5 py-px text-[9.5px] font-bold uppercase text-ink-3">
+                      non confirmé
+                    </span>
+                  ) : null}
+                </span>
+                <span className="truncate text-[12px] text-ink-2">{s.newsletter.name}</span>
+                <span className="truncate text-[12px] text-ink-3">
+                  {s.user ? (
+                    <Link href={`/membre/${s.user.id}`} className="text-blue hover:underline">{s.user.name}</Link>
+                  ) : (
+                    "—"
+                  )}
+                </span>
+                <span className="text-[12px] text-ink-3">{formatDate(s.createdAt)}</span>
+              </div>
+            ))}
+          </>
+        )}
+      </section>
 
       {/* Composer une édition */}
       <section className="mb-6 rounded-[14px] border border-dashed border-line bg-surface-2 p-5">

@@ -30,14 +30,28 @@ function getTransporter(): nodemailer.Transporter | null {
 }
 
 /** Envoie un e-mail ; renvoie false (sans lever) si SMTP non configuré ou échec. */
-export async function sendEmail(opts: { to: string; subject: string; html: string; text?: string }): Promise<boolean> {
+export async function sendEmail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  /** Adresse à laquelle « Répondre » doit écrire (l'expéditeur reste no-reply). */
+  replyTo?: string;
+}): Promise<boolean> {
   const tx = getTransporter();
   if (!tx) {
     console.warn(`[email] SMTP non configuré — e-mail « ${opts.subject} » vers ${opts.to} non envoyé.`);
     return false;
   }
   try {
-    await tx.sendMail({ from: FROM, to: opts.to, subject: opts.subject, html: opts.html, text: opts.text });
+    await tx.sendMail({
+      from: FROM,
+      to: opts.to,
+      replyTo: opts.replyTo,
+      subject: opts.subject,
+      html: opts.html,
+      text: opts.text,
+    });
     return true;
   } catch (e) {
     console.error("[email] échec d'envoi :", e);

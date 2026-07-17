@@ -24,9 +24,17 @@ export async function submitContactAction(_prev: ContactResult | undefined, form
   const msg = await prisma.contactMessage.create({ data: { name, email, subject, body } });
 
   // Notification à la rédaction (si SMTP configuré) — répondable directement.
+  // Destinataires : la boîte d'envoi (no-reply) + la boîte de contact. Doublon
+  // volontaire : le message reste lisible même si l'une des deux est purgée.
+  // CONTACT_TO permet de changer l'adresse sans redéployer.
   if (emailConfigured) {
+    const destinataires = [process.env.SMTP_USER, process.env.CONTACT_TO ?? "contact@abidjan4all.info"]
+      .filter((a): a is string => Boolean(a))
+      .filter((a, i, t) => t.indexOf(a) === i); // jamais deux fois la même adresse
+
     sendEmail({
-      to: process.env.SMTP_USER!,
+      to: destinataires.join(", "),
+      replyTo: email, // « Répondre » écrit à l'auteur du message, pas à no-reply
       subject: `[Contact] ${subject}`,
       html: emailLayout(
         `Nouveau message de ${name}`,

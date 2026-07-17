@@ -24,6 +24,10 @@ const LEGACY_RUBRIQUES: Array<[source: string, destination: string]> = [
 const nextConfig: NextConfig = {
   // Les packages du workspace sont livrés en sources TS : Next les transpile.
   transpilePackages: ["@a4a/ui", "@a4a/db", "@a4a/payments", "@a4a/ai"],
+  // geoip-lite lit ses bases `.dat` sur le disque, à un chemin relatif à son
+  // propre dossier : empaqueté par webpack, il les cherche dans .next/ et
+  // échoue (500 sur toutes les pages). Laissé externe, il les retrouve.
+  serverExternalPackages: ["geoip-lite"],
   // Image Docker minimale (server.js autonome + traces de dépendances).
   // Conditionnel : la sortie standalone crée des symlinks, interdits sans
   // privilèges sous Windows — activée uniquement dans le build Docker (Linux).
