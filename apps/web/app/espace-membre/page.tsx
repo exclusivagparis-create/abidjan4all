@@ -6,6 +6,7 @@ import { formatXOF, planById } from "@a4a/payments";
 import { auth } from "@/auth";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { logout } from "@/lib/actions/auth-actions";
 import { cancelSubscriptionAction } from "@/lib/actions/billing-actions";
 import { updateProfileAction } from "@/lib/actions/community-actions";
 import { PushOptIn } from "@/components/push-optin";
@@ -106,6 +107,17 @@ export default async function EspaceMembrePage({
             >
               ⚙ Paramètres
             </Link>
+            {/* Il n'existait AUCUNE déconnexion hors du Studio : un membre
+                pouvait entrer mais jamais sortir — problème sur un appareil
+                partagé (famille, cybercafé). */}
+            <form action={logout}>
+              <button
+                type="submit"
+                className="rounded-pill border border-[rgba(214,40,45,0.4)] bg-surface-2 px-4 py-2 text-xs font-semibold text-red"
+              >
+                Se déconnecter
+              </button>
+            </form>
           </div>
         </div>
 

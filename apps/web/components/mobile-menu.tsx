@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@a4a/ui";
+import { logout } from "@/lib/actions/auth-actions";
 
 export type MenuEntry = { label: string; href: string };
 
@@ -118,7 +119,15 @@ export function MobileMenu({
                 <Link href="/inscription" className="mt-2.5 block py-1 text-center text-[13px] font-semibold text-blue">
                   Créer un compte
                 </Link>
-              ) : null}
+              ) : (
+                // Sur téléphone, le panneau est le seul chemin vers le compte :
+                // la déconnexion doit y être, pas seulement dans l'espace membre.
+                <form action={logout} className="mt-2.5">
+                  <button type="submit" className="block w-full py-1 text-center text-[13px] font-semibold text-red">
+                    Se déconnecter
+                  </button>
+                </form>
+              )}
               <Link
                 href="/abonnement"
                 className="mt-2.5 block rounded-pill bg-red py-3 text-center text-[14px] font-bold text-white"

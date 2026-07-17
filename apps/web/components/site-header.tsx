@@ -50,9 +50,15 @@ export async function SiteHeader() {
           dépassent sinon la largeur utile sur un portable 1280. */}
       <div className="mx-auto flex max-w-[1200px] items-center gap-2 px-3 py-3.5 sm:gap-3 sm:px-6 md:gap-4 lg:px-8">
         <MobileMenu entries={NAV} secondaires={secondaires} connecte={connecte} />
-        <Link href="/" className="flex flex-none items-center">
-          <img src="/logo-mark-light.png" alt="Abidjan4All" className="h-[19px] [display:var(--show-light)] sm:h-[26px]" />
-          <img src="/logo-mark-dark.png" alt="" aria-hidden className="h-[19px] [display:var(--show-dark)] sm:h-[26px]" />
+        {/* Sur téléphone : le monogramme A4A (48 px de large) au lieu du
+            mot-symbole complet (109 px). Les 61 px gagnés rendent sa place au
+            libellé « Se connecter », qu'une icône devait remplacer faute de
+            largeur. Le mot-symbole revient dès `sm`. */}
+        <Link href="/" className="flex flex-none items-center" aria-label="Abidjan4All — accueil">
+          <img src="/logo-a4a-light.png" alt="" aria-hidden className="h-[21px] [display:var(--show-light)] sm:hidden" />
+          <img src="/logo-a4a-dark.png" alt="" aria-hidden className="h-[21px] [display:var(--show-dark)] sm:hidden" />
+          <img src="/logo-mark-light.png" alt="" aria-hidden className="hidden h-[26px] sm:[display:var(--show-light)]" />
+          <img src="/logo-mark-dark.png" alt="" aria-hidden className="hidden h-[26px] sm:[display:var(--show-dark)]" />
         </Link>
         {/* Barre horizontale à partir de `lg` seulement. En tablette, elle
             n'obtenait que 231 px pour 506 nécessaires : le menu était tronqué
@@ -79,20 +85,14 @@ export async function SiteHeader() {
             className="w-20 bg-transparent text-[12.5px] text-ink outline-none placeholder:text-ink-3"
           />
         </form>
-        {/* Toujours visible, y compris sur téléphone : ce lien était réservé
-            au grand écran, un visiteur mobile n'avait donc aucun accès à la
-            connexion depuis la barre. En dessous de `sm`, la place manque pour
-            le libellé — une icône le remplace, le nom restant porté par
-            aria-label pour les lecteurs d'écran. */}
+        {/* Toujours visible, libellé compris : ce lien était réservé au grand
+            écran, un visiteur mobile n'avait donc aucun accès à la connexion
+            depuis la barre. Le monogramme A4A libère la largeur nécessaire. */}
         <Link
           href={connecte ? "/espace-membre" : "/login"}
-          aria-label={connecte ? "Mon compte" : "Se connecter"}
-          className="flex flex-none items-center whitespace-nowrap text-[12.5px] font-semibold text-ink-2 hover:text-ink"
+          className="flex-none whitespace-nowrap text-[11.5px] font-semibold text-ink-2 hover:text-ink sm:text-[12.5px]"
         >
-          <span aria-hidden className="text-[17px] leading-none sm:hidden">
-            ☺
-          </span>
-          <span className="hidden sm:inline">{connecte ? "Mon compte" : "Se connecter"}</span>
+          {connecte ? "Mon compte" : "Se connecter"}
         </Link>
         {/* La bascule de thème est reprise dans le panneau mobile : dans la
             barre, son libellé « 🌙 Sombre » faisait déborder « S'abonner »
