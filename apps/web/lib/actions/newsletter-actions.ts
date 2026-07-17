@@ -48,6 +48,33 @@ export async function updateEditionAction(id: string, formData: FormData): Promi
   redirect(`/admin/newsletters/${id}?ok=1`);
 }
 
+/**
+ * Choix des destinataires d'une édition (cases à cocher).
+ *
+ * Tout coché = liste vide en base : l'édition suivra alors automatiquement la
+ * liste des inscrits, y compris ceux arrivés après ce réglage. Une sélection
+ * partielle est figée sur les adresses retenues.
+ */
+export async function setRecipientsAction(id: string, formData: FormData): Promise<void> {
+  await requirePublisher();
+  const edition = await prisma.newsletterEdition.findUnique({ where: { id } });
+  if (!edition || edition.status === "sent") redirect(`/admin/newsletters/${id}`);
+
+  const choisis = formData.getAll("recipients").map((s) => String(s));
+  const tous = await prisma.newsletterSubscription.findMany({
+    where: { newsletterId: edition.newsletterId, confirmed: true },
+    select: { email: true },
+  });
+  const toutSelectionne = choisis.length === tous.length;
+
+  await prisma.newsletterEdition.update({
+    where: { id },
+    data: { recipientEmails: toutSelectionne ? [] : choisis },
+  });
+  revalidatePath(`/admin/newsletters/${id}`);
+  redirect(`/admin/newsletters/${id}?dest=${choisis.length}`);
+}
+
 export async function deleteEditionAction(id: string): Promise<void> {
   await requirePublisher();
   await prisma.newsletterEdition.delete({ where: { id } }).catch(() => {});
@@ -80,8 +107,16 @@ export async function sendEditionAction(id: string): Promise<void> {
   // conserver l'ordre choisi
   const articles = ids.map((aid) => articlesRaw.find((a) => a.id === aid)).filter(Boolean) as typeof articlesRaw;
 
+  // Destinataires : la sélection de l'édition si elle existe, sinon tous les
+  // inscrits confirmés. Le filtre sur les inscrits reste appliqué dans les deux
+  // cas : une adresse désinscrite entre-temps ne doit pas recevoir l'envoi.
+  const choisis = Array.isArray(edition.recipientEmails) ? (edition.recipientEmails as string[]) : [];
   const subs = await prisma.newsletterSubscription.findMany({
-    where: { newsletterId: edition.newsletterId, confirmed: true },
+    where: {
+      newsletterId: edition.newsletterId,
+      confirmed: true,
+      ...(choisis.length > 0 ? { email: { in: choisis } } : {}),
+    },
     select: { email: true },
   });
 

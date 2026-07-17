@@ -6,6 +6,7 @@ import { auth, PUBLISH_ROLES } from "@/auth";
 import {
   deleteEditionAction,
   sendEditionAction,
+  setRecipientsAction,
   updateEditionAction,
 } from "@/lib/actions/newsletter-actions";
 import { PageBodyEditor } from "@/components/admin/page-body-editor";
@@ -21,7 +22,7 @@ export default async function EditionPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ ok?: string; erreur?: string; envoye?: string }>;
+  searchParams: Promise<{ ok?: string; erreur?: string; envoye?: string; dest?: string }>;
 }) {
   const [{ id }, sp, session] = await Promise.all([params, searchParams, auth()]);
   if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
@@ -49,7 +50,19 @@ export default async function EditionPage({
   ]);
   const orderedArticles = ids.map((aid) => selected.find((a) => a.id === aid)).filter(Boolean) as typeof selected;
   const sent = edition.status === "sent";
-  const recipients = edition.newsletter._count.subscriptions;
+
+  // Destinataires : sélection figée de l'édition, sinon tous les inscrits.
+  const inscrits = await prisma.newsletterSubscription.findMany({
+    where: { newsletterId: edition.newsletterId, confirmed: true },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, email: true, createdAt: true, user: { select: { name: true } } },
+  });
+  const choisis = Array.isArray(edition.recipientEmails) ? (edition.recipientEmails as string[]) : [];
+  const selectionPartielle = choisis.length > 0;
+  const estChoisi = (email: string) => !selectionPartielle || choisis.includes(email);
+  const recipients = selectionPartielle
+    ? inscrits.filter((s) => estChoisi(s.email)).length
+    : inscrits.length;
 
   const previewHtml = buildEditionHtml({
     newsletterName: edition.newsletter.name,
@@ -106,12 +119,69 @@ export default async function EditionPage({
             </form>
           )}
 
+          {/* Choix des destinataires */}
+          {!sent ? (
+            <form action={setRecipientsAction.bind(null, edition.id)} className="mt-4 rounded-[14px] border border-line bg-surface p-5 shadow-[var(--shadow-sm)]">
+              <div className="mb-1 text-sm font-bold">Destinataires</div>
+              <p className="mb-3 text-[12.5px] text-ink-3">
+                {selectionPartielle ? (
+                  <>
+                    Sélection figée : <b>{recipients}</b> adresse(s) sur {inscrits.length}. Tout cocher rétablit
+                    l&apos;envoi à tous les inscrits, y compris ceux à venir.
+                  </>
+                ) : (
+                  <>
+                    Tous les inscrits — <b>{inscrits.length}</b> adresse(s), y compris celles inscrites d&apos;ici
+                    l&apos;envoi. Décochez pour restreindre.
+                  </>
+                )}
+              </p>
+
+              {inscrits.length === 0 ? (
+                <p className="text-[12.5px] text-ink-3">Aucun inscrit pour l&apos;instant.</p>
+              ) : (
+                <>
+                  <div className="max-h-[220px] overflow-y-auto rounded-[10px] border border-line-2">
+                    {inscrits.map((s) => (
+                      <label
+                        key={s.id}
+                        className="flex items-center gap-2.5 border-b border-line-2 px-3 py-2 last:border-b-0 hover:bg-surface-2/60"
+                      >
+                        <input
+                          type="checkbox"
+                          name="recipients"
+                          value={s.email}
+                          defaultChecked={estChoisi(s.email)}
+                        />
+                        <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold">{s.email}</span>
+                        {s.user ? <span className="truncate text-[11.5px] text-ink-3">{s.user.name}</span> : null}
+                        <span className="flex-none text-[11px] text-ink-3">{formatDate(s.createdAt)}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    type="submit"
+                    className="mt-3 rounded-pill border border-line bg-surface-2 px-4 py-2 text-xs font-bold text-ink"
+                  >
+                    Enregistrer les destinataires
+                  </button>
+                  {sp.dest ? (
+                    <span className="ml-3 text-[12px] font-semibold text-green">
+                      {sp.dest} destinataire(s) retenu(s).
+                    </span>
+                  ) : null}
+                </>
+              )}
+            </form>
+          ) : null}
+
           {/* Envoi */}
           {!sent ? (
             <form action={sendEditionAction.bind(null, edition.id)} className="mt-4 rounded-[14px] border border-line bg-surface p-5 shadow-[var(--shadow-sm)]">
               <div className="mb-2 text-sm font-bold">Envoyer maintenant</div>
               <p className="mb-3 text-[12.5px] text-ink-3">
-                L&apos;édition partira aux <b>{recipients}</b> abonné(s) confirmé(s) de « {edition.newsletter.name} ».
+                L&apos;édition partira à <b>{recipients}</b> abonné(s) confirmé(s) de « {edition.newsletter.name} »
+                {selectionPartielle ? " (sélection restreinte ci-dessus)" : ""}.
                 Chaque e-mail contient un lien de désabonnement. Action irréversible.
               </p>
               <button
