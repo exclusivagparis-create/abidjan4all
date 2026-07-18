@@ -17,9 +17,12 @@ function toLocalInput(d: Date | null): string | null {
 
 export default async function EditArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [session, article, rubriques, mediaOptions] = await Promise.all([
+  const [session, article, rubriques, mediaRecents] = await Promise.all([
     auth(),
-    prisma.article.findUnique({ where: { id }, include: { author: { select: { name: true } } } }),
+    prisma.article.findUnique({
+      where: { id },
+      include: { author: { select: { name: true } }, coverAsset: { select: { id: true, url: true, alt: true } } },
+    }),
     prisma.rubrique.findMany({ orderBy: { order: "asc" }, select: { id: true, slug: true, name: true, color: true } }),
     prisma.mediaAsset.findMany({
       where: { type: { in: ["image", "svg"] } },
@@ -29,6 +32,14 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
     }),
   ]);
   if (!article) notFound();
+
+  // La couverture actuelle doit toujours figurer dans la liste, même si c'est
+  // un ancien visuel hors des 23 plus récents : sinon le sélecteur ne la montre
+  // pas et le contrôle « vraie couverture » de l'éditeur la croit absente.
+  const mediaOptions =
+    article.coverAsset && !mediaRecents.some((m) => m.id === article.coverAsset!.id)
+      ? [article.coverAsset, ...mediaRecents]
+      : mediaRecents;
 
   const initial: EditorArticle = {
     id: article.id,

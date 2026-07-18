@@ -104,6 +104,12 @@ export function ArticleEditor({
   const rubrique = rubriques.find((r) => r.id === article.rubriqueId);
   const statusMeta = STATUS_META[article.status];
 
+  // Couverture réelle sélectionnée ? (un placeholder du seed ne compte pas.)
+  // Sert d'indice avant publication — le contrôle qui fait foi est côté serveur.
+  const aUneVraieCouverture = mediaOptions.some(
+    (m) => m.id === article.coverAssetId && !m.url.startsWith("placeholder://")
+  );
+
   function toInput(): ArticleInput {
     return {
       id: article.id ?? undefined,
@@ -381,14 +387,19 @@ export function ArticleEditor({
               </ActionBtn>
             ) : null}
             {canPublish && article.status !== "published" && article.scheduledAt ? (
-              <ActionBtn onClick={() => run("schedule")} disabled={pending} variant="secondary">
+              <ActionBtn onClick={() => run("schedule")} disabled={pending || !aUneVraieCouverture} variant="secondary">
                 Programmer
               </ActionBtn>
             ) : null}
             {canPublish && article.status !== "published" ? (
-              <ActionBtn onClick={() => run("publish")} disabled={pending} variant="primary">
+              <ActionBtn onClick={() => run("publish")} disabled={pending || !aUneVraieCouverture} variant="primary">
                 Publier
               </ActionBtn>
+            ) : null}
+            {canPublish && article.status !== "published" && !aUneVraieCouverture ? (
+              <p className="mt-1 w-full text-[11.5px] font-semibold text-orange">
+                ⚠ Ajoutez une image de couverture (panneau « Image à la une ») pour pouvoir publier.
+              </p>
             ) : null}
             {canPublish && article.status === "published" ? (
               <ActionBtn onClick={() => run("unpublish")} disabled={pending} variant="secondary">

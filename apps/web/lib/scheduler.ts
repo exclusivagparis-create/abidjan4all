@@ -8,11 +8,22 @@ import { sendArticleAlert } from "@/lib/push";
 export async function publishDueArticles(): Promise<number> {
   const due = await prisma.article.findMany({
     where: { status: "scheduled", scheduledAt: { lte: new Date() } },
-    select: { id: true },
+    select: { id: true, coverAsset: { select: { url: true } } },
   });
   if (due.length === 0) return 0;
 
-  const ids = due.map((a) => a.id);
+  // Image de couverture obligatoire, comme à la publication manuelle : une
+  // couverture retirée après la programmation ne doit pas passer en douce.
+  // Les articles concernés restent « programmés » (leur heure est dépassée) —
+  // ils partiront dès qu'une image sera ajoutée. On les signale sans bloquer.
+  const prets = due.filter((a) => a.coverAsset?.url && !a.coverAsset.url.startsWith("placeholder://"));
+  const bloques = due.length - prets.length;
+  if (bloques > 0) {
+    console.warn(`[scheduler] ${bloques} article(s) programmé(s) sans image de couverture — non publiés.`);
+  }
+  if (prets.length === 0) return 0;
+
+  const ids = prets.map((a) => a.id);
   const { count } = await prisma.article.updateMany({
     where: { id: { in: ids } },
     data: { status: "published", publishedAt: new Date(), scheduledAt: null },

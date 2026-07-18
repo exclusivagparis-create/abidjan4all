@@ -148,13 +148,32 @@ export async function transitionArticle(id: string, action: Transition): Promise
   const user = await requireRole(rule.roles);
   if (!user) return { ok: false, error: "Rôle insuffisant pour cette action." };
 
-  const article = await prisma.article.findUnique({ where: { id } });
+  const article = await prisma.article.findUnique({
+    where: { id },
+    include: { coverAsset: { select: { url: true } } },
+  });
   if (!article) return { ok: false, error: "Article introuvable." };
   if (!rule.from.includes(article.status)) {
     return { ok: false, error: `Transition impossible depuis « ${article.status} ».` };
   }
   if (action === "schedule" && (!article.scheduledAt || article.scheduledAt <= new Date())) {
     return { ok: false, error: "Renseigner d'abord une date de programmation future." };
+  }
+  // Image de couverture obligatoire pour paraître en ligne : sans elle,
+  // l'accueil et les listes affichent un aplat gris qui trahit un site en
+  // construction. Le contrôle porte sur la mise en ligne (publication directe
+  // ou programmation), jamais sur brouillon/relecture — on peut donc préparer
+  // un article sans image, mais pas le publier ainsi. Un placeholder du seed
+  // (url `placeholder://…`) ne compte pas comme une vraie couverture.
+  if (action === "publish" || action === "schedule") {
+    const url = article.coverAsset?.url;
+    const aUneVraieCouverture = Boolean(url) && !url!.startsWith("placeholder://");
+    if (!aUneVraieCouverture) {
+      return {
+        ok: false,
+        error: "Ajoutez une image de couverture avant de publier — elle est obligatoire pour paraître en ligne.",
+      };
+    }
   }
 
   const data: Prisma.ArticleUpdateInput =
