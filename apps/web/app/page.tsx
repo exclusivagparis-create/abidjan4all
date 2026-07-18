@@ -26,8 +26,21 @@ const MARCHES = [
 
 const PUBLIC_ARTICLE = { status: "published" as const, hidden: false };
 
+type ArticleCarte = Awaited<ReturnType<typeof chargerArticles>>[number];
+
+function chargerArticles() {
+  return prisma.article.findMany({
+    where: PUBLIC_ARTICLE,
+    select: articleListSelect,
+    orderBy: { publishedAt: "desc" },
+    take: 40,
+  });
+}
+
+const url = (a: { slug: string; rubrique: { slug: string } }) => `/${a.rubrique.slug}/${a.slug}`;
+
 export default async function HomePage() {
-  const [featured, articles, liveUpdates, plusLus, videos, lettre] = await Promise.all([
+  const [featured, articles, liveUpdates, plusLus, videos, lettre, rubriques] = await Promise.all([
     // « À la Une » piloté depuis le Studio (positions 1 à 5).
     prisma.article.findMany({
       where: { ...PUBLIC_ARTICLE, featuredRank: { not: null } },
@@ -35,12 +48,7 @@ export default async function HomePage() {
       orderBy: { featuredRank: "asc" },
       take: 5,
     }),
-    prisma.article.findMany({
-      where: PUBLIC_ARTICLE,
-      select: articleListSelect,
-      orderBy: { publishedAt: "desc" },
-      take: 14,
-    }),
+    chargerArticles(),
     prisma.liveUpdate.findMany({
       where: { liveBlog: { status: "live" } },
       orderBy: { time: "desc" },
@@ -54,7 +62,6 @@ export default async function HomePage() {
       take: 3,
     }),
     // Fenêtre vidéo du rail : le direct d'abord, puis les plus récentes.
-    // 5 au total = la vidéo en tête + 4 d'historique.
     prisma.video.findMany({
       where: { published: true },
       select: { id: true, title: true, provider: true, providerRef: true, live: true },
@@ -65,19 +72,53 @@ export default async function HomePage() {
     prisma.newsletter
       .findUnique({ where: { slug: "essentiel-du-matin" }, select: { name: true, description: true } })
       .then((n) => n ?? prisma.newsletter.findFirst({ orderBy: { slug: "asc" }, select: { name: true, description: true } })),
+    // Rubriques et leur nombre d'articles publiés — pour la bande d'exploration.
+    prisma.rubrique.findMany({
+      orderBy: { order: "asc" },
+      select: {
+        slug: true,
+        name: true,
+        color: true,
+        _count: { select: { articles: { where: PUBLIC_ARTICLE } } },
+      },
+    }),
   ]);
 
   // À la Une = positions choisies ; à défaut, les plus récents. Le n°1 fait la tête d'affiche.
   const aLaUne = featured.length > 0 ? featured : articles.slice(0, 5);
-  const featuredIds = new Set(aLaUne.map((a) => a.id));
   const lead = aLaUne[0];
   const rail = aLaUne.slice(1, 3);
-  const grilleUne = aLaUne.slice(1, 5); // les 4 autres positions (le n°1 est en tête d'affiche)
-  const cacao = articles.filter((a) => a.rubrique.slug === "cacao-marches" && a.id !== lead?.id).slice(0, 3);
-  const grille = articles.filter((a) => !featuredIds.has(a.id)).slice(0, 6);
-  const tickerItems = liveUpdates.map((u) => u.title ?? u.liveBlog.title);
+  const grilleUne = aLaUne.slice(1, 5);
 
-  const url = (a: { slug: string; rubrique: { slug: string } }) => `/${a.rubrique.slug}/${a.slug}`;
+  // Dédoublonnage : un même article ne paraît qu'une fois sur l'accueil. On
+  // consomme le stock section par section, en marquant les articles déjà vus.
+  const dejaVu = new Set<string>(aLaUne.slice(0, 5).map((a) => a.id));
+
+  // Sections par rubrique — comme les grands médias. On n'en crée une que si la
+  // rubrique a AU MOINS 2 articles encore disponibles : jamais de bloc vide.
+  const parRubrique = new Map<string, { name: string; color: string; slug: string; articles: ArticleCarte[] }>();
+  for (const a of articles) {
+    if (dejaVu.has(a.id)) continue;
+    const g = parRubrique.get(a.rubrique.slug) ?? {
+      name: a.rubrique.name,
+      color: a.rubrique.color,
+      slug: a.rubrique.slug,
+      articles: [],
+    };
+    g.articles.push(a);
+    parRubrique.set(a.rubrique.slug, g);
+  }
+  const sectionsRubriques = [...parRubrique.values()]
+    .filter((g) => g.articles.length >= 2)
+    .sort((a, b) => b.articles.length - a.articles.length)
+    .map((g) => ({ ...g, articles: g.articles.slice(0, 4) }));
+  sectionsRubriques.forEach((s) => s.articles.forEach((a) => dejaVu.add(a.id)));
+
+  // Derniers articles = tout ce qui n'a pas encore trouvé sa place.
+  const derniers = articles.filter((a) => !dejaVu.has(a.id)).slice(0, 6);
+
+  const rubriquesExplorer = rubriques.filter((r) => r._count.articles > 0);
+  const tickerItems = liveUpdates.map((u) => u.title ?? u.liveBlog.title);
 
   return (
     <div className="min-h-screen bg-bg text-ink">
@@ -85,13 +126,11 @@ export default async function HomePage() {
       <Ticker items={tickerItems} />
 
       {/* RUBAN MARCHÉS (statique — flux de cotation à brancher en DF-05) */}
-      <section className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-[22px]">
+      <section className="mx-auto max-w-[1200px] px-4 pt-[22px] sm:px-6 lg:px-8">
         <div className="flex overflow-hidden rounded-md border border-line bg-surface shadow-[var(--shadow-sm)]">
           <div className="flex flex-none items-center bg-navy px-3 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-white sm:px-5 sm:text-[11.5px]">
             Marchés
           </div>
-          {/* Sur téléphone : une seule ligne qui défile du doigt. En grille 2
-              colonnes, les cotations s'empilaient sur quatre rangées. */}
           <div className="flex flex-1 overflow-x-auto [scrollbar-width:none] sm:grid sm:grid-cols-5 sm:overflow-visible [&::-webkit-scrollbar]:hidden">
             {MARCHES.map((m, i) => (
               <div
@@ -110,19 +149,12 @@ export default async function HomePage() {
 
       {/* HERO */}
       {lead ? (
-        <section className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-8">
+        <section className="mx-auto max-w-[1200px] px-4 pt-8 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 gap-9 border-b-2 border-ink pb-8 lg:grid-cols-[1.6fr_1fr]">
-            {/* Colonne en flex : l'image absorbe l'écart de hauteur avec le
-                rail. Sans cela, un article court laissait un grand blanc sous
-                la signature, et un rail court en laissait un dans la fenêtre
-                vidéo — selon la longueur du titre du jour. */}
             <article className="flex flex-col">
               <Link href={url(lead)} className="group flex min-h-0 flex-1 flex-col">
-                {/* Hauteur libre à partir de `lg` (l'image, en object-cover,
-                    montre simplement plus du cliché). Sur téléphone elle est
-                    bornée : 560 px y mangeaient 80 % de l'écran. */}
                 <div className="relative mb-4 h-[210px] flex-none overflow-hidden rounded-[14px] sm:h-[320px] md:h-[420px] lg:mb-5 lg:h-auto lg:min-h-[420px] lg:flex-1">
-                  <PlaceholderMedia url={lead.coverAsset?.url} alt={lead.coverAsset?.alt} className="h-full w-full" />
+                  <PlaceholderMedia url={lead.coverAsset?.url} alt={lead.coverAsset?.alt} className="h-full w-full transition-transform duration-500 group-hover:scale-[1.03]" />
                   <span
                     className="absolute left-3 top-3 rounded-[5px] px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white sm:left-4 sm:top-4 sm:px-3 sm:py-1.5 sm:text-[11.5px]"
                     style={{ background: lead.rubrique.color }}
@@ -161,7 +193,6 @@ export default async function HomePage() {
                   </div>
                 </div>
               ))}
-              {/* Comble le vide entre le 2e article du rail et « Les plus lus ». */}
               <VideoWindow videos={videos} />
 
               <div className="mt-auto rounded-md border border-line bg-surface-2 px-5 py-4">
@@ -189,93 +220,141 @@ export default async function HomePage() {
 
       {/* 4 ARTICLES À LA UNE (positions choisies dans le Studio) */}
       {grilleUne.length > 0 ? (
-        <section className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-12">
+        <section className="mx-auto max-w-[1200px] px-4 pt-12 sm:px-6 lg:px-8">
           <SectionHeader name="À la une" color="var(--orange)" />
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {grilleUne.map((a) => (
-              <article key={a.slug}>
-                <Link href={url(a)} className="group block">
-                  <PlaceholderMedia url={a.coverAsset?.url} alt={a.coverAsset?.alt} className="mb-3 h-[160px] w-full rounded-[10px]" />
-                  <RubriqueBadge slug={a.rubrique.slug} label={a.rubrique.name} color={a.rubrique.color} />
-                  <h4 className="mt-[7px] font-serif text-[19px] font-semibold leading-[1.2] group-hover:underline">
-                    <RichTitle text={a.title} />
-                  </h4>
-                </Link>
-                <div className="mt-1.5 flex items-center gap-2 text-xs text-ink-3">
-                  {a.author.name} · {a.readingTime} min {a.premium ? <PremiumChip /> : null}
-                </div>
-              </article>
+              <CarteArticle key={a.slug} a={a} />
             ))}
           </div>
         </section>
       ) : null}
 
-      {/* BLOC CACAO & MARCHÉS */}
-      {cacao.length > 0 ? (
-        <section className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-12">
-          <SectionHeader name="Cacao & Marchés" color="#8A5A2B" href="/cacao-marches" />
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
-            <article className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
-              <PlaceholderMedia url={cacao[0]!.coverAsset?.url} alt={cacao[0]!.coverAsset?.alt} className="h-[300px] w-full" />
-              <div className="px-[26px] pb-[26px] pt-[22px]">
-                <span className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: "#8A5A2B" }}>
-                  {cacao[0]!.kicker ?? "Cacao & Marchés"}
-                </span>
-                <Link href={url(cacao[0]!)}>
-                  <h3 className="my-2 font-serif text-[27px] font-semibold leading-[1.14] hover:underline">
-                    <RichTitle text={cacao[0]!.title} />
-                  </h3>
-                </Link>
-                <p className="mb-3 max-w-[56ch] font-serif text-base leading-[1.5] text-ink-2">{cacao[0]!.dek}</p>
-                <div className="text-[12.5px] text-ink-3">
-                  {cacao[0]!.author.name} · {cacao[0]!.readingTime} min
-                </div>
-              </div>
-            </article>
-            <div className="flex flex-col gap-4">
-              {cacao.slice(1).map((a) => (
-                <div key={a.slug} className="rounded-md border border-line bg-surface px-[18px] py-4 shadow-[var(--shadow-sm)]">
-                  <span className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: "#8A5A2B" }}>
-                    {a.kicker ?? "Marchés"}
-                  </span>
-                  <Link href={url(a)}>
-                    <h4 className="my-1.5 font-serif text-[19px] font-semibold leading-[1.18] hover:underline">
-                      <RichTitle text={a.title} />
-                    </h4>
-                  </Link>
-                  <div className="text-[11.5px] text-ink-3">{a.readingTime} min</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      ) : null}
+      {/* SECTIONS PAR RUBRIQUE — densifient l'accueil avec le contenu existant */}
+      {sectionsRubriques.map((s) => (
+        <RubriqueSection key={s.slug} section={s} />
+      ))}
 
       {lettre ? <NewsletterSignup nom={lettre.name} description={lettre.description} /> : null}
 
       {/* DERNIERS ARTICLES */}
-      <section className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 pt-12">
-        <SectionHeader name="Derniers articles" color="var(--ink-3)" />
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {grille.map((a) => (
-            <article key={a.slug}>
-              <Link href={url(a)} className="group block">
-                <PlaceholderMedia url={a.coverAsset?.url} alt={a.coverAsset?.alt} className="mb-3 h-[170px] w-full rounded-[10px]" />
-                <RubriqueBadge slug={a.rubrique.slug} label={a.rubrique.name} color={a.rubrique.color} />
-                <h4 className="mt-[7px] font-serif text-[19px] font-semibold leading-[1.22] group-hover:underline">
-                  <RichTitle text={a.title} />
-                </h4>
+      {derniers.length > 0 ? (
+        <section className="mx-auto max-w-[1200px] px-4 pt-12 sm:px-6 lg:px-8">
+          <SectionHeader name="Derniers articles" color="var(--ink-3)" />
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {derniers.map((a) => (
+              <CarteArticle key={a.slug} a={a} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* EXPLORER LES RUBRIQUES — bande de navigation, remplit le bas de page */}
+      {rubriquesExplorer.length > 0 ? (
+        <section className="mx-auto max-w-[1200px] px-4 pt-12 sm:px-6 lg:px-8">
+          <SectionHeader name="Explorer les rubriques" color="var(--navy)" />
+          <div className="flex flex-wrap gap-2.5">
+            {rubriquesExplorer.map((r) => (
+              <Link
+                key={r.slug}
+                href={`/${r.slug}`}
+                className="flex items-center gap-2 rounded-pill border border-line bg-surface px-4 py-2 text-[13px] font-semibold text-ink-2 shadow-[var(--shadow-sm)] transition-colors hover:text-ink"
+              >
+                <span className="h-2.5 w-2.5 flex-none rounded-pill" style={{ background: r.color }} />
+                {r.name}
+                <span className="text-[11.5px] font-bold text-ink-3">{r._count.articles}</span>
               </Link>
-              <div className="mt-1.5 flex items-center gap-2 text-xs text-ink-3">
-                {a.author.name} · {a.readingTime} min {a.premium ? <PremiumChip /> : null}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <SiteFooter />
     </div>
+  );
+}
+
+/** Section d'une rubrique : un article en vedette (avec image) + une liste. */
+function RubriqueSection({
+  section,
+}: {
+  section: { name: string; color: string; slug: string; articles: ArticleCarte[] };
+}) {
+  const [tete, ...reste] = section.articles;
+  if (!tete) return null;
+  return (
+    <section className="mx-auto max-w-[1200px] px-4 pt-12 sm:px-6 lg:px-8">
+      <SectionHeader name={section.name} color={section.color} href={`/${section.slug}`} />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
+        <article className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
+          <Link href={url(tete)} className="group block">
+            <PlaceholderMedia
+              url={tete.coverAsset?.url}
+              alt={tete.coverAsset?.alt}
+              className="h-[240px] w-full transition-transform duration-500 group-hover:scale-[1.03] sm:h-[300px]"
+            />
+          </Link>
+          <div className="px-[26px] pb-[26px] pt-[22px]">
+            <span className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: section.color }}>
+              {tete.kicker ?? section.name}
+            </span>
+            <Link href={url(tete)}>
+              <h3 className="my-2 font-serif text-[27px] font-semibold leading-[1.14] hover:underline">
+                <RichTitle text={tete.title} />
+              </h3>
+            </Link>
+            {tete.dek ? (
+              <p className="mb-3 max-w-[56ch] font-serif text-base leading-[1.5] text-ink-2">{tete.dek}</p>
+            ) : null}
+            <div className="text-[12.5px] text-ink-3">
+              {tete.author.name} · {tete.readingTime} min {tete.premium ? <PremiumChip /> : null}
+            </div>
+          </div>
+        </article>
+
+        {reste.length > 0 ? (
+          <div className="flex flex-col gap-4">
+            {reste.map((a) => (
+              <div key={a.slug} className="rounded-md border border-line bg-surface px-[18px] py-4 shadow-[var(--shadow-sm)]">
+                <span className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: section.color }}>
+                  {a.kicker ?? section.name}
+                </span>
+                <Link href={url(a)}>
+                  <h4 className="my-1.5 font-serif text-[19px] font-semibold leading-[1.18] hover:underline">
+                    <RichTitle text={a.title} />
+                  </h4>
+                </Link>
+                <div className="text-[11.5px] text-ink-3">
+                  {a.author.name} · {a.readingTime} min
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+/** Carte d'article standard (grilles « À la une » et « Derniers articles »). */
+function CarteArticle({ a }: { a: ArticleCarte }) {
+  return (
+    <article>
+      <Link href={url(a)} className="group block overflow-hidden rounded-[10px]">
+        <PlaceholderMedia
+          url={a.coverAsset?.url}
+          alt={a.coverAsset?.alt}
+          className="mb-3 h-[170px] w-full rounded-[10px] transition-transform duration-500 group-hover:scale-[1.04]"
+        />
+        <RubriqueBadge slug={a.rubrique.slug} label={a.rubrique.name} color={a.rubrique.color} />
+        <h4 className="mt-[7px] font-serif text-[19px] font-semibold leading-[1.22] group-hover:underline">
+          <RichTitle text={a.title} />
+        </h4>
+      </Link>
+      <div className="mt-1.5 flex items-center gap-2 text-xs text-ink-3">
+        {a.author.name} · {a.readingTime} min {a.premium ? <PremiumChip /> : null}
+      </div>
+    </article>
   );
 }
 
@@ -286,7 +365,7 @@ function SectionHeader({ name, color, href }: { name: string; color: string; hre
       <h2 className="font-serif text-[28px] font-semibold">{name}</h2>
       <span className="h-px flex-1 bg-line" />
       {href ? (
-        <Link href={href} className="text-[13px] font-semibold" style={{ color }}>
+        <Link href={href} className="whitespace-nowrap text-[13px] font-semibold" style={{ color }}>
           Tout voir ›
         </Link>
       ) : null}
