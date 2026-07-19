@@ -62,11 +62,12 @@ export default async function HomePage() {
       take: 3,
     }),
     // Fenêtre vidéo du rail : le direct d'abord, puis les plus récentes.
+    // On charge tout l'historique (plafond large) ; la liste défile dans le rail.
     prisma.video.findMany({
       where: { published: true },
       select: { id: true, title: true, provider: true, providerRef: true, live: true },
       orderBy: [{ live: "desc" }, { publishedAt: "desc" }],
-      take: 5,
+      take: 60,
     }),
     // Newsletter mise en avant sur l'accueil (CRM DF-03).
     prisma.newsletter

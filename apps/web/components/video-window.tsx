@@ -51,11 +51,11 @@ export function VideoWindow({ videos }: { videos: VideoItem[] }) {
       </div>
 
       {historique.length > 0 ? (
-        // La liste occupe toute la place restante du rail (flex-1) : plafonnée,
-        // elle laissait ~174 px de blanc sous elle dans la fenêtre. Le nombre
-        // de vidéos étant borné à 5 en amont, sa hauteur naturelle reste
-        // inférieure à la colonne de gauche ; `overflow-y-auto` couvre le reste.
-        <div className="min-h-0 flex-1 overflow-y-auto border-t border-line-2 px-4 pb-2 pt-2">
+        // La liste occupe la place restante du rail (flex-1) pour combler le
+        // vide, mais un `max-h` explicite garantit toujours une barre de
+        // défilement dès qu'il y a plus de vidéos que de hauteur — la hauteur
+        // de la colonne de gauche ne suffisait pas à borner la liste seule.
+        <div className="min-h-0 flex-1 max-h-[260px] overflow-y-auto border-t border-line-2 px-4 pb-2 pt-2 [scrollbar-width:thin]">
           <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.1em] text-ink-3">Historique vidéo</div>
           {historique.map((v) => {
             const vignette = thumbnailUrl(v.provider, v.providerRef);
