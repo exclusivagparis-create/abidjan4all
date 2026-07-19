@@ -27,7 +27,7 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
     prisma.mediaAsset.findMany({
       where: { type: { in: ["image", "svg"] } },
       orderBy: { createdAt: "desc" },
-      take: 23,
+      take: 500, // le sélecteur défile et se recherche ; plafond large de sécurité
       select: { id: true, url: true, alt: true },
     }),
   ]);

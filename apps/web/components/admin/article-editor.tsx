@@ -76,6 +76,7 @@ export function ArticleEditor({
   const [article, setArticle] = useState(initial);
   const [tagInput, setTagInput] = useState("");
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const [rechercheImage, setRechercheImage] = useState("");
   const [pending, startTransition] = useTransition();
 
   const set = <K extends keyof EditorArticle>(key: K, value: EditorArticle[K]) =>
@@ -535,37 +536,66 @@ export function ArticleEditor({
               Bibliothèque vide — ajoutez des visuels dans la Médiathèque.
             </p>
           ) : (
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => set("coverAssetId", null)}
-                className={`flex h-16 items-center justify-center rounded-[8px] border text-[11px] font-semibold ${
-                  article.coverAssetId === null ? "border-ink text-ink" : "border-line text-ink-3"
-                }`}
-              >
-                Aucune
-              </button>
-              {mediaOptions.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  title={m.alt ?? undefined}
-                  onClick={() => set("coverAssetId", m.id)}
-                  className={`h-16 overflow-hidden rounded-[8px] border-2 ${
-                    article.coverAssetId === m.id ? "border-[var(--accent)]" : "border-transparent"
-                  }`}
-                >
-                  {m.url.startsWith("placeholder://") ? (
-                    <span className="flex h-full w-full items-center justify-center bg-surface-2 px-1 text-center font-mono text-[9px] uppercase text-ink-3">
-                      {m.url.slice("placeholder://".length).slice(0, 24)}
-                    </span>
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={m.url} alt={m.alt ?? ""} className="h-full w-full object-cover" />
-                  )}
-                </button>
-              ))}
-            </div>
+            (() => {
+              // Filtre d'affichage seulement : `aUneVraieCouverture` reste calculé
+              // sur la liste complète, la recherche ne doit pas bloquer la
+              // publication d'un article dont la couverture est masquée par le filtre.
+              const q = rechercheImage.trim().toLowerCase();
+              const visibles = q
+                ? mediaOptions.filter((m) => (m.alt ?? "").toLowerCase().includes(q) || m.url.toLowerCase().includes(q))
+                : mediaOptions;
+              return (
+                <div>
+                  <input
+                    type="search"
+                    value={rechercheImage}
+                    onChange={(e) => setRechercheImage(e.target.value)}
+                    placeholder={`Rechercher parmi ${mediaOptions.length} image${mediaOptions.length > 1 ? "s" : ""}…`}
+                    className="mb-2 w-full rounded-[8px] border border-line bg-surface px-3 py-2 text-[12.5px] outline-none focus:border-ink-3"
+                  />
+                  {/* Zone défilante : toute la médiathèque est accessible, plus
+                      de plafond à 23 visuels. */}
+                  <div className="max-h-[300px] overflow-y-auto rounded-[8px] border border-line-2 p-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      {!q ? (
+                        <button
+                          type="button"
+                          onClick={() => set("coverAssetId", null)}
+                          className={`flex h-16 items-center justify-center rounded-[8px] border text-[11px] font-semibold ${
+                            article.coverAssetId === null ? "border-ink text-ink" : "border-line text-ink-3"
+                          }`}
+                        >
+                          Aucune
+                        </button>
+                      ) : null}
+                      {visibles.map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          title={m.alt ?? undefined}
+                          onClick={() => set("coverAssetId", m.id)}
+                          className={`h-16 overflow-hidden rounded-[8px] border-2 ${
+                            article.coverAssetId === m.id ? "border-[var(--accent)]" : "border-transparent"
+                          }`}
+                        >
+                          {m.url.startsWith("placeholder://") ? (
+                            <span className="flex h-full w-full items-center justify-center bg-surface-2 px-1 text-center font-mono text-[9px] uppercase text-ink-3">
+                              {m.url.slice("placeholder://".length).slice(0, 24)}
+                            </span>
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={m.url} alt={m.alt ?? ""} className="h-full w-full object-cover" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    {visibles.length === 0 ? (
+                      <p className="py-4 text-center text-[12px] text-ink-3">Aucune image ne correspond à « {rechercheImage} ».</p>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })()
           )}
         </Panel>
 
