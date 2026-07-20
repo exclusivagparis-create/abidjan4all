@@ -55,6 +55,17 @@ export default async function AnnoncesPage({ searchParams }: { searchParams: Pro
           diaspora. Dépôt gratuit, publication après validation.
         </p>
 
+        {/* Bourse d'emploi : CV en ligne gratuit pour les candidats. */}
+        <Link
+          href="/cv"
+          className="mb-6 flex items-center justify-between gap-3 rounded-[12px] border border-line bg-surface-2 px-5 py-3.5 hover:border-ink-3"
+        >
+          <span className="text-[13.5px] font-semibold text-ink-2">
+            📄 Candidat ? Publiez votre <span className="text-green">CV en ligne gratuit</span> et soyez repéré par les recruteurs.
+          </span>
+          <span className="flex-none text-[12.5px] font-bold text-green">Banque de CV →</span>
+        </Link>
+
         <div className="mb-6 flex flex-wrap gap-2">
           <Link href="/annonces" className={`rounded-pill px-3.5 py-1.5 text-xs font-semibold ${!filter ? "bg-navy text-white" : "border border-line bg-surface text-ink-2"}`}>
             Toutes

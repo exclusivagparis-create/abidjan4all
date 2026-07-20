@@ -102,6 +102,12 @@ export default async function EspaceMembrePage({
               Voir mon profil public
             </Link>
             <Link
+              href="/espace-membre/cv"
+              className="rounded-pill border border-line bg-surface-2 px-4 py-2 text-xs font-semibold text-ink"
+            >
+              📄 Mon CV en ligne
+            </Link>
+            <Link
               href="/parametres"
               className="rounded-pill border border-line bg-surface-2 px-4 py-2 text-xs font-semibold text-ink"
             >

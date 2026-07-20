@@ -26,6 +26,8 @@ export default async function NewArticlePage() {
     dek: "",
     rubriqueId: "",
     premium: false,
+    sponsored: false,
+    sponsorName: "",
     tags: [],
     status: "draft",
     scheduledAt: null,

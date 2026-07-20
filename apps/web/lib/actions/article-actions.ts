@@ -24,6 +24,8 @@ const ArticleInputSchema = z.object({
   dek: z.string().trim().optional(),
   rubriqueId: z.string().min(1, "Choisir une rubrique."),
   premium: z.boolean(),
+  sponsored: z.boolean().optional(),
+  sponsorName: z.string().trim().max(80).optional(),
   tags: z.array(z.string().trim().min(1)).max(12),
   scheduledAt: z.string().nullable().optional(), // ISO ou null
   coverAssetId: z.string().nullable().optional(),
@@ -85,6 +87,8 @@ export async function saveArticle(raw: unknown): Promise<ActionResult> {
     dek: input.dek || null,
     rubriqueId: input.rubriqueId,
     premium: input.premium,
+    sponsored: input.sponsored ?? false,
+    sponsorName: input.sponsored ? input.sponsorName || null : null,
     tags: input.tags,
     scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
     coverAssetId: input.coverAssetId ?? null,

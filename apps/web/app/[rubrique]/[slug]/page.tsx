@@ -150,6 +150,18 @@ export default async function ArticlePage({ params }: Props) {
             ) : null}
           </div>
 
+          {/* Native advertising : bandeau « Communiqué partenaire » explicite. */}
+          {article.sponsored ? (
+            <div className="mb-5 flex items-center gap-3 rounded-[10px] border border-[#E8641A] bg-[rgba(232,100,26,0.08)] px-4 py-3">
+              <span className="rounded-[3px] bg-[#E8641A] px-2.5 py-1 text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-white">
+                Communiqué partenaire
+              </span>
+              <span className="text-[12.5px] text-ink-2">
+                Contenu sponsorisé{article.sponsorName ? ` — en partenariat avec ${article.sponsorName}` : ""}.
+              </span>
+            </div>
+          ) : null}
+
           <h1 className="mb-[18px] font-serif text-[clamp(30px,5vw,46px)] font-extrabold leading-[1.12] tracking-tight">
             <RichTitle text={article.title} />
           </h1>

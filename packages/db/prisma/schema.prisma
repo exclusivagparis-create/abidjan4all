@@ -155,6 +155,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   subscription            Subscription?
+  cvProfile               CvProfile?
   comments                Comment[]
   favorites               Article[]                @relation("Favorites")
   groups                  Group[]
@@ -367,6 +368,10 @@ model Article {
   hidden       Boolean  @default(false) // publié mais masqué du public (éditeur/admin)
   seo         Json     @default("{}") // { slug, metaTitle, metaDescription, ogImage }
   aiSummary   Json? // { keyPoints: string[], long: string }
+
+  // Native advertising : article sponsorisé signalé « Communiqué partenaire ».
+  sponsored   Boolean @default(false)
+  sponsorName String? // annonceur affiché sous le label (ex. « Orange CI »)
 
   comments    Comment[]
   favoritedBy User[]      @relation("Favorites")
@@ -728,4 +733,28 @@ model GlossaryTerm {
   term       String @unique
   category   String
   definition String
+}
+
+// ---------------------------------------------------------------------------
+// E-commerce services : CV en ligne (gratuit)
+// ---------------------------------------------------------------------------
+
+/// CV en ligne d'un membre (bourse d'emploi). Gratuit, un par compte.
+model CvProfile {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  headline    String // intitulé / métier recherché
+  summary     String? // présentation libre
+  phone       String?
+  contactEmail String?
+  location    String?
+  skills      String[]
+  experiences Json     @default("[]") // [{ role, company, period, detail }]
+  education   Json     @default("[]") // [{ school, degree, year }]
+  isPublic    Boolean  @default(true) // visible dans l'annuaire des CV
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -26,6 +26,8 @@ export type EditorArticle = {
   dek: string;
   rubriqueId: string;
   premium: boolean;
+  sponsored: boolean;
+  sponsorName: string;
   tags: string[];
   status: ArticleStatus;
   scheduledAt: string | null; // valeur pour <input datetime-local>
@@ -119,6 +121,8 @@ export function ArticleEditor({
       dek: article.dek || undefined,
       rubriqueId: article.rubriqueId,
       premium: article.premium,
+      sponsored: article.sponsored,
+      sponsorName: article.sponsored ? article.sponsorName.trim() || undefined : undefined,
       tags: article.tags,
       scheduledAt: article.scheduledAt ? new Date(article.scheduledAt).toISOString() : null,
       coverAssetId: article.coverAssetId,
@@ -341,6 +345,35 @@ export function ArticleEditor({
               />
             </button>
           </label>
+
+          <label className="flex items-center justify-between border-t border-line-2 py-2.5">
+            <span>
+              <span className="block text-[13px] font-semibold">Communiqué partenaire</span>
+              <span className="text-[11.5px] text-ink-3">Article sponsorisé, signalé au lecteur</span>
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={article.sponsored}
+              onClick={() => set("sponsored", !article.sponsored)}
+              className="relative h-[23px] w-10 rounded-pill transition-colors"
+              style={{ background: article.sponsored ? "var(--orange, #E8641A)" : "var(--line)" }}
+            >
+              <span
+                className="absolute top-0.5 h-[19px] w-[19px] rounded-pill bg-white transition-all"
+                style={{ left: article.sponsored ? "auto" : 2, right: article.sponsored ? 2 : "auto" }}
+              />
+            </button>
+          </label>
+          {article.sponsored ? (
+            <input
+              value={article.sponsorName}
+              onChange={(e) => set("sponsorName", e.target.value)}
+              maxLength={80}
+              placeholder="Nom de l'annonceur (optionnel)"
+              className="w-full rounded-[8px] border border-line bg-bg px-3 py-2 text-[13px]"
+            />
+          ) : null}
 
           <div className="border-t border-line-2 py-2.5">
             <span className="mb-1.5 block text-[13px] font-semibold">Programmer</span>
