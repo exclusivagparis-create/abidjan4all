@@ -77,7 +77,10 @@ export default async function RubriquePage({ params }: Props) {
           </span>
         </div>
 
-        <AdSlot rubrique={rubrique.slug} />
+        {/* Bandeau 728×90 en tête, encart natif in-feed, interstitiel mobile. */}
+        <AdSlot rubrique={rubrique.slug} placement="leaderboard" />
+        <AdSlot rubrique={rubrique.slug} placement="native" />
+        <AdSlot rubrique={rubrique.slug} placement="interstitial" />
 
         {articles.length === 0 ? (
           <p className="py-16 text-center font-serif text-lg text-ink-3">

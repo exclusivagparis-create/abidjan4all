@@ -29,6 +29,7 @@ export async function SiteFooter() {
           <Link href="/groupes" className="hover:text-ink">Groupes</Link>
           <Link href="/verifie" className="hover:text-ink">A4A Vérifie</Link>
           <Link href="/annonces" className="hover:text-ink">Petites annonces</Link>
+          <Link href="/publicite" className="hover:text-ink">Annoncer / Publicité</Link>
           <Link href="/contact" className="hover:text-ink">Contact</Link>
           <Link href="/formation" className="hover:text-ink">A4A Formation</Link>
           <Link href="/recherche" className="hover:text-ink">Recherche</Link>
