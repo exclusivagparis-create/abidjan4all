@@ -24,6 +24,7 @@ export const PLACEMENTS: Placement[] = [
   { slug: "home_interstitial", page: "Accueil", format: "interstitial", label: "Accueil — interstitiel mobile", zone: "Plein écran mobile, 1×/session", defaultEnabled: false },
   // Rubrique
   { slug: "rubrique_leaderboard", page: "Rubrique", format: "leaderboard_728x90", label: "Rubrique — bandeau haut", zone: "Sous le titre de rubrique", defaultEnabled: true },
+  { slug: "rubrique_mpu", page: "Rubrique", format: "mpu_300x250", label: "Rubrique — pavé", zone: "Sous le bandeau, avant la liste", defaultEnabled: true },
   { slug: "rubrique_native", page: "Rubrique", format: "native", label: "Rubrique — natif in-feed", zone: "Au fil de la liste d'articles", defaultEnabled: true },
   { slug: "rubrique_interstitial", page: "Rubrique", format: "interstitial", label: "Rubrique — interstitiel mobile", zone: "Plein écran mobile, 1×/session", defaultEnabled: false },
   // Article

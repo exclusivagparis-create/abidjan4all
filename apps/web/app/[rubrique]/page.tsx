@@ -99,6 +99,7 @@ export default async function RubriquePage({ params, searchParams }: Props) {
 
         {/* Emplacements rubrique (gérés au Studio). */}
         <AdSlot rubrique={rubrique.slug} placementId="rubrique_leaderboard" />
+        <AdSlot rubrique={rubrique.slug} placementId="rubrique_mpu" />
         <AdSlot rubrique={rubrique.slug} placementId="rubrique_native" />
         <AdSlot rubrique={rubrique.slug} placementId="rubrique_interstitial" />
 
