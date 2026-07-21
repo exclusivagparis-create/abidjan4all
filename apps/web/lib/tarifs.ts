@@ -82,3 +82,12 @@ export const TARIFS_WHATSAPP: PalierAnnonce[] = [
 export function trouverPalier(grille: PalierAnnonce[], id: string): PalierAnnonce | undefined {
   return grille.find((p) => p.id === id);
 }
+
+/**
+ * Formatage FCFA sûr côté client — identique à `formatXOF` de `@a4a/payments`
+ * sans en importer le module (qui dépend de `node:crypto` et casserait le
+ * bundle navigateur d'un composant client).
+ */
+export function formatFCFA(amount: number): string {
+  return `${amount.toLocaleString("fr-FR")} FCFA`;
+}

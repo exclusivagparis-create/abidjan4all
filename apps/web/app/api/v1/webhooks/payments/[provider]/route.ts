@@ -7,11 +7,32 @@ import {
 } from "@a4a/payments";
 import { apiError } from "@/lib/api";
 import { failPayment, fulfillPayment } from "@/lib/billing";
+import { failOrder, fulfillOrder } from "@/lib/order-billing";
 
 const WebhookInput = z.object({
   providerRef: z.string().min(1),
   status: z.enum(["succeeded", "failed"]),
 });
+
+/**
+ * Fulfillment unifié : abonnement d'abord, puis commande one-off (Order).
+ * Chaque voie retrouve sa cible par `providerRef` sans rien écrire si elle ne
+ * correspond pas, donc l'ordre d'essai est sans risque et reste idempotent.
+ */
+async function fulfillAny(
+  providerRef: string
+): Promise<{ ok: true; invoiceNumber?: string } | { ok: false; error: string }> {
+  const payment = await fulfillPayment(providerRef);
+  if (payment.ok) return { ok: true, invoiceNumber: payment.invoiceNumber };
+  const order = await fulfillOrder(providerRef);
+  if (order.ok) return { ok: true };
+  return { ok: false, error: payment.error };
+}
+
+async function failAny(providerRef: string): Promise<void> {
+  await failPayment(providerRef);
+  await failOrder(providerRef);
+}
 
 /**
  * POST /api/v1/webhooks/payments/:provider — met à jour Subscription/Payment (contrat).
@@ -62,12 +83,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   if (!parsed.success) return apiError("invalid_input", "Payload invalide.", 400);
 
   if (parsed.data.status === "succeeded") {
-    const result = await fulfillPayment(parsed.data.providerRef);
+    const result = await fulfillAny(parsed.data.providerRef);
     if (!result.ok) return apiError("fulfillment_failed", result.error, 422);
     return Response.json({ received: true, invoice: result.invoiceNumber });
   }
 
-  await failPayment(parsed.data.providerRef);
+  await failAny(parsed.data.providerRef);
   return Response.json({ received: true });
 }
 
@@ -87,13 +108,13 @@ async function handlePaydunyaIpn(rawBody: string) {
   const confirmation = await confirmPaydunyaInvoice(token);
 
   if (confirmation.status === "completed") {
-    const result = await fulfillPayment(token);
+    const result = await fulfillAny(token);
     if (!result.ok) return apiError("fulfillment_failed", result.error, 422);
-    console.log(`[webhook:paydunya] paiement confirmé — facture ${result.invoiceNumber}`);
+    console.log(`[webhook:paydunya] paiement confirmé${result.invoiceNumber ? ` — facture ${result.invoiceNumber}` : " (commande)"}`);
     return Response.json({ received: true, invoice: result.invoiceNumber });
   }
   if (confirmation.status === "cancelled") {
-    await failPayment(token);
+    await failAny(token);
     return Response.json({ received: true });
   }
   // pending : on accuse réception, l'IPN final arrivera plus tard
@@ -123,13 +144,13 @@ async function handleStripeEvent(rawBody: string, signatureHeader: string | null
   if (!event.type || !sessionId) return apiError("invalid_input", "Événement incomplet.", 400);
 
   if (event.type === "checkout.session.completed") {
-    const result = await fulfillPayment(sessionId);
+    const result = await fulfillAny(sessionId);
     if (!result.ok) return apiError("fulfillment_failed", result.error, 422);
-    console.log(`[webhook:stripe] paiement confirmé — facture ${result.invoiceNumber}`);
+    console.log(`[webhook:stripe] paiement confirmé${result.invoiceNumber ? ` — facture ${result.invoiceNumber}` : " (commande)"}`);
     return Response.json({ received: true, invoice: result.invoiceNumber });
   }
   if (event.type === "checkout.session.expired" || event.type === "checkout.session.async_payment_failed") {
-    await failPayment(sessionId);
+    await failAny(sessionId);
     return Response.json({ received: true });
   }
   // autres événements : accusé de réception sans action

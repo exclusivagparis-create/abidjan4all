@@ -52,7 +52,8 @@ export default async function AnnoncesPage({ searchParams }: { searchParams: Pro
         </div>
         <p className="mb-6 max-w-[62ch] font-serif text-[15px] text-ink-2">
           Emploi, immobilier et services — les annonces de la communauté Abidjan4All, en Côte d&apos;Ivoire et dans la
-          diaspora. Dépôt gratuit, publication après validation.
+          diaspora. Offres d&apos;emploi et immobilier payantes selon la formule choisie ; annonces de services
+          gratuites, publiées après validation.
         </p>
 
         {/* Bourse d'emploi : CV en ligne gratuit pour les candidats. */}

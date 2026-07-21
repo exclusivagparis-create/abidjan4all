@@ -2,18 +2,30 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { prisma, type ListingStatus, type ListingType } from "@a4a/db";
+import { prisma, type ListingStatus, type ListingType, type OrderKind } from "@a4a/db";
+import type { PaymentMethodId } from "@a4a/payments";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { startOrderCheckout } from "@/lib/order-billing";
+import { TARIFS_EMPLOI, TARIFS_IMMO, trouverPalier, type PalierAnnonce } from "@/lib/tarifs";
 
 const TYPES: ListingType[] = ["emploi", "immobilier", "service"];
-/** Durée de publication d'une annonce (jours). */
+/** Durée d'une annonce gratuite (service) — les payantes suivent leur palier. */
 const DUREE_JOURS = 30;
+const METHODS: PaymentMethodId[] = ["momo", "orange", "wave", "moov", "djamo", "card", "paypal"];
+
+/** Emploi et immobilier sont payants (cf. lib/tarifs) ; service reste gratuit. */
+const GRILLE_PAYANTE: Partial<Record<ListingType, { grille: PalierAnnonce[]; kind: OrderKind }>> = {
+  emploi: { grille: TARIFS_EMPLOI, kind: "listing_emploi" },
+  immobilier: { grille: TARIFS_IMMO, kind: "listing_immobilier" },
+};
 
 export type ListingResult = { ok: true } | { ok: false; error: string };
 
 /**
- * Dépôt d'une annonce par un membre connecté. Elle part en modération
- * (status `pending`) — la rédaction la publie depuis le Studio.
+ * Dépôt d'une annonce par un membre connecté.
+ * - service : gratuit, part en modération (status `pending`) ;
+ * - emploi / immobilier : payant — l'annonce est créée `pending` puis publiée
+ *   automatiquement à la confirmation du paiement (redirection vers le PSP).
  */
 export async function createListingAction(_prev: ListingResult | undefined, formData: FormData): Promise<ListingResult> {
   const session = await auth();
@@ -34,9 +46,22 @@ export async function createListingAction(_prev: ListingResult | undefined, form
   if (!location) return { ok: false, error: "Localisation requise." };
 
   const price = priceRaw ? Math.max(0, Number(priceRaw) || 0) : null;
-  const expiresAt = new Date(Date.now() + DUREE_JOURS * 24 * 3600 * 1000);
+  const payant = GRILLE_PAYANTE[type as ListingType];
 
-  await prisma.listing.create({
+  // Palier + moyen de paiement requis pour les catégories payantes.
+  let palier: PalierAnnonce | undefined;
+  let method: PaymentMethodId | undefined;
+  if (payant) {
+    palier = trouverPalier(payant.grille, String(formData.get("tier") ?? ""));
+    method = String(formData.get("method") ?? "") as PaymentMethodId;
+    if (!palier) return { ok: false, error: "Choisissez une formule de publication." };
+    if (!METHODS.includes(method)) return { ok: false, error: "Choisissez un moyen de paiement." };
+  }
+
+  // Annonce créée en attente. Gratuite (service) → modération ; payante → sera
+  // publiée par le fulfillment de la commande, avec l'échéance du palier.
+  const dureeJours = palier?.jours ?? DUREE_JOURS;
+  const listing = await prisma.listing.create({
     data: {
       type: type as ListingType,
       title,
@@ -45,9 +70,27 @@ export async function createListingAction(_prev: ListingResult | undefined, form
       location,
       attributes: contact ? { contact } : {},
       authorId: author.id,
-      expiresAt,
+      expiresAt: new Date(Date.now() + dureeJours * 24 * 3600 * 1000),
     },
   });
+
+  if (payant && palier && method) {
+    const checkout = await startOrderCheckout({
+      userId: author.id,
+      email: session.user.email ?? "",
+      kind: payant.kind,
+      tierId: palier.id,
+      method,
+      listingId: listing.id,
+    });
+    if (!checkout.ok) {
+      // Paiement impossible à démarrer : on retire l'annonce en attente.
+      await prisma.listing.delete({ where: { id: listing.id } }).catch(() => {});
+      return { ok: false, error: checkout.error };
+    }
+    redirect(checkout.checkoutUrl);
+  }
+
   revalidatePath("/admin/annonces");
   return { ok: true };
 }

@@ -27,6 +27,7 @@ export async function SiteFooter() {
           <Link href="/en-direct" className="hover:text-ink">Nos directs</Link>
           <Link href="/podcasts" className="hover:text-ink">Podcasts</Link>
           <Link href="/groupes" className="hover:text-ink">Groupes</Link>
+          <Link href="/club" className="hover:text-ink">WhatsApp Club</Link>
           <Link href="/verifie" className="hover:text-ink">A4A Vérifie</Link>
           <Link href="/annonces" className="hover:text-ink">Petites annonces</Link>
           <Link href="/cv" className="hover:text-ink">Banque de CV</Link>

@@ -122,6 +122,18 @@ enum ListingStatus {
   expired
 }
 
+enum OrderKind {
+  listing_emploi
+  listing_immobilier
+  whatsapp
+}
+
+enum OrderStatus {
+  pending
+  paid
+  failed
+}
+
 enum FactCheckVerdict {
   vrai
   faux
@@ -156,6 +168,8 @@ model User {
 
   subscription            Subscription?
   cvProfile               CvProfile?
+  orders                  Order[]
+  whatsappMembership      WhatsappMembership?
   comments                Comment[]
   favorites               Article[]                @relation("Favorites")
   groups                  Group[]
@@ -617,10 +631,51 @@ model Listing {
   status   ListingStatus @default(pending)
   paidTier String?
 
+  orders Order[]
+
   createdAt DateTime @default(now())
   expiresAt DateTime
 
   @@index([type, status, expiresAt])
+}
+
+/// Commande one-off (hors abonnement) : dépôt d'annonce payant, adhésion
+/// WhatsApp Club. Réutilise les mêmes prestataires que les abonnements mais
+/// reste totalement séparée de Subscription/Payment/Invoice.
+model Order {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  kind     OrderKind
+  tier     String // identifiant du palier tarifaire (cf. lib/tarifs.ts)
+  amount   Int
+  currency String    @default("XOF")
+  provider String // mock | paydunya | stripe…
+  providerRef String @default("")
+  status   OrderStatus @default(pending)
+
+  // Cible : annonce à publier une fois payée (listing_*), sinon null (whatsapp).
+  listing   Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  listingId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([providerRef])
+}
+
+/// Adhésion au WhatsApp Club (accès au groupe privé), une par membre.
+model WhatsappMembership {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  tier      String
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ---------------------------------------------------------------------------
