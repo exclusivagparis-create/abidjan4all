@@ -97,10 +97,10 @@ export default async function RubriquePage({ params, searchParams }: Props) {
           </div>
         ) : null}
 
-        {/* Bandeau 728×90 en tête, encart natif in-feed, interstitiel mobile. */}
-        <AdSlot rubrique={rubrique.slug} placement="leaderboard" />
-        <AdSlot rubrique={rubrique.slug} placement="native" />
-        <AdSlot rubrique={rubrique.slug} placement="interstitial" />
+        {/* Emplacements rubrique (gérés au Studio). */}
+        <AdSlot rubrique={rubrique.slug} placementId="rubrique_leaderboard" />
+        <AdSlot rubrique={rubrique.slug} placementId="rubrique_native" />
+        <AdSlot rubrique={rubrique.slug} placementId="rubrique_interstitial" />
 
         {articles.length === 0 ? (
           <p className="py-16 text-center font-serif text-lg text-ink-3">

@@ -3,9 +3,15 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type AdFormat, type AdStatus } from "@a4a/db";
 import { auth } from "@/auth";
-import { createCampaignAction, deleteCampaignAction, setCampaignStatusAction } from "@/lib/actions/ad-actions";
+import {
+  createCampaignAction,
+  deleteCampaignAction,
+  setCampaignStatusAction,
+  setPlacementEnabledAction,
+} from "@/lib/actions/ad-actions";
 import { CampaignForm } from "@/components/admin/campaign-form";
 import { PlaceholderMedia } from "@/components/placeholder-media";
+import { PLACEMENTS, emplacementsActifs } from "@/lib/ad-placements";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Régie publicitaire · Studio" };
@@ -42,9 +48,10 @@ export default async function AdminAds({ searchParams }: { searchParams: Promise
   const [{ erreur }, session] = await Promise.all([searchParams, auth()]);
   if (session?.user?.role !== "admin") redirect("/admin");
 
-  const [campaigns, rubriques] = await Promise.all([
+  const [campaigns, rubriques, emplActifs] = await Promise.all([
     prisma.adCampaign.findMany({ orderBy: [{ status: "asc" }, { startAt: "desc" }] }),
     prisma.rubrique.findMany({ orderBy: { order: "asc" }, select: { slug: true, name: true } }),
+    emplacementsActifs(),
   ]);
 
   const actives = campaigns.filter((c) => c.status === "active");
@@ -71,6 +78,62 @@ export default async function AdminAds({ searchParams }: { searchParams: Promise
           </div>
         ))}
       </div>
+
+      {/* EMPLACEMENTS — activer/désactiver chaque encart des pages publiques. */}
+      <section className="mb-6 rounded-[14px] border border-line bg-surface px-6 py-[22px] shadow-[var(--shadow-sm)]">
+        <h2 className="mb-1 text-sm font-bold">Emplacements publicitaires</h2>
+        <p className="mb-4 text-[12.5px] text-ink-3">
+          Où les encarts peuvent apparaître sur le site. Un emplacement désactivé n&apos;affiche jamais de publicité ;
+          activé, il diffuse la campagne du bon format qui le cible.
+        </p>
+        <div className="overflow-x-auto rounded-[10px] border border-line">
+          <table className="w-full min-w-[720px] text-[13px]">
+            <thead>
+              <tr className="border-b border-line text-left text-[10.5px] font-bold uppercase tracking-[0.08em] text-ink-3">
+                <th className="px-4 py-2.5">Page</th>
+                <th className="px-3 py-2.5">Emplacement</th>
+                <th className="px-3 py-2.5">Format</th>
+                <th className="px-3 py-2.5">Zone</th>
+                <th className="px-3 py-2.5">État</th>
+                <th className="px-3 py-2.5" />
+              </tr>
+            </thead>
+            <tbody>
+              {PLACEMENTS.map((p) => {
+                const on = emplActifs.get(p.slug) ?? p.defaultEnabled;
+                return (
+                  <tr key={p.slug} className="border-b border-line-2 last:border-b-0">
+                    <td className="px-4 py-2.5 text-ink-3">{p.page}</td>
+                    <td className="px-3 py-2.5 font-semibold">{p.label.replace(/^.*— /, "")}</td>
+                    <td className="px-3 py-2.5 text-ink-2">{FORMAT_LABEL[p.format]}</td>
+                    <td className="px-3 py-2.5 text-[12px] text-ink-3">{p.zone}</td>
+                    <td className="px-3 py-2.5">
+                      <span
+                        className="inline-flex items-center gap-1.5 text-xs font-bold"
+                        style={{ color: on ? "var(--green)" : "var(--ink-3)" }}
+                      >
+                        <span className="h-[7px] w-[7px] rounded-pill" style={{ background: on ? "var(--green)" : "var(--ink-3)" }} />
+                        {on ? "Activé" : "Désactivé"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <form action={setPlacementEnabledAction.bind(null, p.slug)}>
+                        <input type="hidden" name="enabled" value={on ? "0" : "1"} />
+                        <button
+                          type="submit"
+                          className="rounded-pill border border-line bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-ink-2 hover:bg-surface-3"
+                        >
+                          {on ? "Désactiver" : "Activer"}
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {erreur ? (
         <p className="mb-4 rounded-md bg-[rgba(214,40,45,0.1)] px-4 py-2.5 text-[13px] font-semibold text-red">

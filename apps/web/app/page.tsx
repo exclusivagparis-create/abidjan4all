@@ -12,6 +12,7 @@ import { NewsletterSignup } from "@/components/newsletter-signup";
 import { ServicesBand } from "@/components/services-band";
 import { DiasporaStrip } from "@/components/diaspora-strip";
 import { RubriqueExplorer } from "@/components/rubrique-explorer";
+import { AdSlot } from "@/components/ad-slot";
 import { articleListSelect } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 
@@ -151,6 +152,12 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Emplacement pub — bandeau haut d'accueil + interstitiel mobile. */}
+      <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
+        <AdSlot placementId="home_leaderboard" />
+      </div>
+      <AdSlot placementId="home_interstitial" />
+
       {/* HERO */}
       {lead ? (
         <section className="mx-auto max-w-[1200px] px-4 pt-8 sm:px-6 lg:px-8">
@@ -217,6 +224,9 @@ export default async function HomePage() {
                   </div>
                 ))}
               </div>
+
+              {/* Emplacement pub — pavé 300×250 en colonne. */}
+              <AdSlot placementId="home_mpu" />
             </aside>
           </div>
         </section>
@@ -244,6 +254,11 @@ export default async function HomePage() {
       {sectionsRubriques.map((s) => (
         <RubriqueSection key={s.slug} section={s} />
       ))}
+
+      {/* Emplacement pub — encart natif in-feed. */}
+      <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
+        <AdSlot placementId="home_native" />
+      </div>
 
       {lettre ? <NewsletterSignup nom={lettre.name} description={lettre.description} /> : null}
 

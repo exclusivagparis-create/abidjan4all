@@ -9,6 +9,7 @@ import { ArticleBody } from "@/components/article-body";
 import { RichTitle, plainTitle } from "@/components/rich-title";
 import { ShareButtons } from "@/components/share-buttons";
 import { CommentsSection } from "@/components/comments-section";
+import { AdSlot } from "@/components/ad-slot";
 import { formatDateFull, initials } from "@/lib/format";
 import { auth } from "@/auth";
 import { hasActiveSubscription } from "@/lib/billing";
@@ -130,6 +131,10 @@ export default async function ArticlePage({ params }: Props) {
             </Link>
           </nav>
 
+          {/* Emplacements pub — bandeau haut + interstitiel mobile (gérés au Studio). */}
+          <AdSlot rubrique={article.rubrique.slug} placementId="article_leaderboard" />
+          <AdSlot rubrique={article.rubrique.slug} placementId="article_interstitial" />
+
           {/* Rangée de pilules (modèle : .tag-row) */}
           <div className="mb-4 flex flex-wrap gap-2">
             <span
@@ -170,6 +175,9 @@ export default async function ArticlePage({ params }: Props) {
               {article.dek}
             </p>
           ) : null}
+
+          {/* Emplacement pub — pavé 300×250 après le chapeau. */}
+          <AdSlot rubrique={article.rubrique.slug} placementId="article_mpu" />
 
           {/* Byline (modèle : auteur vert, date grise, pilule temps de lecture, badge rubrique) */}
           <div className="mb-8 flex flex-wrap items-center gap-x-5 gap-y-2 border-b-2 border-ink pb-5 text-[12.5px]">
@@ -243,6 +251,13 @@ export default async function ArticlePage({ params }: Props) {
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[120px] bg-[linear-gradient(to_bottom,transparent,var(--bg))]" />
           ) : null}
         </article>
+
+        {/* Emplacement pub — natif en fin d'article. */}
+        {!gated ? (
+          <div className="mx-auto max-w-[760px] px-4 sm:px-6 lg:px-8">
+            <AdSlot rubrique={article.rubrique.slug} placementId="article_native" />
+          </div>
+        ) : null}
 
         {/* Signature (modèle : avatar vert + rôle) puis tags de pied d'article */}
         {!gated ? (

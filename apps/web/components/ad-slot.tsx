@@ -1,17 +1,8 @@
 import { headers } from "next/headers";
-import type { AdFormat } from "@a4a/db";
 import { countImpression, pickCampaign } from "@/lib/ads";
 import { ipDeLaRequete, paysDepuisIp, appareilDepuisUa } from "@/lib/audience";
+import { getPlacement, placementActif } from "@/lib/ad-placements";
 import { AdInterstitial } from "@/components/ad-interstitial";
-
-/** Gabarits d'emplacement → format de campagne. */
-type Placement = "leaderboard" | "mpu" | "native" | "interstitial";
-const PLACEMENT_FORMAT: Record<Placement, AdFormat> = {
-  leaderboard: "leaderboard_728x90",
-  mpu: "mpu_300x250",
-  native: "native",
-  interstitial: "interstitial",
-};
 
 /** Contexte de diffusion (pays + appareil) déduit de la requête. */
 async function contexteDiffusion() {
@@ -22,26 +13,23 @@ async function contexteDiffusion() {
 }
 
 /**
- * Encart publicitaire (régie interne, DF-03). Quatre gabarits réels :
- *  - `leaderboard` : bandeau 728×90 pleine largeur (en-tête de rubrique) ;
- *  - `mpu` : pavé 300×250 (colonne) ;
- *  - `native` : encart natif in-feed ;
- *  - `interstitial` : plein écran mobile (rendu par un composant client).
- * Sans campagne active ciblant l'emplacement (rubrique + pays + appareil),
- * rien n'est rendu — aucun espace réservé vide.
+ * Encart publicitaire (régie interne, DF-03). Chaque encart est rattaché à un
+ * EMPLACEMENT du catalogue (lib/ad-placements) qui porte son format et son
+ * état activé/désactivé (piloté au Studio). Un emplacement désactivé — ou sans
+ * campagne active le ciblant (rubrique + pays + appareil) — ne rend rien :
+ * aucun espace réservé vide.
  */
-export async function AdSlot({
-  rubrique,
-  placement = "native",
-}: {
-  rubrique?: string;
-  placement?: Placement;
-}) {
+export async function AdSlot({ placementId, rubrique }: { placementId: string; rubrique?: string }) {
+  const placement = getPlacement(placementId);
+  if (!placement) return null;
+  if (!(await placementActif(placementId))) return null; // désactivé au Studio
+
   const { country, device } = await contexteDiffusion();
+  const format = placement.format;
 
   // L'interstitiel est réservé au mobile et délégué à un composant client
   // (fermeture + plafond de fréquence). On ne le sert pas sur desktop.
-  if (placement === "interstitial") {
+  if (format === "interstitial") {
     if (device !== "mobile") return null;
     const campaign = await pickCampaign({ rubrique, device, country, format: "interstitial" });
     if (!campaign) return null;
@@ -56,21 +44,15 @@ export async function AdSlot({
     );
   }
 
-  const campaign = await pickCampaign({
-    rubrique,
-    device,
-    country,
-    format: PLACEMENT_FORMAT[placement],
-  });
+  const campaign = await pickCampaign({ rubrique, device, country, format });
   if (!campaign) return null;
 
   countImpression(campaign.id);
 
-  const isLeaderboard = placement === "leaderboard";
-  const isMpu = placement === "mpu";
+  const isLeaderboard = format === "leaderboard_728x90";
+  const isMpu = format === "mpu_300x250";
 
-  // Cadre dimensionné par gabarit : le bandeau vise 728×90, le pavé 300×250,
-  // le natif s'adapte à la largeur du flux.
+  // Cadre dimensionné par format : bandeau 728×90, pavé 300×250, natif fluide.
   const frameClass = isLeaderboard
     ? "mx-auto w-full max-w-[728px]"
     : isMpu

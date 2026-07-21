@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma, type AdFormat, type AdStatus } from "@a4a/db";
 import { auth } from "@/auth";
 import { removeUpload, saveImageUpload } from "@/lib/uploads";
+import { getPlacement } from "@/lib/ad-placements";
 
 const FORMATS: AdFormat[] = ["leaderboard_728x90", "mpu_300x250", "native", "interstitial"];
 const TRANSITIONS: Record<AdStatus, AdStatus[]> = {
@@ -127,6 +128,20 @@ export async function deleteCampaignAction(id: string): Promise<void> {
   await prisma.adCampaign.delete({ where: { id } }).catch(() => {});
   revalidatePath("/admin/ads");
   redirect("/admin/ads");
+}
+
+/** Active/désactive un emplacement publicitaire (catalogue lib/ad-placements). */
+export async function setPlacementEnabledAction(slug: string, formData: FormData): Promise<void> {
+  await requireAdmin();
+  if (!getPlacement(slug)) return; // slug hors catalogue
+  const enabled = String(formData.get("enabled") ?? "") === "1";
+  await prisma.adPlacement.upsert({
+    where: { slug },
+    create: { slug, enabled },
+    update: { enabled },
+  });
+  revalidatePath("/admin/ads");
+  revalidatePath("/", "layout"); // les encarts sont partout
 }
 
 /** Transition de statut contrôlée (draft→active→paused/ended). */

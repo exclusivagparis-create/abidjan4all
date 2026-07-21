@@ -611,6 +611,16 @@ model AdCampaign {
   status      AdStatus @default(draft)
 }
 
+/// Emplacement publicitaire (encart d'une page). Le catalogue des emplacements
+/// est défini en code (lib/ad-placements.ts) ; cette table ne stocke que l'état
+/// activé/désactivé piloté depuis la régie Studio. Une absence de ligne = état
+/// par défaut du catalogue.
+model AdPlacement {
+  slug      String   @id // ex. "home_leaderboard"
+  enabled   Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
+
 // ---------------------------------------------------------------------------
 // Marketplace (emploi / immobilier / service)
 // ---------------------------------------------------------------------------
