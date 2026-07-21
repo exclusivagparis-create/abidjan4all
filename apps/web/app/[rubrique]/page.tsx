@@ -8,6 +8,7 @@ import { AdSlot } from "@/components/ad-slot";
 import { PlaceholderMedia } from "@/components/placeholder-media";
 import { RichTitle } from "@/components/rich-title";
 import { StaticPageView } from "@/components/static-page-view";
+import { DiasporaStrip } from "@/components/diaspora-strip";
 import { articleListSelect } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 
@@ -17,7 +18,10 @@ import { formatDate } from "@/lib/format";
 // le trafic l'exige — cf. README infra).
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ rubrique: string }> };
+type Props = {
+  params: Promise<{ rubrique: string }>;
+  searchParams: Promise<{ pays?: string }>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { rubrique: slug } = await params;
@@ -27,8 +31,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return page ? { title: page.title } : {};
 }
 
-export default async function RubriquePage({ params }: Props) {
+export default async function RubriquePage({ params, searchParams }: Props) {
   const { rubrique: slug } = await params;
+  const { pays } = await searchParams;
   const rubrique = await prisma.rubrique.findUnique({ where: { slug } });
   if (!rubrique) {
     // Repli 1 : une page statique publiée à cette adresse (ex. /mentions-legales).
@@ -50,8 +55,16 @@ export default async function RubriquePage({ params }: Props) {
     notFound();
   }
 
+  // Filtre pays (rubrique Diaspora) : un article tagué du nom du pays remonte
+  // sous le chip correspondant. Ignoré hors Diaspora ou sans paramètre.
+  const paysFiltre = slug === "diaspora" && pays ? pays.trim().slice(0, 40) : null;
   const articles = await prisma.article.findMany({
-    where: { status: "published", hidden: false, rubriqueId: rubrique.id },
+    where: {
+      status: "published",
+      hidden: false,
+      rubriqueId: rubrique.id,
+      ...(paysFiltre ? { tags: { has: paysFiltre } } : {}),
+    },
     select: articleListSelect,
     orderBy: { publishedAt: "desc" },
     take: 24,
@@ -76,6 +89,13 @@ export default async function RubriquePage({ params }: Props) {
             {articles.length} article{articles.length > 1 ? "s" : ""}
           </span>
         </div>
+
+        {/* Filtres pays sur la rubrique Diaspora. */}
+        {slug === "diaspora" ? (
+          <div className="mb-6">
+            <DiasporaStrip active={paysFiltre ?? undefined} bare />
+          </div>
+        ) : null}
 
         {/* Bandeau 728×90 en tête, encart natif in-feed, interstitiel mobile. */}
         <AdSlot rubrique={rubrique.slug} placement="leaderboard" />

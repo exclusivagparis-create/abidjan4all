@@ -9,6 +9,9 @@ import { RichTitle, plainTitle } from "@/components/rich-title";
 import { ShareButtons } from "@/components/share-buttons";
 import { VideoWindow } from "@/components/video-window";
 import { NewsletterSignup } from "@/components/newsletter-signup";
+import { ServicesBand } from "@/components/services-band";
+import { DiasporaStrip } from "@/components/diaspora-strip";
+import { RubriqueExplorer } from "@/components/rubrique-explorer";
 import { articleListSelect } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 
@@ -219,6 +222,12 @@ export default async function HomePage() {
         </section>
       ) : null}
 
+      {/* BANDE SERVICES + FILTRES DIASPORA (identité CI) */}
+      <div className="mt-12">
+        <ServicesBand />
+      </div>
+      <DiasporaStrip />
+
       {/* 4 ARTICLES À LA UNE (positions choisies dans le Studio) */}
       {grilleUne.length > 0 ? (
         <section className="mx-auto max-w-[1200px] px-4 pt-12 sm:px-6 lg:px-8">
@@ -253,20 +262,8 @@ export default async function HomePage() {
       {/* EXPLORER LES RUBRIQUES — bande de navigation, remplit le bas de page */}
       {rubriquesExplorer.length > 0 ? (
         <section className="mx-auto max-w-[1200px] px-4 pt-12 sm:px-6 lg:px-8">
-          <SectionHeader name="Explorer les rubriques" color="var(--navy)" />
-          <div className="flex flex-wrap gap-2.5">
-            {rubriquesExplorer.map((r) => (
-              <Link
-                key={r.slug}
-                href={`/${r.slug}`}
-                className="flex items-center gap-2 rounded-pill border border-line bg-surface px-4 py-2 text-[13px] font-semibold text-ink-2 shadow-[var(--shadow-sm)] transition-colors hover:text-ink"
-              >
-                <span className="h-2.5 w-2.5 flex-none rounded-pill" style={{ background: r.color }} />
-                {r.name}
-                <span className="text-[11.5px] font-bold text-ink-3">{r._count.articles}</span>
-              </Link>
-            ))}
-          </div>
+          <SectionHeader name="Explorer par rubrique" color="var(--navy)" />
+          <RubriqueExplorer rubriques={rubriquesExplorer} />
         </section>
       ) : null}
 

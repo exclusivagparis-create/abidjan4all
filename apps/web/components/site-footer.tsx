@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@a4a/db";
+import { RESEAUX_ACTIFS } from "@/lib/reseaux";
 
 export async function SiteFooter() {
   const [rubriques, pages] = await Promise.all([
@@ -45,6 +46,24 @@ export async function SiteFooter() {
               </Link>
             ))}
           </nav>
+        ) : null}
+        {RESEAUX_ACTIFS.length > 0 ? (
+          <div className="mt-6 flex items-center gap-2.5 border-t border-line-2 pt-5">
+            <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3">Suivez-nous</span>
+            {RESEAUX_ACTIFS.map((r) => (
+              <a
+                key={r.name}
+                href={r.href}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={r.label}
+                title={r.label}
+                className="flex h-8 w-8 items-center justify-center rounded-pill border border-line bg-surface-2 text-[13px] text-ink-2 transition-colors hover:border-[#1A6B3C] hover:text-[#1A6B3C]"
+              >
+                {r.glyph}
+              </a>
+            ))}
+          </div>
         ) : null}
         <div className="mt-6 border-t border-line-2 pt-5 text-xs text-ink-3">
           © 2026 Abidjan4All · Exclusiv&apos;AG — Tous droits réservés
