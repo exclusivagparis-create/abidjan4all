@@ -11,6 +11,7 @@ const KIND_LABEL: Record<string, string> = {
   listing_emploi: "Dépôt d'offre d'emploi",
   listing_immobilier: "Annonce immobilière",
   whatsapp: "Adhésion WhatsApp Club",
+  ad_reservation: "Réservation d'emplacement publicitaire",
 };
 
 /** Page « prestataire » simulée pour les commandes one-off (annonces, club). */

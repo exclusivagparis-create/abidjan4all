@@ -78,6 +78,28 @@ export const TARIFS_WHATSAPP: PalierAnnonce[] = [
   { id: "annuel", label: "Annuel", prix: 15000, jours: 365, description: "Accès 12 mois au meilleur tarif." },
 ];
 
+/**
+ * Packs de réservation d'emplacement en self-service (page /publicite) : prix
+ * forfaitaire par format et par durée. Ajustables ici. `format` doit exister
+ * dans AdFormat.
+ */
+export type PackPub = PalierAnnonce & { format: AdFormat };
+
+export const PACKS_PUB: PackPub[] = [
+  { id: "bandeau-7", format: "leaderboard_728x90", label: "Bandeau 728×90 — 7 jours", jours: 7, prix: 40000, description: "Bandeau en tête de page, 7 jours." },
+  { id: "bandeau-15", format: "leaderboard_728x90", label: "Bandeau 728×90 — 15 jours", jours: 15, prix: 75000, description: "Bandeau en tête de page, 15 jours." },
+  { id: "bandeau-30", format: "leaderboard_728x90", label: "Bandeau 728×90 — 30 jours", jours: 30, prix: 130000, description: "Bandeau en tête de page, 30 jours." },
+  { id: "pave-7", format: "mpu_300x250", label: "Pavé 300×250 — 7 jours", jours: 7, prix: 30000, description: "Pavé en colonne / dans le contenu, 7 jours." },
+  { id: "pave-15", format: "mpu_300x250", label: "Pavé 300×250 — 15 jours", jours: 15, prix: 55000, description: "Pavé en colonne / dans le contenu, 15 jours." },
+  { id: "pave-30", format: "mpu_300x250", label: "Pavé 300×250 — 30 jours", jours: 30, prix: 95000, description: "Pavé en colonne / dans le contenu, 30 jours." },
+  { id: "natif-7", format: "native", label: "Natif in-feed — 7 jours", jours: 7, prix: 50000, description: "Encart natif au fil des articles, 7 jours." },
+  { id: "natif-15", format: "native", label: "Natif in-feed — 15 jours", jours: 15, prix: 90000, description: "Encart natif au fil des articles, 15 jours." },
+  { id: "natif-30", format: "native", label: "Natif in-feed — 30 jours", jours: 30, prix: 160000, description: "Encart natif au fil des articles, 30 jours." },
+  { id: "video-7", format: "video", label: "Encart vidéo — 7 jours", jours: 7, prix: 45000, description: "Encart sponsor sur la page Vidéos, 7 jours." },
+  { id: "video-15", format: "video", label: "Encart vidéo — 15 jours", jours: 15, prix: 80000, description: "Encart sponsor sur la page Vidéos, 15 jours." },
+  { id: "video-30", format: "video", label: "Encart vidéo — 30 jours", jours: 30, prix: 140000, description: "Encart sponsor sur la page Vidéos, 30 jours." },
+];
+
 /** Retrouve un palier par identifiant dans une grille donnée. */
 export function trouverPalier(grille: PalierAnnonce[], id: string): PalierAnnonce | undefined {
   return grille.find((p) => p.id === id);

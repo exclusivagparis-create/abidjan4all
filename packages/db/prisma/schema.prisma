@@ -134,6 +134,7 @@ enum OrderKind {
   listing_emploi
   listing_immobilier
   whatsapp
+  ad_reservation
 }
 
 enum OrderStatus {
@@ -629,7 +630,8 @@ model AdCampaign {
   advertiserUser   User?   @relation("AdvertiserCampaigns", fields: [advertiserUserId], references: [id], onDelete: SetNull)
   advertiserUserId String?
 
-  banners AdBanner[]
+  banners      AdBanner[]
+  reservations Order[]    @relation("ReservationCampaign")
 
   @@index([advertiserUserId])
 }
@@ -727,10 +729,15 @@ model Order {
   listing   Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
   listingId String?
 
+  // Réservation d'emplacement publicitaire : campagne à activer une fois payée.
+  campaign   AdCampaign? @relation("ReservationCampaign", fields: [campaignId], references: [id], onDelete: SetNull)
+  campaignId String?
+
   createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([providerRef])
+  @@index([campaignId])
 }
 
 /// Adhésion au WhatsApp Club (accès au groupe privé), une par membre.

@@ -1,11 +1,13 @@
 import { prisma, type OrderKind } from "@a4a/db";
 import { getProviderForMethod, type PaymentMethodId } from "@a4a/payments";
-import { TARIFS_EMPLOI, TARIFS_IMMO, TARIFS_WHATSAPP, trouverPalier, type PalierAnnonce } from "@/lib/tarifs";
+import { removeUpload } from "@/lib/uploads";
+import { TARIFS_EMPLOI, TARIFS_IMMO, TARIFS_WHATSAPP, PACKS_PUB, trouverPalier, type PalierAnnonce } from "@/lib/tarifs";
 
 /** Grille tarifaire correspondant au type de commande. */
 function grillePourKind(kind: OrderKind): PalierAnnonce[] {
   if (kind === "listing_emploi") return TARIFS_EMPLOI;
   if (kind === "listing_immobilier") return TARIFS_IMMO;
+  if (kind === "ad_reservation") return PACKS_PUB;
   return TARIFS_WHATSAPP;
 }
 
@@ -23,6 +25,7 @@ export async function startOrderCheckout(params: {
   tierId: string;
   method: PaymentMethodId;
   listingId?: string;
+  campaignId?: string;
 }): Promise<StartOrderResult> {
   const palier = trouverPalier(grillePourKind(params.kind), params.tierId);
   if (!palier) return { ok: false, error: "Formule invalide." };
@@ -42,6 +45,7 @@ export async function startOrderCheckout(params: {
       providerRef: "",
       status: "pending",
       listingId: params.listingId ?? null,
+      campaignId: params.campaignId ?? null,
     },
   });
 
@@ -88,6 +92,29 @@ export async function fulfillOrder(providerRef: string): Promise<FulfillOrderRes
   const now = new Date();
   const echeance = new Date(now.getTime() + palier.jours * 24 * 3600 * 1000);
 
+  if (order.kind === "ad_reservation") {
+    // Réservation payée : la campagne (créée en brouillon) s'active pour la
+    // durée du pack, et l'acheteur devient « partner » pour suivre ses stats.
+    const echeanceCampagne = new Date(now.getTime() + palier.jours * 24 * 3600 * 1000);
+    await prisma.$transaction([
+      prisma.order.update({ where: { id: order.id }, data: { status: "paid" } }),
+      ...(order.campaignId
+        ? [
+            prisma.adCampaign.update({
+              where: { id: order.campaignId },
+              data: { status: "active", startAt: now, endAt: echeanceCampagne, advertiserUserId: order.userId },
+            }),
+          ]
+        : []),
+    ]);
+    // Accès à l'espace annonceur (sans rétrograder un compte du Studio).
+    await prisma.user.updateMany({
+      where: { id: order.userId, role: { in: ["reader", "member"] } },
+      data: { role: "partner" },
+    });
+    return { ok: true };
+  }
+
   if (order.kind === "whatsapp") {
     const membership = await prisma.whatsappMembership.findUnique({ where: { userId: order.userId } });
     // Prolongation : on repart de l'échéance en cours si elle est future.
@@ -122,5 +149,20 @@ export async function fulfillOrder(providerRef: string): Promise<FulfillOrderRes
 /** Échec/abandon d'une commande one-off. */
 export async function failOrder(providerRef: string): Promise<void> {
   if (!providerRef) return;
+  const orders = await prisma.order.findMany({
+    where: { providerRef, status: "pending" },
+    select: { kind: true, campaignId: true },
+  });
+  if (orders.length === 0) return;
   await prisma.order.updateMany({ where: { providerRef, status: "pending" }, data: { status: "failed" } });
+
+  // Réservation abandonnée : on retire la campagne restée en brouillon.
+  for (const o of orders) {
+    if (o.kind !== "ad_reservation" || !o.campaignId) continue;
+    const camp = await prisma.adCampaign.findUnique({ where: { id: o.campaignId }, select: { status: true } });
+    if (camp?.status !== "draft") continue;
+    const banners = await prisma.adBanner.findMany({ where: { campaignId: o.campaignId }, select: { imageUrl: true } });
+    await Promise.all(banners.map((b) => removeUpload(b.imageUrl)));
+    await prisma.adCampaign.delete({ where: { id: o.campaignId } }).catch(() => {});
+  }
 }

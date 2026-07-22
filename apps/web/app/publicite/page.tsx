@@ -113,12 +113,31 @@ export default async function PublicitePage() {
           </div>
         </section>
 
+        {/* Réservation en ligne (self-service) */}
+        <section className="mb-6 rounded-[16px] border border-[#1A6B3C] bg-[rgba(26,107,60,0.06)] px-7 py-8">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="font-serif text-[24px] font-semibold">Réserver en ligne, tout de suite</h2>
+              <p className="mt-2 max-w-[54ch] text-[14px] text-ink-2">
+                Choisissez un emplacement et une durée, envoyez votre visuel, payez — votre publicité est diffusée
+                automatiquement. À partir de 30 000 FCFA.
+              </p>
+            </div>
+            <Link
+              href="/publicite/reserver"
+              className="inline-block flex-none rounded-pill bg-[#1A6B3C] px-7 py-3 text-[14px] font-bold text-white"
+            >
+              Réserver un emplacement →
+            </Link>
+          </div>
+        </section>
+
         {/* Contact régie */}
         <section className="rounded-[16px] border border-line bg-surface-2 px-7 py-8 text-center">
-          <h2 className="font-serif text-[24px] font-semibold">Parlons de votre campagne</h2>
+          <h2 className="font-serif text-[24px] font-semibold">Un projet sur mesure ?</h2>
           <p className="mx-auto mt-2 max-w-[54ch] text-[14px] text-ink-2">
-            Décrivez votre objectif et votre budget : nous revenons vers vous avec une proposition et un calendrier de
-            diffusion.
+            Pour une campagne CPM, un habillage de site ou un communiqué partenaire, décrivez votre objectif : nous
+            revenons vers vous avec une proposition.
           </p>
           <Link
             href="/contact?sujet=publicite"
