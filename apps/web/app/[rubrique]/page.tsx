@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
@@ -97,10 +98,7 @@ export default async function RubriquePage({ params, searchParams }: Props) {
           </div>
         ) : null}
 
-        {/* Emplacements rubrique (gérés au Studio). */}
-        <AdSlot rubrique={rubrique.slug} placementId="rubrique_leaderboard" />
-        <AdSlot rubrique={rubrique.slug} placementId="rubrique_mpu" />
-        <AdSlot rubrique={rubrique.slug} placementId="rubrique_native" />
+        {/* Interstitiel mobile (le bandeau est global, dans l'en-tête). */}
         <AdSlot rubrique={rubrique.slug} placementId="rubrique_interstitial" />
 
         {articles.length === 0 ? (
@@ -109,37 +107,47 @@ export default async function RubriquePage({ params, searchParams }: Props) {
           </p>
         ) : (
           <div className="flex flex-col gap-7">
-            {articles.map((a) => (
-              <article key={a.slug} className="grid grid-cols-1 gap-6 border-b border-line-2 pb-7 sm:grid-cols-[260px_1fr]">
-                <Link href={`/${rubrique.slug}/${a.slug}`}>
-                  <PlaceholderMedia url={a.coverAsset?.url} alt={a.coverAsset?.alt} className="h-[150px] w-full rounded-[10px]" />
-                </Link>
-                <div>
-                  {a.kicker ? (
-                    <span className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: rubrique.color }}>
-                      {a.kicker}
-                    </span>
-                  ) : null}
+            {articles.map((a, i) => (
+              <Fragment key={a.slug}>
+                {/* Pavé et natif insérés AU MILIEU de la liste — distincts du
+                    bandeau (dans l'en-tête). */}
+                {i === 2 ? <AdSlot rubrique={rubrique.slug} placementId="rubrique_mpu" /> : null}
+                {i === 6 ? <AdSlot rubrique={rubrique.slug} placementId="rubrique_native" /> : null}
+                <article className="grid grid-cols-1 gap-6 border-b border-line-2 pb-7 sm:grid-cols-[260px_1fr]">
                   <Link href={`/${rubrique.slug}/${a.slug}`}>
-                    <h2 className="mb-1.5 mt-1 font-serif text-2xl font-semibold leading-[1.16] hover:underline">
-                      <RichTitle text={a.title} />
-                    </h2>
+                    <PlaceholderMedia url={a.coverAsset?.url} alt={a.coverAsset?.alt} className="h-[150px] w-full rounded-[10px]" />
                   </Link>
-                  <p className="mb-2.5 max-w-[70ch] font-serif text-[15.5px] leading-normal text-ink-2">{a.dek}</p>
-                  <div className="flex items-center gap-2 text-xs text-ink-3">
-                    <span className="font-bold text-ink">{a.author.name}</span>
-                    <span>
-                      · {formatDate(a.publishedAt)} · {a.readingTime} min
-                    </span>
-                    {a.premium ? (
-                      <span className="rounded-pill bg-[linear-gradient(135deg,#F5C24B,#E8641A)] px-2 py-0.5 text-[10px] font-extrabold uppercase text-[#16181D]">
-                        A4A+
+                  <div>
+                    {a.kicker ? (
+                      <span className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: rubrique.color }}>
+                        {a.kicker}
                       </span>
                     ) : null}
+                    <Link href={`/${rubrique.slug}/${a.slug}`}>
+                      <h2 className="mb-1.5 mt-1 font-serif text-2xl font-semibold leading-[1.16] hover:underline">
+                        <RichTitle text={a.title} />
+                      </h2>
+                    </Link>
+                    <p className="mb-2.5 max-w-[70ch] font-serif text-[15.5px] leading-normal text-ink-2">{a.dek}</p>
+                    <div className="flex items-center gap-2 text-xs text-ink-3">
+                      <span className="font-bold text-ink">{a.author.name}</span>
+                      <span>
+                        · {formatDate(a.publishedAt)} · {a.readingTime} min
+                      </span>
+                      {a.premium ? (
+                        <span className="rounded-pill bg-[linear-gradient(135deg,#F5C24B,#E8641A)] px-2 py-0.5 text-[10px] font-extrabold uppercase text-[#16181D]">
+                          A4A+
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              </article>
+                </article>
+              </Fragment>
             ))}
+            {/* Liste courte : garantit l'affichage du pavé même avec < 3 articles. */}
+            {articles.length > 0 && articles.length <= 2 ? (
+              <AdSlot rubrique={rubrique.slug} placementId="rubrique_mpu" />
+            ) : null}
           </div>
         )}
       </main>

@@ -131,8 +131,7 @@ export default async function ArticlePage({ params }: Props) {
             </Link>
           </nav>
 
-          {/* Emplacements pub — bandeau haut + interstitiel mobile (gérés au Studio). */}
-          <AdSlot rubrique={article.rubrique.slug} placementId="article_leaderboard" />
+          {/* Interstitiel mobile (le bandeau est global, dans l'en-tête). */}
           <AdSlot rubrique={article.rubrique.slug} placementId="article_interstitial" />
 
           {/* Rangée de pilules (modèle : .tag-row) */}

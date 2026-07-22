@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { ThemeToggle } from "@a4a/ui";
 import { prisma } from "@a4a/db";
 import { auth } from "@/auth";
 import { MobileMenu } from "@/components/mobile-menu";
 import { AudienceTracker } from "@/components/audience-tracker";
 import { SiteTopbar } from "@/components/site-topbar";
+import { AdSlot } from "@/components/ad-slot";
 
 /** Menu par défaut, servi tant qu'aucune entrée n'est définie au Studio. */
 const NAV_DEFAUT = [
@@ -38,6 +40,11 @@ export async function SiteHeader() {
     auth(),
   ]);
   const NAV = items.length > 0 ? items : NAV_DEFAUT;
+
+  // Section courante (1er segment du chemin, exposé par le middleware) : sert
+  // le ciblage par rubrique du bandeau global. Absent sur l'accueil.
+  const h = await headers();
+  const sectionCourante = (h.get("x-a4a-path") ?? "").split("/").filter(Boolean)[0];
   // « Mon compte » n'a de sens que pour qui en a un : un visiteur se voit
   // proposer « Se connecter ». Les pages qui portent cet en-tête sont donc
   // rendues à chaque requête (l'état de connexion ne peut pas être mis en cache).
@@ -115,6 +122,12 @@ export async function SiteHeader() {
         </Link>
       </div>
       </header>
+      {/* Bandeau publicitaire global — présent sous l'en-tête sur toutes les
+          pages publiques (rendu seulement si l'emplacement est activé et qu'une
+          campagne « bandeau » le cible ; sinon rien). */}
+      <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
+        <AdSlot placementId="site_leaderboard" rubrique={sectionCourante} />
+      </div>
     </>
   );
 }

@@ -152,10 +152,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Emplacement pub — bandeau haut d'accueil + interstitiel mobile. */}
-      <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
-        <AdSlot placementId="home_leaderboard" />
-      </div>
+      {/* Interstitiel mobile d'accueil (le bandeau est global, dans l'en-tête). */}
       <AdSlot placementId="home_interstitial" />
 
       {/* HERO */}

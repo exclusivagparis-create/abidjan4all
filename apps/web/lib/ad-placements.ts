@@ -9,7 +9,7 @@ import { prisma, type AdFormat } from "@a4a/db";
  */
 export type Placement = {
   slug: string;
-  page: "Accueil" | "Rubrique" | "Article";
+  page: "Global" | "Accueil" | "Rubrique" | "Article";
   format: AdFormat;
   label: string;
   zone: string; // description de l'emplacement, pour le Studio
@@ -17,18 +17,17 @@ export type Placement = {
 };
 
 export const PLACEMENTS: Placement[] = [
+  // Global — présent sur TOUTES les pages publiques (rendu dans l'en-tête).
+  { slug: "site_leaderboard", page: "Global", format: "leaderboard_728x90", label: "Global — bandeau (toutes les pages)", zone: "Sous l'en-tête, sur tout le site", defaultEnabled: true },
   // Accueil
-  { slug: "home_leaderboard", page: "Accueil", format: "leaderboard_728x90", label: "Accueil — bandeau haut", zone: "Sous le fil d'actualité", defaultEnabled: true },
   { slug: "home_mpu", page: "Accueil", format: "mpu_300x250", label: "Accueil — pavé colonne", zone: "Colonne latérale, sous « Les plus lus »", defaultEnabled: true },
   { slug: "home_native", page: "Accueil", format: "native", label: "Accueil — natif in-feed", zone: "Entre les sections d'articles", defaultEnabled: true },
   { slug: "home_interstitial", page: "Accueil", format: "interstitial", label: "Accueil — interstitiel mobile", zone: "Plein écran mobile, 1×/session", defaultEnabled: false },
   // Rubrique
-  { slug: "rubrique_leaderboard", page: "Rubrique", format: "leaderboard_728x90", label: "Rubrique — bandeau haut", zone: "Sous le titre de rubrique", defaultEnabled: true },
-  { slug: "rubrique_mpu", page: "Rubrique", format: "mpu_300x250", label: "Rubrique — pavé", zone: "Sous le bandeau, avant la liste", defaultEnabled: true },
+  { slug: "rubrique_mpu", page: "Rubrique", format: "mpu_300x250", label: "Rubrique — pavé", zone: "Au milieu de la liste d'articles", defaultEnabled: true },
   { slug: "rubrique_native", page: "Rubrique", format: "native", label: "Rubrique — natif in-feed", zone: "Au fil de la liste d'articles", defaultEnabled: true },
   { slug: "rubrique_interstitial", page: "Rubrique", format: "interstitial", label: "Rubrique — interstitiel mobile", zone: "Plein écran mobile, 1×/session", defaultEnabled: false },
   // Article
-  { slug: "article_leaderboard", page: "Article", format: "leaderboard_728x90", label: "Article — bandeau haut", zone: "Sous le fil d'ariane", defaultEnabled: true },
   { slug: "article_mpu", page: "Article", format: "mpu_300x250", label: "Article — pavé", zone: "Après le chapeau / dans le corps", defaultEnabled: true },
   { slug: "article_native", page: "Article", format: "native", label: "Article — natif fin d'article", zone: "Sous le corps de l'article", defaultEnabled: true },
   { slug: "article_interstitial", page: "Article", format: "interstitial", label: "Article — interstitiel mobile", zone: "Plein écran mobile, 1×/session", defaultEnabled: false },
