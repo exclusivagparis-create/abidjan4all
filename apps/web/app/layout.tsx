@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Archivo, Newsreader } from "next/font/google";
 import { ThemeProvider, ThemeScript } from "@a4a/ui";
 import { CookieConsent } from "@/components/cookie-consent";
+import { AdSkin } from "@/components/ad-skin";
+import { habillageActif } from "@/lib/ad-skin";
 import { organizationJsonLd, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
@@ -39,7 +41,12 @@ export const metadata: Metadata = {
 
 const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Habillage publicitaire : quand une campagne « habillage » est active, le
+  // fond est cliquable et le contenu passe dans un cadre centré (les marges
+  // laissent voir le habillage sur grand écran). Sinon, rendu identique.
+  const skin = await habillageActif();
+
   return (
     <html
       lang="fr"
@@ -61,7 +68,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd()) }}
         />
-        <ThemeProvider>{children}</ThemeProvider>
+        {skin ? <AdSkin /> : null}
+        <ThemeProvider>
+          {skin ? (
+            <div
+              style={{
+                position: "relative",
+                zIndex: 1,
+                maxWidth: 1320,
+                margin: "0 auto",
+                minHeight: "100vh",
+                background: "var(--bg)",
+                boxShadow: "0 0 60px rgba(0,0,0,0.28)",
+              }}
+            >
+              {children}
+            </div>
+          ) : (
+            children
+          )}
+        </ThemeProvider>
         <CookieConsent ga4Id={GA4_ID} />
       </body>
     </html>

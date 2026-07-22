@@ -16,6 +16,8 @@ const FORMAT_LABEL: Record<AdFormat, string> = {
   mpu_300x250: "Pavé 300×250",
   native: "Natif",
   interstitial: "Interstitiel",
+  skin: "Habillage",
+  video: "Vidéo",
 };
 const STATUS_LABEL: Record<AdStatus, string> = {
   draft: "En préparation",

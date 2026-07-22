@@ -101,6 +101,8 @@ enum AdFormat {
   mpu_300x250
   native
   interstitial
+  skin // habillage : fond de page cliquable
+  video // encart sponsor sur la page Vidéos
 }
 
 enum AdStatus {

@@ -24,12 +24,16 @@ const FORMAT_LABEL: Record<AdFormat, string> = {
   mpu_300x250: "Pavé 300×250",
   native: "Natif",
   interstitial: "Interstitiel",
+  skin: "Habillage",
+  video: "Vidéo",
 };
 const FORMAT_COURT: Record<AdFormat, string> = {
   leaderboard_728x90: "Bandeau",
   mpu_300x250: "Pavé",
   native: "Natif",
   interstitial: "Interstitiel",
+  skin: "Habillage",
+  video: "Vidéo",
 };
 const PRIORITE_LABEL: Record<AdPriority, string> = { basse: "Basse", moyenne: "Moyenne", haute: "Haute" };
 const STATUS_META: Record<AdStatus, { label: string; color: string }> = {

@@ -1,7 +1,7 @@
 import type { AdFormat } from "@a4a/db";
 import { countImpression, pickBanner } from "@/lib/ads";
 
-const FORMATS: AdFormat[] = ["leaderboard_728x90", "mpu_300x250", "native", "interstitial"];
+const FORMATS: AdFormat[] = ["leaderboard_728x90", "mpu_300x250", "native", "interstitial", "skin", "video"];
 
 // GET /api/v1/ads/slots?format=&rubrique=&device= → [AdCreative] (contrat §Régie).
 // Sert au plus une bannière ciblée pour le format demandé et compte l'impression.

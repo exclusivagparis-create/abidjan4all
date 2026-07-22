@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { PlaceholderMedia } from "@/components/placeholder-media";
 import { RichTitle } from "@/components/rich-title";
 import { VideoPlayer } from "@/components/video-player";
+import { AdSlot } from "@/components/ad-slot";
 import { thumbnailUrl } from "@/lib/video";
 import { articleListSelect } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -50,6 +51,9 @@ export default async function VideosPage() {
             </span>
           ) : null}
         </div>
+
+        {/* Régie vidéo — encart sponsor au-dessus du lecteur (géré au Studio). */}
+        <AdSlot placementId="video_preroll" />
 
         {une ? (
           <section className="mb-10 grid grid-cols-1 gap-7 lg:grid-cols-[1.6fr_1fr]">

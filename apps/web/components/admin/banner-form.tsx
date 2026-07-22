@@ -1,12 +1,14 @@
 import { PlaceholderMedia } from "@/components/placeholder-media";
 
-type AdFormat = "leaderboard_728x90" | "mpu_300x250" | "native" | "interstitial";
+type AdFormat = "leaderboard_728x90" | "mpu_300x250" | "native" | "interstitial" | "skin" | "video";
 
 const FORMAT_LABEL: Record<AdFormat, string> = {
   leaderboard_728x90: "Bandeau 728×90",
   mpu_300x250: "Pavé 300×250",
   native: "Natif",
   interstitial: "Interstitiel",
+  skin: "Habillage (fond de page)",
+  video: "Vidéo (page Vidéos)",
 };
 
 export type BannerInitial = {

@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 
 const CampaignInput = z.object({
   advertiser: z.string().trim().min(2).max(80),
-  format: z.enum(["leaderboard_728x90", "mpu_300x250", "native", "interstitial"]),
+  format: z.enum(["leaderboard_728x90", "mpu_300x250", "native", "interstitial", "skin", "video"]),
   cpm: z.number().int().positive(),
   headline: z.string().trim().max(120).optional(),
   linkUrl: z.string().url().optional(),

@@ -9,7 +9,7 @@ import { prisma, type AdFormat } from "@a4a/db";
  */
 export type Placement = {
   slug: string;
-  page: "Global" | "Accueil" | "Rubrique" | "Article";
+  page: "Global" | "Accueil" | "Rubrique" | "Article" | "Vidéo";
   format: AdFormat;
   label: string;
   zone: string; // description de l'emplacement, pour le Studio
@@ -19,6 +19,9 @@ export type Placement = {
 export const PLACEMENTS: Placement[] = [
   // Global — présent sur TOUTES les pages publiques (rendu dans l'en-tête).
   { slug: "site_leaderboard", page: "Global", format: "leaderboard_728x90", label: "Global — bandeau (toutes les pages)", zone: "Sous l'en-tête, sur tout le site", defaultEnabled: true },
+  { slug: "site_skin", page: "Global", format: "skin", label: "Global — habillage (fond de page)", zone: "Fond de page, visible dans les marges sur grand écran", defaultEnabled: false },
+  // Vidéo
+  { slug: "video_preroll", page: "Vidéo", format: "video", label: "Vidéo — encart sponsor", zone: "Au-dessus du lecteur, page Vidéos", defaultEnabled: true },
   // Accueil
   { slug: "home_mpu", page: "Accueil", format: "mpu_300x250", label: "Accueil — pavé colonne", zone: "Colonne latérale, sous « Les plus lus »", defaultEnabled: true },
   { slug: "home_native", page: "Accueil", format: "native", label: "Accueil — natif in-feed", zone: "Entre les sections d'articles", defaultEnabled: true },

@@ -8,7 +8,7 @@ import { removeUpload, saveImageUpload } from "@/lib/uploads";
 import { getPlacement } from "@/lib/ad-placements";
 import { sendMonthlyAdReports } from "@/lib/ad-reports";
 
-const FORMATS: AdFormat[] = ["leaderboard_728x90", "mpu_300x250", "native", "interstitial"];
+const FORMATS: AdFormat[] = ["leaderboard_728x90", "mpu_300x250", "native", "interstitial", "skin", "video"];
 const PRIORITES: AdPriority[] = ["basse", "moyenne", "haute"];
 const TRANSITIONS: Record<AdStatus, AdStatus[]> = {
   draft: ["active"],
