@@ -176,6 +176,7 @@ model User {
   cvProfile               CvProfile?
   orders                  Order[]
   whatsappMembership      WhatsappMembership?
+  advertiserCampaigns     AdCampaign[]             @relation("AdvertiserCampaigns")
   comments                Comment[]
   favorites               Article[]                @relation("Favorites")
   groups                  Group[]
@@ -621,7 +622,29 @@ model AdCampaign {
   status    AdStatus @default(draft)
   createdAt DateTime @default(now())
 
+  // Compte annonceur (rôle « partner ») autorisé à consulter les stats de
+  // cette campagne depuis son espace. Optionnel — assigné par l'administration.
+  advertiserUser   User?   @relation("AdvertiserCampaigns", fields: [advertiserUserId], references: [id], onDelete: SetNull)
+  advertiserUserId String?
+
   banners AdBanner[]
+
+  @@index([advertiserUserId])
+}
+
+/// Journal des rapports mensuels envoyés (dédoublonnage : un envoi par
+/// annonceur et par mois, quels que soient les redémarrages).
+model AdReportLog {
+  id               String   @id @default(cuid())
+  advertiserUserId String
+  period           String // "2026-07"
+  // Compteurs cumulés au moment de l'envoi : le rapport du mois suivant
+  // présente le delta par rapport à ce relevé.
+  impressions      Int      @default(0)
+  clicks           Int      @default(0)
+  sentAt           DateTime @default(now())
+
+  @@unique([advertiserUserId, period])
 }
 
 /// Créatif d'une campagne : un visuel (ou une accroche) d'un format donné,

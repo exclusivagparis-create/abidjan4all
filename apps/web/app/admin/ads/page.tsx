@@ -8,6 +8,7 @@ import {
   deleteCampaignAction,
   setCampaignStatusAction,
   setPlacementEnabledAction,
+  sendMonthlyReportsAction,
 } from "@/lib/actions/ad-actions";
 import { CampaignForm } from "@/components/admin/campaign-form";
 import { PLACEMENTS, emplacementsActifs } from "@/lib/ad-placements";
@@ -50,13 +51,14 @@ const NEXT_STATUS: Record<AdStatus, Array<{ to: AdStatus; label: string }>> = {
   ended: [],
 };
 
-export default async function AdminAds({ searchParams }: { searchParams: Promise<{ erreur?: string }> }) {
-  const [{ erreur }, session] = await Promise.all([searchParams, auth()]);
+export default async function AdminAds({ searchParams }: { searchParams: Promise<{ erreur?: string; rapports?: string }> }) {
+  const [{ erreur, rapports }, session] = await Promise.all([searchParams, auth()]);
   if (session?.user?.role !== "admin") redirect("/admin");
 
-  const [campaigns, rubriques, emplActifs] = await Promise.all([
+  const [campaigns, rubriques, partners, emplActifs] = await Promise.all([
     prisma.adCampaign.findMany({ orderBy: [{ status: "asc" }, { createdAt: "desc" }], include: { banners: true } }),
     prisma.rubrique.findMany({ orderBy: { order: "asc" }, select: { slug: true, name: true } }),
+    prisma.user.findMany({ where: { role: "partner" }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     emplacementsActifs(),
   ]);
 
@@ -70,9 +72,26 @@ export default async function AdminAds({ searchParams }: { searchParams: Promise
   const clicks = campaigns.reduce((s, c) => s + agg(c).clk, 0);
   const ctr = impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) : "0.00";
 
+  const partnersCount = partners.length;
+
   return (
     <div>
-      <h1 className="mb-6 text-lg font-bold">Régie publicitaire</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-lg font-bold">Régie publicitaire</h1>
+        {partnersCount > 0 ? (
+          <form action={sendMonthlyReportsAction}>
+            <button type="submit" className="rounded-pill border border-line bg-surface-2 px-4 py-2 text-[12px] font-semibold text-ink-2 hover:text-ink">
+              ✉ Envoyer les rapports mensuels ({partnersCount} annonceur{partnersCount > 1 ? "s" : ""})
+            </button>
+          </form>
+        ) : null}
+      </div>
+
+      {rapports ? (
+        <p className="mb-4 rounded-md bg-[rgba(26,107,60,0.1)] px-4 py-2.5 text-[13px] font-semibold text-[#1A6B3C]">
+          Rapports mensuels : {rapports.split("-")[0]} envoyé(s), {rapports.split("-")[1]} déjà traité(s) ce mois-ci.
+        </p>
+      ) : null}
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {(
@@ -152,7 +171,7 @@ export default async function AdminAds({ searchParams }: { searchParams: Promise
         <p className="mb-4 text-[12.5px] text-ink-3">
           Créez le conteneur (annonceur, ciblage, période, plafonds), puis ajoutez-y une ou plusieurs bannières.
         </p>
-        <CampaignForm action={createCampaignAction} rubriques={rubriques} submitLabel="Créer et ajouter des bannières" />
+        <CampaignForm action={createCampaignAction} rubriques={rubriques} partners={partners} submitLabel="Créer et ajouter des bannières" />
       </section>
 
       {/* Campagnes */}

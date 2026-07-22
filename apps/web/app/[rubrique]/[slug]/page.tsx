@@ -132,7 +132,7 @@ export default async function ArticlePage({ params }: Props) {
           </nav>
 
           {/* Interstitiel mobile (le bandeau est global, dans l'en-tête). */}
-          <AdSlot rubrique={article.rubrique.slug} placementId="article_interstitial" />
+          <AdSlot rubrique={article.rubrique.slug} placementId="article_interstitial" contentTags={article.tags} />
 
           {/* Rangée de pilules (modèle : .tag-row) */}
           <div className="mb-4 flex flex-wrap gap-2">
@@ -176,7 +176,7 @@ export default async function ArticlePage({ params }: Props) {
           ) : null}
 
           {/* Emplacement pub — pavé 300×250 après le chapeau. */}
-          <AdSlot rubrique={article.rubrique.slug} placementId="article_mpu" />
+          <AdSlot rubrique={article.rubrique.slug} placementId="article_mpu" contentTags={article.tags} />
 
           {/* Byline (modèle : auteur vert, date grise, pilule temps de lecture, badge rubrique) */}
           <div className="mb-8 flex flex-wrap items-center gap-x-5 gap-y-2 border-b-2 border-ink pb-5 text-[12.5px]">
@@ -254,7 +254,7 @@ export default async function ArticlePage({ params }: Props) {
         {/* Emplacement pub — natif en fin d'article. */}
         {!gated ? (
           <div className="mx-auto max-w-[760px] px-4 sm:px-6 lg:px-8">
-            <AdSlot rubrique={article.rubrique.slug} placementId="article_native" />
+            <AdSlot rubrique={article.rubrique.slug} placementId="article_native" contentTags={article.tags} />
           </div>
         ) : null}
 

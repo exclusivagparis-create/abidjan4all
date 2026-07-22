@@ -1,5 +1,6 @@
 import { prisma } from "@a4a/db";
 import { sendArticleAlert } from "@/lib/push";
+import { sendMonthlyAdReports } from "@/lib/ad-reports";
 
 /**
  * Bascule scheduled→published quand l'heure programmée est atteinte.
@@ -48,7 +49,24 @@ export function startScheduler() {
   if (g.a4aScheduler) return;
   g.a4aScheduler = setInterval(() => {
     publishDueArticles().catch((e) => console.error("[scheduler]", e));
+    envoyerRapportsSiDebutDeMois();
   }, INTERVAL_MS);
   console.log("[scheduler] publication automatique des programmés — toutes les 60 s");
   publishDueArticles().catch((e) => console.error("[scheduler]", e));
+  envoyerRapportsSiDebutDeMois();
+}
+
+/**
+ * Rapports mensuels : tentés dans les premiers jours du mois. `sendMonthly-
+ * AdReports` est idempotent (un envoi par annonceur et par période), donc les
+ * appels répétés ne créent pas de doublon — inutile de mémoriser la dernière
+ * exécution. Silencieux s'il n'y a rien à envoyer.
+ */
+function envoyerRapportsSiDebutDeMois() {
+  if (new Date().getDate() > 3) return;
+  sendMonthlyAdReports()
+    .then((r) => {
+      if (r.envoyes > 0) console.log(`[scheduler] rapports annonceurs : ${r.envoyes} envoyé(s)`);
+    })
+    .catch((e) => console.error("[scheduler:rapports]", e));
 }

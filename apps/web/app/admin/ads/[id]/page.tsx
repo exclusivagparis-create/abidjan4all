@@ -36,9 +36,10 @@ export default async function EditCampaign({
   const [{ id }, { erreur }, session] = await Promise.all([params, searchParams, auth()]);
   if (session?.user?.role !== "admin") redirect("/admin");
 
-  const [campaign, rubriques] = await Promise.all([
+  const [campaign, rubriques, partners] = await Promise.all([
     prisma.adCampaign.findUnique({ where: { id }, include: { banners: { orderBy: { createdAt: "asc" } } } }),
     prisma.rubrique.findMany({ orderBy: { order: "asc" }, select: { slug: true, name: true } }),
+    prisma.user.findMany({ where: { role: "partner" }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
   if (!campaign) notFound();
 
@@ -49,7 +50,8 @@ export default async function EditCampaign({
     permanent: campaign.permanent,
     capImpressions: campaign.capImpressions,
     capClicks: campaign.capClicks,
-    targeting: (campaign.targeting ?? {}) as { rubriques?: string[]; geo?: string[] },
+    targeting: (campaign.targeting ?? {}) as { rubriques?: string[]; geo?: string[]; tags?: string[] },
+    advertiserUserId: campaign.advertiserUserId,
     startAt: ymd(campaign.startAt),
     endAt: ymd(campaign.endAt),
   };
@@ -96,7 +98,7 @@ export default async function EditCampaign({
       {/* Réglages de la campagne */}
       <section className="mb-6 rounded-[14px] border border-line bg-surface px-6 py-[22px] shadow-[var(--shadow-sm)]">
         <h2 className="mb-4 text-sm font-bold">Réglages de la campagne</h2>
-        <CampaignForm action={updateCampaignAction.bind(null, id)} rubriques={rubriques} initial={initial} submitLabel="Enregistrer" />
+        <CampaignForm action={updateCampaignAction.bind(null, id)} rubriques={rubriques} partners={partners} initial={initial} submitLabel="Enregistrer" />
       </section>
 
       {/* Bannières */}

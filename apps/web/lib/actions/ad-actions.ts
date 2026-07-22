@@ -6,6 +6,7 @@ import { prisma, type AdFormat, type AdPriority, type AdStatus } from "@a4a/db";
 import { auth } from "@/auth";
 import { removeUpload, saveImageUpload } from "@/lib/uploads";
 import { getPlacement } from "@/lib/ad-placements";
+import { sendMonthlyAdReports } from "@/lib/ad-reports";
 
 const FORMATS: AdFormat[] = ["leaderboard_728x90", "mpu_300x250", "native", "interstitial"];
 const PRIORITES: AdPriority[] = ["basse", "moyenne", "haute"];
@@ -43,6 +44,12 @@ function parseCampaignForm(formData: FormData) {
     .split(",")
     .map((s) => s.trim().toUpperCase())
     .filter((s) => /^[A-Z]{2,6}$/.test(s));
+  const tags = String(formData.get("tags") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 20);
+  const advertiserUserId = String(formData.get("advertiserUserId") ?? "").trim() || null;
   const priorityRaw = String(formData.get("priority") ?? "moyenne");
   const priority = (PRIORITES.includes(priorityRaw as AdPriority) ? priorityRaw : "moyenne") as AdPriority;
   const permanent = String(formData.get("permanent") ?? "") === "1";
@@ -66,7 +73,18 @@ function parseCampaignForm(formData: FormData) {
 
   return {
     valid,
-    data: { advertiser, cpm, targeting: { rubriques, geo }, priority, permanent, capImpressions, capClicks, startAt, endAt },
+    data: {
+      advertiser,
+      cpm,
+      targeting: { rubriques, geo, tags },
+      advertiserUserId,
+      priority,
+      permanent,
+      capImpressions,
+      capClicks,
+      startAt,
+      endAt,
+    },
   };
 }
 
@@ -203,6 +221,14 @@ export async function deleteBannerAction(bannerId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 // Emplacements (catalogue lib/ad-placements)
 // ---------------------------------------------------------------------------
+
+/** Envoie manuellement les récapitulatifs mensuels aux comptes annonceurs. */
+export async function sendMonthlyReportsAction(): Promise<void> {
+  await requireAdmin();
+  const { envoyes, ignores } = await sendMonthlyAdReports();
+  revalidatePath("/admin/ads");
+  redirect(`/admin/ads?rapports=${envoyes}-${ignores}`);
+}
 
 /** Active/désactive un emplacement publicitaire. */
 export async function setPlacementEnabledAction(slug: string, formData: FormData): Promise<void> {

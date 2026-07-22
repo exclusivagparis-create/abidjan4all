@@ -13,7 +13,8 @@ export type CampaignInitial = {
   permanent: boolean;
   capImpressions: number | null;
   capClicks: number | null;
-  targeting: { rubriques?: string[]; geo?: string[] };
+  targeting: { rubriques?: string[]; geo?: string[]; tags?: string[] };
+  advertiserUserId: string | null;
   startAt: string; // yyyy-mm-dd
   endAt: string;
 };
@@ -28,16 +29,19 @@ const lbl = "grid gap-1 text-[11.5px] font-semibold text-ink-2";
 export function CampaignForm({
   action,
   rubriques,
+  partners,
   initial,
   submitLabel,
 }: {
   action: (formData: FormData) => void;
   rubriques: { slug: string; name: string }[];
+  partners: { id: string; name: string }[];
   initial?: CampaignInitial;
   submitLabel: string;
 }) {
   const targetRubriques = new Set(initial?.targeting?.rubriques ?? []);
   const geo = (initial?.targeting?.geo ?? []).join(", ");
+  const tags = (initial?.targeting?.tags ?? []).join(", ");
 
   return (
     <form action={action} className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -82,6 +86,20 @@ export function CampaignForm({
       <label className={lbl}>
         Zones (codes, vide = monde)
         <input name="geo" defaultValue={geo} placeholder="CI, FR, CEDEAO" className={field} />
+      </label>
+
+      <label className={`${lbl} sm:col-span-2`}>
+        Mots-clés ciblés (séparés par des virgules, vide = tous)
+        <input name="tags" defaultValue={tags} placeholder="cacao, diaspora, CAN 2025" className={field} />
+      </label>
+      <label className={lbl}>
+        Compte annonceur (accès stats)
+        <select name="advertiserUserId" defaultValue={initial?.advertiserUserId ?? ""} className={field}>
+          <option value="">— aucun —</option>
+          {partners.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
       </label>
 
       {/* Ciblage rubriques : cases à cocher (plusieurs possibles) */}

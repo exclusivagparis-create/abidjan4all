@@ -95,6 +95,14 @@ export default async function EspaceMembrePage({
             </div>
           </div>
           <div className="ml-auto flex flex-wrap gap-2">
+            {user.role === "partner" ? (
+              <Link
+                href="/espace-annonceur"
+                className="rounded-pill bg-[#1A6B3C] px-4 py-2 text-xs font-bold text-white"
+              >
+                📊 Espace annonceur
+              </Link>
+            ) : null}
             <Link
               href={`/membre/${user.id}`}
               className="rounded-pill border border-line bg-surface-2 px-4 py-2 text-xs font-semibold text-ink"

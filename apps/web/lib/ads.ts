@@ -1,6 +1,6 @@
 import { prisma, type AdBanner, type AdCampaign, type AdFormat, type AdPriority } from "@a4a/db";
 
-export type AdTargeting = { rubriques?: string[]; geo?: string[]; device?: string };
+export type AdTargeting = { rubriques?: string[]; geo?: string[]; device?: string; tags?: string[] };
 
 /** Bannière retenue pour diffusion, avec sa campagne (annonceur, ciblage). */
 export type BanniereDiffusee = AdBanner & { campaign: AdCampaign };
@@ -45,6 +45,7 @@ export async function pickBanner(params: {
   device?: string;
   country?: string | null;
   format: AdFormat;
+  contentTags?: string[];
 }): Promise<BanniereDiffusee | null> {
   const now = new Date();
   const campaigns = await prisma.adCampaign.findMany({
@@ -75,6 +76,12 @@ export async function pickBanner(params: {
     if (t.rubriques?.length && !params.rubrique) continue; // campagne ciblée hors rubrique
     if (t.device && params.device && t.device !== params.device) continue;
     if (!geoCible(t.geo, params.country ?? null)) continue;
+    // Ciblage par mots-clés : la campagne ne s'affiche que sur un contenu
+    // portant au moins un des tags visés (sinon exclue, comme le ciblage rubrique).
+    if (t.tags?.length) {
+      if (!params.contentTags?.length) continue;
+      if (!t.tags.some((tag) => params.contentTags!.includes(tag))) continue;
+    }
 
     for (const b of c.banners) {
       if (b.format === params.format) candidates.push({ ...b, campaign: c });

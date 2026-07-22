@@ -19,7 +19,15 @@ async function contexteDiffusion() {
  * campagne active le ciblant (rubrique + pays + appareil) — ne rend rien :
  * aucun espace réservé vide.
  */
-export async function AdSlot({ placementId, rubrique }: { placementId: string; rubrique?: string }) {
+export async function AdSlot({
+  placementId,
+  rubrique,
+  contentTags,
+}: {
+  placementId: string;
+  rubrique?: string;
+  contentTags?: string[];
+}) {
   const placement = getPlacement(placementId);
   if (!placement) return null;
   if (!(await placementActif(placementId))) return null; // désactivé au Studio
@@ -31,7 +39,7 @@ export async function AdSlot({ placementId, rubrique }: { placementId: string; r
   // (fermeture + plafond de fréquence). On ne le sert pas sur desktop.
   if (format === "interstitial") {
     if (device !== "mobile") return null;
-    const banner = await pickBanner({ rubrique, device, country, format: "interstitial" });
+    const banner = await pickBanner({ rubrique, device, country, format: "interstitial", contentTags });
     if (!banner) return null;
     return (
       <AdInterstitial
@@ -44,7 +52,7 @@ export async function AdSlot({ placementId, rubrique }: { placementId: string; r
     );
   }
 
-  const banner = await pickBanner({ rubrique, device, country, format });
+  const banner = await pickBanner({ rubrique, device, country, format, contentTags });
   if (!banner) return null;
   const campaign = { advertiser: banner.campaign.advertiser, headline: banner.headline, imageUrl: banner.imageUrl, linkUrl: banner.linkUrl, id: banner.id };
 
