@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { countImpression, pickCampaign } from "@/lib/ads";
+import { countImpression, pickBanner } from "@/lib/ads";
 import { ipDeLaRequete, paysDepuisIp, appareilDepuisUa } from "@/lib/audience";
 import { getPlacement, placementActif } from "@/lib/ad-placements";
 import { AdInterstitial } from "@/components/ad-interstitial";
@@ -31,23 +31,24 @@ export async function AdSlot({ placementId, rubrique }: { placementId: string; r
   // (fermeture + plafond de fréquence). On ne le sert pas sur desktop.
   if (format === "interstitial") {
     if (device !== "mobile") return null;
-    const campaign = await pickCampaign({ rubrique, device, country, format: "interstitial" });
-    if (!campaign) return null;
+    const banner = await pickBanner({ rubrique, device, country, format: "interstitial" });
+    if (!banner) return null;
     return (
       <AdInterstitial
-        id={campaign.id}
-        advertiser={campaign.advertiser}
-        headline={campaign.headline}
-        imageUrl={campaign.imageUrl}
-        linkUrl={campaign.linkUrl}
+        id={banner.id}
+        advertiser={banner.campaign.advertiser}
+        headline={banner.headline}
+        imageUrl={banner.imageUrl}
+        linkUrl={banner.linkUrl}
       />
     );
   }
 
-  const campaign = await pickCampaign({ rubrique, device, country, format });
-  if (!campaign) return null;
+  const banner = await pickBanner({ rubrique, device, country, format });
+  if (!banner) return null;
+  const campaign = { advertiser: banner.campaign.advertiser, headline: banner.headline, imageUrl: banner.imageUrl, linkUrl: banner.linkUrl, id: banner.id };
 
-  countImpression(campaign.id);
+  countImpression(banner.id);
 
   const isLeaderboard = format === "leaderboard_728x90";
   const isMpu = format === "mpu_300x250";

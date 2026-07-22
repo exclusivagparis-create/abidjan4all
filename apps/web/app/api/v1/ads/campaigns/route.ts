@@ -29,17 +29,23 @@ export async function POST(request: Request) {
   if (!parsed.success) return apiError("invalid_input", "Campagne invalide.", 400);
   if (parsed.data.endAt <= parsed.data.startAt) return apiError("invalid_input", "Période invalide.", 400);
 
+  // La campagne est un conteneur ; le créatif fourni devient sa première bannière.
   const campaign = await prisma.adCampaign.create({
     data: {
       advertiser: parsed.data.advertiser,
-      format: parsed.data.format as AdFormat,
       cpm: parsed.data.cpm,
-      headline: parsed.data.headline ?? null,
-      linkUrl: parsed.data.linkUrl ?? null,
       targeting: parsed.data.targeting,
       startAt: parsed.data.startAt,
       endAt: parsed.data.endAt,
+      banners: {
+        create: {
+          format: parsed.data.format as AdFormat,
+          headline: parsed.data.headline ?? null,
+          linkUrl: parsed.data.linkUrl ?? null,
+        },
+      },
     },
+    include: { banners: true },
   });
   return Response.json(campaign, { status: 201 });
 }

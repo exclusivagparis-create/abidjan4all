@@ -110,6 +110,12 @@ enum AdStatus {
   ended
 }
 
+enum AdPriority {
+  basse
+  moyenne
+  haute
+}
+
 enum ListingType {
   emploi
   immobilier
@@ -593,22 +599,49 @@ model NewsletterSubscription {
 // Régie publicitaire
 // ---------------------------------------------------------------------------
 
+/// Campagne = conteneur d'un annonceur. Elle regroupe une ou plusieurs
+/// bannières (créatifs) qui tournent selon la priorité, et porte le ciblage,
+/// la période et les plafonds de diffusion partagés.
 model AdCampaign {
-  id         String   @id @default(cuid())
+  id         String     @id @default(cuid())
   advertiser String
-  format     AdFormat
   cpm        Int
   targeting  Json // { geo:["CI","FR","CEDEAO"], rubriques:[], device:"mobile" }
-  headline   String? // accroche affichée dans l'encart
-  linkUrl    String? // destination du clic (comptée par /api/v1/ads/click/:id)
-  imageUrl   String? // visuel du bandeau/pavé/natif (servi par /uploads/:name)
+  priority   AdPriority @default(moyenne) // pondère le tirage entre campagnes
 
-  startAt DateTime
-  endAt   DateTime
+  startAt   DateTime
+  endAt     DateTime
+  permanent Boolean @default(false) // diffusion permanente : ignore endAt
+
+  // Plafonds de diffusion (null = illimité) — la campagne s'arrête d'elle-même
+  // quand le total cumulé des bannières atteint le plafond.
+  capImpressions Int?
+  capClicks      Int?
+
+  status    AdStatus @default(draft)
+  createdAt DateTime @default(now())
+
+  banners AdBanner[]
+}
+
+/// Créatif d'une campagne : un visuel (ou une accroche) d'un format donné,
+/// avec ses propres compteurs d'affichages et de clics.
+model AdBanner {
+  id         String     @id @default(cuid())
+  campaign   AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId String
+
+  format   AdFormat
+  headline String? // accroche affichée dans l'encart
+  linkUrl  String? // destination du clic (comptée par /api/v1/ads/click/:id)
+  imageUrl String? // visuel (servi par /uploads/:name)
+  active   Boolean @default(true)
 
   impressions Int      @default(0)
   clicks      Int      @default(0)
-  status      AdStatus @default(draft)
+  createdAt   DateTime @default(now())
+
+  @@index([campaignId])
 }
 
 /// Emplacement publicitaire (encart d'une page). Le catalogue des emplacements
