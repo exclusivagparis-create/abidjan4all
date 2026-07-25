@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
 import { authConfig } from "./auth.config";
 
-const STUDIO_ROLES = ["journalist", "editor", "admin"];
+const STUDIO_ROLES = ["journalist", "editor", "admin", "ad_manager"];
 
 // Instance edge-safe (sans Prisma/bcrypt) : suffit à lire le JWT de session.
 const { auth } = NextAuth(authConfig);
@@ -19,6 +19,10 @@ export default auth((req) => {
     }
     if (!STUDIO_ROLES.includes(user.role)) {
       return Response.redirect(new URL("/", req.nextUrl));
+    }
+    // Gestionnaire Régie : accès Studio limité à la régie publicitaire.
+    if (user.role === "ad_manager" && !pathname.startsWith("/admin/ads")) {
+      return Response.redirect(new URL("/admin/ads", req.nextUrl));
     }
   }
 

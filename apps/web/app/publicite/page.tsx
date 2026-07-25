@@ -5,6 +5,7 @@ import { formatXOF } from "@a4a/payments";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { TARIFS_PUB, COMMUNIQUE_PARTENAIRE } from "@/lib/tarifs";
+import { listActivePacks } from "@/lib/packs";
 
 export const metadata: Metadata = {
   title: "Annoncer sur Abidjan4All — tarifs & formats publicitaires",
@@ -29,6 +30,9 @@ export default async function PublicitePage() {
     prisma.pageView.count({ where: { createdAt: { gte: depuis }, device: "mobile" } }),
   ]);
   const partMobile = pagesVues > 0 ? Math.round((mobile / pagesVues) * 100) : 0;
+  // Prix d'appel du self-service : le pack le moins cher de la grille (Studio).
+  const packs = await listActivePacks();
+  const prixMin = packs.length > 0 ? Math.min(...packs.map((p) => p.prix)) : null;
 
   const stats: Array<[string, string]> = [
     [nf.format(pagesVues), "Pages vues / 30 j"],
@@ -120,7 +124,8 @@ export default async function PublicitePage() {
               <h2 className="font-serif text-[24px] font-semibold">Réserver en ligne, tout de suite</h2>
               <p className="mt-2 max-w-[54ch] text-[14px] text-ink-2">
                 Choisissez un emplacement et une durée, envoyez votre visuel, payez — votre publicité est diffusée
-                automatiquement. À partir de 30 000 FCFA.
+                après un rapide contrôle de la rédaction.
+                {prixMin ? ` À partir de ${formatXOF(prixMin)}.` : ""}
               </p>
             </div>
             <Link

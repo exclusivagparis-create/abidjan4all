@@ -7,21 +7,26 @@ import { auth } from "@/auth";
 import { removeUpload, saveImageUpload } from "@/lib/uploads";
 import { getPlacement } from "@/lib/ad-placements";
 import { sendMonthlyAdReports } from "@/lib/ad-reports";
+import { trouverPack } from "@/lib/packs";
 
 const FORMATS: AdFormat[] = ["leaderboard_728x90", "mpu_300x250", "native", "interstitial", "skin", "video"];
 const PRIORITES: AdPriority[] = ["basse", "moyenne", "haute"];
 const TRANSITIONS: Record<AdStatus, AdStatus[]> = {
   draft: ["active"],
+  // Réservation payée : l'approbation passe par approveReservationAction (qui
+  // recale les dates pour la durée pleine du pack) — ici, seul le refus.
+  pending_review: ["ended"],
   active: ["paused", "ended"],
   paused: ["active", "ended"],
   ended: [],
 };
 
-async function requireAdmin() {
+/** Administration ou Gestionnaire Régie (rôle relu en base, jamais le JWT seul). */
+async function requireRegie() {
   const session = await auth();
   if (!session?.user) redirect("/login?next=/admin/ads");
   const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } });
-  if (!me || me.role !== "admin") redirect("/admin");
+  if (!me || !["admin", "ad_manager"].includes(me.role)) redirect("/admin");
   return me;
 }
 
@@ -90,7 +95,7 @@ function parseCampaignForm(formData: FormData) {
 
 /** Crée une campagne (brouillon) puis ouvre sa fiche pour y ajouter des bannières. */
 export async function createCampaignAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireRegie();
   const { valid, data } = parseCampaignForm(formData);
   if (!valid) redirect("/admin/ads?erreur=1");
 
@@ -101,7 +106,7 @@ export async function createCampaignAction(formData: FormData): Promise<void> {
 
 /** Modifie une campagne existante (champs de conteneur uniquement). */
 export async function updateCampaignAction(id: string, formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireRegie();
   const { valid, data } = parseCampaignForm(formData);
   if (!valid) redirect(`/admin/ads/${id}?erreur=1`);
 
@@ -122,7 +127,7 @@ export async function updateCampaignAction(id: string, formData: FormData): Prom
 
 /** Supprime une campagne et toutes ses bannières (visuels compris). */
 export async function deleteCampaignAction(id: string): Promise<void> {
-  await requireAdmin();
+  await requireRegie();
   const banners = await prisma.adBanner.findMany({ where: { campaignId: id }, select: { imageUrl: true } });
   await Promise.all(banners.map((b) => removeUpload(b.imageUrl)));
   await prisma.adCampaign.delete({ where: { id } }).catch(() => {}); // cascade → bannières
@@ -132,13 +137,42 @@ export async function deleteCampaignAction(id: string): Promise<void> {
 
 /** Transition de statut contrôlée (draft→active→paused/ended). */
 export async function setCampaignStatusAction(id: string, formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireRegie();
   const target = String(formData.get("status") ?? "") as AdStatus;
   const campaign = await prisma.adCampaign.findUnique({ where: { id }, select: { status: true } });
   if (!campaign || !TRANSITIONS[campaign.status]?.includes(target)) return;
   await prisma.adCampaign.update({ where: { id }, data: { status: target } });
   revalidatePath("/admin/ads");
   revalidatePath(`/admin/ads/${id}`);
+}
+
+/**
+ * Approuve une réservation self-service payée (statut « à valider ») : la
+ * diffusion démarre maintenant, pour la durée pleine du pack acheté — le temps
+ * passé en validation n'est pas décompté de ce que l'annonceur a payé.
+ */
+export async function approveReservationAction(id: string): Promise<void> {
+  await requireRegie();
+  const campaign = await prisma.adCampaign.findUnique({
+    where: { id },
+    include: {
+      reservations: { where: { status: "paid" }, orderBy: { createdAt: "desc" }, take: 1, select: { tier: true } },
+    },
+  });
+  if (!campaign || campaign.status !== "pending_review") return;
+
+  const pack = campaign.reservations[0] ? await trouverPack(campaign.reservations[0].tier) : undefined;
+  // Repli si le pack a disparu : durée initialement provisionnée à la commande.
+  const jours =
+    pack?.jours ?? Math.max(1, Math.round((campaign.endAt.getTime() - campaign.startAt.getTime()) / 86400000));
+  const now = new Date();
+  await prisma.adCampaign.update({
+    where: { id },
+    data: { status: "active", startAt: now, endAt: new Date(now.getTime() + jours * 24 * 3600 * 1000) },
+  });
+  revalidatePath("/admin/ads");
+  revalidatePath(`/admin/ads/${id}`);
+  revalidatePath("/", "layout"); // les encarts sont partout
 }
 
 // ---------------------------------------------------------------------------
@@ -155,7 +189,7 @@ function parseBannerForm(formData: FormData) {
 
 /** Ajoute une bannière à une campagne (visuel optionnel). */
 export async function createBannerAction(campaignId: string, formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireRegie();
   const campaign = await prisma.adCampaign.findUnique({ where: { id: campaignId }, select: { id: true } });
   if (!campaign) redirect("/admin/ads");
   const { valid, data } = parseBannerForm(formData);
@@ -176,7 +210,7 @@ export async function createBannerAction(campaignId: string, formData: FormData)
 
 /** Modifie une bannière : format, accroche, lien, visuel (remplacer/retirer). */
 export async function updateBannerAction(bannerId: string, formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireRegie();
   const current = await prisma.adBanner.findUnique({ where: { id: bannerId }, select: { campaignId: true, imageUrl: true } });
   if (!current) redirect("/admin/ads");
   const { valid, data } = parseBannerForm(formData);
@@ -202,7 +236,7 @@ export async function updateBannerAction(bannerId: string, formData: FormData): 
 
 /** Active/désactive une bannière (sans la supprimer). */
 export async function setBannerActiveAction(bannerId: string, formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireRegie();
   const active = String(formData.get("active") ?? "") === "1";
   const b = await prisma.adBanner.update({ where: { id: bannerId }, data: { active }, select: { campaignId: true } }).catch(() => null);
   if (b) revalidatePath(`/admin/ads/${b.campaignId}`);
@@ -210,7 +244,7 @@ export async function setBannerActiveAction(bannerId: string, formData: FormData
 
 /** Supprime une bannière (et son visuel). */
 export async function deleteBannerAction(bannerId: string): Promise<void> {
-  await requireAdmin();
+  await requireRegie();
   const b = await prisma.adBanner.findUnique({ where: { id: bannerId }, select: { campaignId: true, imageUrl: true } });
   if (!b) return;
   await removeUpload(b.imageUrl);
@@ -224,7 +258,7 @@ export async function deleteBannerAction(bannerId: string): Promise<void> {
 
 /** Envoie manuellement les récapitulatifs mensuels aux comptes annonceurs. */
 export async function sendMonthlyReportsAction(): Promise<void> {
-  await requireAdmin();
+  await requireRegie();
   const { envoyes, ignores } = await sendMonthlyAdReports();
   revalidatePath("/admin/ads");
   redirect(`/admin/ads?rapports=${envoyes}-${ignores}`);
@@ -232,7 +266,7 @@ export async function sendMonthlyReportsAction(): Promise<void> {
 
 /** Active/désactive un emplacement publicitaire. */
 export async function setPlacementEnabledAction(slug: string, formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireRegie();
   if (!getPlacement(slug)) return; // slug hors catalogue
   const enabled = String(formData.get("enabled") ?? "") === "1";
   await prisma.adPlacement.upsert({ where: { slug }, create: { slug, enabled }, update: { enabled } });

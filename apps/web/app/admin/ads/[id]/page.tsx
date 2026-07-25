@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { prisma, type AdFormat } from "@a4a/db";
 import { auth } from "@/auth";
 import {
+  approveReservationAction,
+  setCampaignStatusAction,
   updateCampaignAction,
   createBannerAction,
   updateBannerAction,
@@ -36,7 +38,7 @@ export default async function EditCampaign({
   searchParams: Promise<{ erreur?: string }>;
 }) {
   const [{ id }, { erreur }, session] = await Promise.all([params, searchParams, auth()]);
-  if (session?.user?.role !== "admin") redirect("/admin");
+  if (!["admin", "ad_manager"].includes(session?.user?.role ?? "")) redirect("/admin");
 
   const [campaign, rubriques, partners] = await Promise.all([
     prisma.adCampaign.findUnique({ where: { id }, include: { banners: { orderBy: { createdAt: "asc" } } } }),
@@ -81,6 +83,25 @@ export default async function EditCampaign({
         {" "}{nf.format(totalClk)} clics · CTR {totalImp > 0 ? ((totalClk / totalImp) * 100).toFixed(2) : "0.00"} %).
       </p>
 
+      {campaign.status === "pending_review" ? (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md bg-[rgba(232,100,26,0.12)] px-4 py-3">
+          <span className="text-[13px] font-semibold text-orange">
+            Réservation payée en attente de validation — vérifiez le visuel et le lien ci-dessous avant diffusion.
+          </span>
+          <span className="flex gap-2">
+            <form action={approveReservationAction.bind(null, id)}>
+              <button type="submit" className="rounded-pill bg-[#1A6B3C] px-4 py-2 text-[12px] font-bold text-white">
+                Approuver la diffusion
+              </button>
+            </form>
+            <form action={setCampaignStatusAction.bind(null, id)}>
+              <button type="submit" name="status" value="ended" className="rounded-pill border border-[rgba(214,40,45,0.4)] bg-surface px-4 py-2 text-[12px] font-semibold text-red">
+                Refuser
+              </button>
+            </form>
+          </span>
+        </div>
+      ) : null}
       {campaign.status === "ended" ? (
         <p className="mb-4 rounded-md bg-[rgba(232,100,26,0.1)] px-4 py-2.5 text-[13px] font-semibold text-orange">
           Campagne terminée — enregistrez avec une <b>date de fin future</b> (ou en diffusion permanente) pour la reconduire :

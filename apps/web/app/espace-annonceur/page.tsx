@@ -21,6 +21,7 @@ const FORMAT_LABEL: Record<AdFormat, string> = {
 };
 const STATUS_LABEL: Record<AdStatus, string> = {
   draft: "En préparation",
+  pending_review: "En attente de validation",
   active: "En diffusion",
   paused: "En pause",
   ended: "Terminée",
@@ -35,6 +36,7 @@ export default async function EspaceAnnonceur() {
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
     include: { banners: { orderBy: { createdAt: "asc" } } },
   });
+  const enValidation = campaigns.some((c) => c.status === "pending_review");
 
   const tImp = campaigns.reduce((s, c) => s + c.banners.reduce((x, b) => x + b.impressions, 0), 0);
   const tClk = campaigns.reduce((s, c) => s + c.banners.reduce((x, b) => x + b.clicks, 0), 0);
@@ -59,6 +61,13 @@ export default async function EspaceAnnonceur() {
         <p className="mb-6 max-w-[64ch] font-serif text-[15px] text-ink-2">
           Suivez les performances de vos campagnes sur Abidjan4All : affichages, clics et taux de clic (CTR), en temps réel.
         </p>
+
+        {enValidation ? (
+          <p className="mb-6 rounded-md bg-[rgba(232,100,26,0.1)] px-4 py-3 text-[13.5px] font-semibold text-orange">
+            ✓ Paiement reçu — votre publicité est <b>en cours de validation</b> par la rédaction. La diffusion démarre
+            dès l&apos;approbation, pour la durée complète que vous avez payée.
+          </p>
+        ) : null}
 
         {campaigns.length === 0 ? (
           <div className="rounded-[14px] border border-line bg-surface p-8 text-center shadow-[var(--shadow-sm)]">

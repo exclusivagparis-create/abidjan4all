@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { prisma, type AdFormat, type AdPriority, type AdStatus } from "@a4a/db";
 import { auth } from "@/auth";
 import {
+  approveReservationAction,
   createCampaignAction,
   deleteCampaignAction,
   setCampaignStatusAction,
@@ -38,12 +39,15 @@ const FORMAT_COURT: Record<AdFormat, string> = {
 const PRIORITE_LABEL: Record<AdPriority, string> = { basse: "Basse", moyenne: "Moyenne", haute: "Haute" };
 const STATUS_META: Record<AdStatus, { label: string; color: string }> = {
   draft: { label: "Brouillon", color: "var(--ink-3)" },
+  pending_review: { label: "À valider", color: "var(--orange)" },
   active: { label: "Active", color: "var(--green)" },
   paused: { label: "En pause", color: "var(--orange)" },
   ended: { label: "Terminée", color: "var(--ink-3)" },
 };
 const NEXT_STATUS: Record<AdStatus, Array<{ to: AdStatus; label: string }>> = {
   draft: [{ to: "active", label: "Activer" }],
+  // L'approbation d'une réservation passe par son bouton dédié (dates recalées).
+  pending_review: [{ to: "ended", label: "Refuser" }],
   active: [
     { to: "paused", label: "Mettre en pause" },
     { to: "ended", label: "Terminer" },
@@ -57,7 +61,7 @@ const NEXT_STATUS: Record<AdStatus, Array<{ to: AdStatus; label: string }>> = {
 
 export default async function AdminAds({ searchParams }: { searchParams: Promise<{ erreur?: string; rapports?: string }> }) {
   const [{ erreur, rapports }, session] = await Promise.all([searchParams, auth()]);
-  if (session?.user?.role !== "admin") redirect("/admin");
+  if (!["admin", "ad_manager"].includes(session?.user?.role ?? "")) redirect("/admin");
 
   const [campaigns, rubriques, partners, emplActifs] = await Promise.all([
     prisma.adCampaign.findMany({ orderBy: [{ status: "asc" }, { createdAt: "desc" }], include: { banners: true } }),
@@ -82,6 +86,12 @@ export default async function AdminAds({ searchParams }: { searchParams: Promise
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-lg font-bold">Régie publicitaire</h1>
+        <Link
+          href="/admin/ads/tarifs"
+          className="rounded-pill border border-line bg-surface-2 px-4 py-2 text-[12px] font-semibold text-ink-2 hover:text-ink"
+        >
+          ⛁ Grille des prix des packs
+        </Link>
         {partnersCount > 0 ? (
           <form action={sendMonthlyReportsAction}>
             <button type="submit" className="rounded-pill border border-line bg-surface-2 px-4 py-2 text-[12px] font-semibold text-ink-2 hover:text-ink">
@@ -90,6 +100,13 @@ export default async function AdminAds({ searchParams }: { searchParams: Promise
           </form>
         ) : null}
       </div>
+
+      {campaigns.some((c) => c.status === "pending_review") ? (
+        <p className="mb-4 rounded-md bg-[rgba(232,100,26,0.12)] px-4 py-2.5 text-[13px] font-semibold text-orange">
+          {campaigns.filter((c) => c.status === "pending_review").length} réservation(s) payée(s) en attente de
+          validation — approuvez la diffusion ou refusez-la dans le tableau ci-dessous.
+        </p>
+      ) : null}
 
       {rapports ? (
         <p className="mb-4 rounded-md bg-[rgba(26,107,60,0.1)] px-4 py-2.5 text-[13px] font-semibold text-[#1A6B3C]">
@@ -242,6 +259,13 @@ export default async function AdminAds({ searchParams }: { searchParams: Promise
                   </td>
                   <td className="px-3 py-3">
                     <div className="flex flex-wrap items-center gap-1.5">
+                      {c.status === "pending_review" ? (
+                        <form action={approveReservationAction.bind(null, c.id)}>
+                          <button type="submit" className="rounded-pill bg-[#1A6B3C] px-2.5 py-1 text-[11px] font-bold text-white">
+                            Approuver la diffusion
+                          </button>
+                        </form>
+                      ) : null}
                       <form action={setCampaignStatusAction.bind(null, c.id)} className="flex gap-1.5">
                         {NEXT_STATUS[c.status].map((n) => (
                           <button key={n.to} type="submit" name="status" value={n.to} className="rounded-pill border border-line bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-ink-2 hover:bg-surface-3">

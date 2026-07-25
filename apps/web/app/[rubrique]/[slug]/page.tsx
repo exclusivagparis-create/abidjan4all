@@ -21,9 +21,12 @@ export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ rubrique: string; slug: string }> };
 
+// Sans filtre de statut : le bouton « Prévisualiser dans un onglet » du Studio
+// pointe ici pour les brouillons/relectures/programmés. La page décide ensuite
+// qui a le droit de voir un article non publié (rédaction seulement).
 async function getArticle(rubriqueSlug: string, slug: string) {
   return prisma.article.findFirst({
-    where: { slug, status: "published", rubrique: { slug: rubriqueSlug } },
+    where: { slug, rubrique: { slug: rubriqueSlug } },
     include: {
       rubrique: { select: { slug: true, name: true, color: true } },
       author: { select: { id: true, name: true, bio: true } },
@@ -32,10 +35,18 @@ async function getArticle(rubriqueSlug: string, slug: string) {
   });
 }
 
+const APERCU_LABEL: Record<string, string> = {
+  draft: "brouillon",
+  review: "en relecture",
+  scheduled: "programmé",
+};
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { rubrique, slug } = await params;
   const article = await getArticle(rubrique, slug);
   if (!article) return {};
+  // Aperçu rédaction : jamais indexé, pas de métadonnées de partage.
+  if (article.status !== "published") return { robots: { index: false, follow: false } };
   const seo = (article.seo ?? {}) as { metaTitle?: string; metaDescription?: string };
   const path = `/${article.rubrique.slug}/${article.slug}`;
   const image =
@@ -80,13 +91,16 @@ export default async function ArticlePage({ params }: Props) {
 
   // paywall : débloqué pour les abonnés A4A+ en cours de validité (DF-03)
   const session = await auth();
-  // Article masqué : invisible au public, consultable par la rédaction (aperçu).
-  if (article.hidden) {
-    const viewer = session?.user
-      ? await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } })
+  // Aperçu et masquage : le public ne voit que les articles publiés non
+  // masqués ; la rédaction prévisualise les autres (le rôle vient de la base,
+  // pas du JWT — un rôle rétrogradé perdrait l'accès immédiatement).
+  const enApercu = article.status !== "published";
+  const viewerRole =
+    (enApercu || article.hidden) && session?.user
+      ? (await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }))?.role ?? null
       : null;
-    if (!viewer || !["editor", "admin"].includes(viewer.role)) notFound();
-  }
+  if (enApercu && !["journalist", "editor", "admin"].includes(viewerRole ?? "")) notFound();
+  if (article.hidden && !["editor", "admin"].includes(viewerRole ?? "")) notFound();
   const unlocked = session?.user ? await hasActiveSubscription(session.user.id) : false;
   const blocks = Array.isArray(article.body) ? article.body : [];
   const gated = article.premium && !unlocked;
@@ -107,15 +121,26 @@ export default async function ArticlePage({ params }: Props) {
   return (
     <div className="min-h-screen bg-bg text-ink">
       {/* Schema.org (DF-06) : NewsArticle avec balisage paywall + fil d'Ariane */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(newsArticleJsonLd(article)) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd(article)) }}
-      />
+      {!enApercu ? (
+        <>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(newsArticleJsonLd(article)) }}
+          />
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd(article)) }}
+          />
+        </>
+      ) : null}
       <SiteHeader />
+
+      {enApercu ? (
+        <div className="bg-[#B7791F] px-4 py-2.5 text-center text-[12.5px] font-bold text-white">
+          Aperçu — article non publié ({APERCU_LABEL[article.status] ?? article.status}). Seule la rédaction voit
+          cette page.
+        </div>
+      ) : null}
 
       {/* Africa in English : contenu anglophone signalé aux lecteurs d'écran et moteurs (DF-05) */}
       <main lang={article.rubrique.slug === "africa-in-english" ? "en" : undefined}>

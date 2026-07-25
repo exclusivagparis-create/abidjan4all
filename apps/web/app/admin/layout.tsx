@@ -11,6 +11,7 @@ const ROLE_LABEL: Record<string, string> = {
   journalist: "Journaliste",
   editor: "Rédactrice en chef",
   admin: "Administration",
+  ad_manager: "Gestionnaire Régie",
 };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -20,19 +21,24 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/login?next=/admin");
   }
 
-  const [reviewCount, pendingComments, pendingListings] = await Promise.all([
+  const [reviewCount, pendingComments, pendingListings, pendingReservations] = await Promise.all([
     prisma.article.count({ where: { status: "review" } }),
     prisma.comment.count({ where: { status: "pending" } }),
     prisma.listing.count({ where: { status: "pending" } }),
+    prisma.adCampaign.count({ where: { status: "pending_review" } }),
   ]);
 
   const canPublish = PUBLISH_ROLES.includes(user.role as (typeof PUBLISH_ROLES)[number]);
+  // Gestionnaire Régie : seule la régie est accessible (le middleware renvoie
+  // toute autre page du Studio vers /admin/ads) — le menu doit le refléter.
+  const isRegieOnly = user.role === "ad_manager";
+  const editorial = !isRegieOnly;
   const contenu: NavItem[] = [
-    { label: "Tableau de bord", href: "/admin", icon: "▦" },
-    { label: "Articles", href: "/admin/articles", icon: "≣", badge: reviewCount },
-    { label: "Médiathèque", href: "/admin/media", icon: "▤" },
+    { label: "Tableau de bord", href: editorial ? "/admin" : undefined, icon: "▦" },
+    { label: "Articles", href: editorial ? "/admin/articles" : undefined, icon: "≣", badge: reviewCount },
+    { label: "Médiathèque", href: editorial ? "/admin/media" : undefined, icon: "▤" },
     { label: "Rubriques", href: canPublish ? "/admin/rubriques" : undefined, icon: "◫" },
-    { label: "Nos directs", href: "/admin/live", icon: "◉" },
+    { label: "Nos directs", href: editorial ? "/admin/live" : undefined, icon: "◉" },
     { label: "Vidéos", href: canPublish ? "/admin/videos" : undefined, icon: "▶" },
     { label: "Podcasts", href: canPublish ? "/admin/podcasts" : undefined, icon: "▶" },
     { label: "A4A Formation", href: canPublish ? "/admin/formation" : undefined, icon: "🎓" },
@@ -43,8 +49,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ];
   // Facturation et audience : liens actifs pour l'administration seulement.
   const isAdmin = user.role === "admin";
+  const isRegie = isAdmin || isRegieOnly;
   const communaute: NavItem[] = [
-    { label: "Commentaires", href: "/admin/comments", icon: "◎", badge: pendingComments, badgeColor: "var(--orange)" },
+    { label: "Commentaires", href: editorial ? "/admin/comments" : undefined, icon: "◎", badge: pendingComments, badgeColor: "var(--orange)" },
     { label: "Messages", href: canPublish ? "/admin/contact" : undefined, icon: "✍" },
     { label: "Newsletters", href: canPublish ? "/admin/newsletters" : undefined, icon: "✉" },
     { label: "Groupes", href: isAdmin ? "/admin/community" : undefined, icon: "◉" },
@@ -53,7 +60,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ];
   const business: NavItem[] = [
     { label: "Petites annonces", href: canPublish ? "/admin/annonces" : undefined, icon: "▤", badge: pendingListings, badgeColor: "var(--orange)" },
-    { label: "Régie publicitaire", href: isAdmin ? "/admin/ads" : undefined, icon: "◈" },
+    { label: "Régie publicitaire", href: isRegie ? "/admin/ads" : undefined, icon: "◈", badge: pendingReservations, badgeColor: "var(--orange)" },
+    { label: "Grille des prix", href: isRegie ? "/admin/ads/tarifs" : undefined, icon: "⛁" },
     { label: "Statistiques", href: isAdmin ? "/admin/stats" : undefined, icon: "▲" },
     { label: "Redirections", href: canPublish ? "/admin/redirections" : undefined, icon: "↪" },
   ];

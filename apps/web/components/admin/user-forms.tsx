@@ -14,6 +14,7 @@ const ROLES: Array<[string, string]> = [
   ["editor", "Rédaction en chef"],
   ["admin", "Administration"],
   ["partner", "Partenaire"],
+  ["ad_manager", "Gestionnaire Régie"],
 ];
 
 /** Création de compte — le mot de passe généré ne s'affiche qu'une fois. */

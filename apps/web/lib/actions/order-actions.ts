@@ -6,7 +6,8 @@ import { prisma } from "@a4a/db";
 import type { PaymentMethodId } from "@a4a/payments";
 import { auth } from "@/auth";
 import { startOrderCheckout, fulfillOrder, failOrder } from "@/lib/order-billing";
-import { trouverPalier, TARIFS_WHATSAPP, PACKS_PUB } from "@/lib/tarifs";
+import { trouverPalier, TARIFS_WHATSAPP } from "@/lib/tarifs";
+import { listActivePacks } from "@/lib/packs";
 import { saveImageUpload } from "@/lib/uploads";
 
 const METHODS: PaymentMethodId[] = ["momo", "orange", "wave", "moov", "djamo", "card", "paypal"];
@@ -45,7 +46,8 @@ export async function startAdReservationAction(formData: FormData): Promise<void
 
   const packId = String(formData.get("pack") ?? "");
   const method = String(formData.get("method") ?? "") as PaymentMethodId;
-  const pack = PACKS_PUB.find((p) => p.id === packId);
+  // Grille lue en base (éditable au Studio) : seuls les packs en vente sont réservables.
+  const pack = (await listActivePacks()).find((p) => p.id === packId);
   if (!pack || !METHODS.includes(method)) redirect("/publicite/reserver?echec=saisie");
 
   const headline = String(formData.get("headline") ?? "").trim().slice(0, 120);

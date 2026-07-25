@@ -10,7 +10,7 @@ function csv(value: string | number): string {
 // GET /admin/ads/:id/export — stats par bannière d'une campagne, en CSV.
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (session?.user?.role !== "admin") return new Response("Accès refusé.", { status: 403 });
+  if (!["admin", "ad_manager"].includes(session?.user?.role ?? "")) return new Response("Accès refusé.", { status: 403 });
 
   const { id } = await params;
   const campaign = await prisma.adCampaign.findUnique({

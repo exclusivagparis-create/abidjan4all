@@ -16,6 +16,7 @@ const ROLE_META: Record<Role, { label: string; color: string }> = {
   editor: { label: "Rédaction en chef", color: "var(--orange)" },
   admin: { label: "Administration", color: "var(--red)" },
   partner: { label: "Partenaire", color: "var(--navy)" },
+  ad_manager: { label: "Gestionnaire Régie", color: "var(--orange)" },
 };
 const ROLES = Object.keys(ROLE_META) as Role[];
 

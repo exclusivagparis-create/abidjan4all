@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { listActivePacks } from "@/lib/packs";
 import { ReservationForm } from "./reservation-form";
 
 export const metadata: Metadata = {
@@ -21,7 +22,7 @@ const ERREURS: Record<string, string> = {
 };
 
 export default async function ReserverPage({ searchParams }: { searchParams: Promise<{ echec?: string; indisponible?: string }> }) {
-  const [{ echec, indisponible }, session] = await Promise.all([searchParams, auth()]);
+  const [{ echec, indisponible }, session, packs] = await Promise.all([searchParams, auth(), listActivePacks()]);
 
   return (
     <div className="min-h-screen bg-bg text-ink">
@@ -35,8 +36,8 @@ export default async function ReserverPage({ searchParams }: { searchParams: Pro
           <h1 className="font-serif text-[27px] font-medium leading-none sm:text-[33px] lg:text-[38px]">Réserver un emplacement</h1>
         </div>
         <p className="mb-6 max-w-[64ch] font-serif text-[15px] text-ink-2">
-          Choisissez un emplacement et une durée, envoyez votre visuel, payez en ligne — votre publicité est diffusée
-          automatiquement pour la période choisie.
+          Choisissez un emplacement et une durée, envoyez votre visuel, payez en ligne — après un rapide contrôle de
+          conformité par la rédaction, votre publicité est diffusée pour la période complète choisie.
         </p>
 
         {echec ? (
@@ -50,7 +51,7 @@ export default async function ReserverPage({ searchParams }: { searchParams: Pro
           </p>
         ) : null}
 
-        <ReservationForm connected={Boolean(session?.user)} />
+        <ReservationForm connected={Boolean(session?.user)} packs={packs} />
       </main>
       <SiteFooter />
     </div>

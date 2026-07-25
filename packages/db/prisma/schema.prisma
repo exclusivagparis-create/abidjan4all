@@ -21,6 +21,7 @@ enum Role {
   editor
   admin
   partner
+  ad_manager // Gestionnaire Régie : accès Studio limité à la régie publicitaire
 }
 
 enum ArticleStatus {
@@ -107,6 +108,7 @@ enum AdFormat {
 
 enum AdStatus {
   draft
+  pending_review // réservation self-service payée, en attente de validation avant diffusion
   active
   paused
   ended
@@ -679,6 +681,22 @@ model AdPlacement {
   slug      String   @id // ex. "home_leaderboard"
   enabled   Boolean  @default(true)
   updatedAt DateTime @updatedAt
+}
+
+/// Pack de réservation self-service : grille des prix éditable au Studio
+/// (/admin/ads/tarifs). Seedée depuis lib/tarifs.ts (PACKS_PUB), qui reste le
+/// repli si la table est vide. Order.tier référence l'id — un pack retiré de
+/// la vente passe `actif=false` plutôt que d'être supprimé s'il a des commandes.
+model AdPack {
+  id          String   @id // slug stable, ex. "bandeau-7"
+  format      AdFormat
+  label       String
+  jours       Int
+  prix        Int // FCFA
+  description String
+  ordre       Int      @default(0)
+  actif       Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
 }
 
 // ---------------------------------------------------------------------------

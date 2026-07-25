@@ -37,6 +37,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 });
 
 /** Rôles autorisés à entrer dans le back-office. */
-export const STUDIO_ROLES = ["journalist", "editor", "admin"] as const;
+export const STUDIO_ROLES = ["journalist", "editor", "admin", "ad_manager"] as const;
 /** Rôles autorisés à programmer/publier (workflow éditorial). */
 export const PUBLISH_ROLES = ["editor", "admin"] as const;
+/** Rôles autorisés à gérer la régie publicitaire (campagnes, grille des prix). */
+export const REGIE_ROLES = ["admin", "ad_manager"] as const;

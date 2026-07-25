@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { startAdReservationAction } from "@/lib/actions/order-actions";
-import { PACKS_PUB, formatFCFA, type PackPub } from "@/lib/tarifs";
+import { formatFCFA, type PackPub } from "@/lib/tarifs";
 
 const field = "w-full rounded-[8px] border border-line bg-surface px-3.5 py-2.5 text-[14px] text-ink outline-none focus:border-ink-3";
 const lbl = "grid gap-1.5 text-xs font-semibold text-ink-2";
@@ -22,15 +22,28 @@ const FORMAT_LABEL: Record<string, string> = {
   leaderboard_728x90: "Bandeau 728×90",
   mpu_300x250: "Pavé 300×250",
   native: "Natif in-feed",
+  interstitial: "Interstitiel mobile",
+  skin: "Habillage du site",
   video: "Encart vidéo",
 };
 
-// Regroupe les packs par format, dans l'ordre d'affichage.
-const ORDRE = ["leaderboard_728x90", "mpu_300x250", "native", "video"];
-const PAR_FORMAT = ORDRE.map((f) => ({ format: f, packs: PACKS_PUB.filter((p) => p.format === f) })).filter((g) => g.packs.length);
+export function ReservationForm({ connected, packs }: { connected: boolean; packs: PackPub[] }) {
+  // Regroupe les packs par format, dans l'ordre de la grille (éditable au Studio).
+  const parFormat = [...new Set(packs.map((p) => p.format))].map((format) => ({
+    format,
+    packs: packs.filter((p) => p.format === format),
+  }));
+  const [pack, setPack] = useState<PackPub>(packs[0]!);
 
-export function ReservationForm({ connected }: { connected: boolean }) {
-  const [pack, setPack] = useState<PackPub>(PACKS_PUB[0]!);
+  if (packs.length === 0) {
+    return (
+      <div className="rounded-[14px] border border-line bg-surface-2 p-6 text-center">
+        <p className="font-serif text-[15px] text-ink-2">
+          La réservation en ligne est momentanément fermée — contactez la régie via la page Publicité.
+        </p>
+      </div>
+    );
+  }
 
   if (!connected) {
     return (
@@ -48,9 +61,9 @@ export function ReservationForm({ connected }: { connected: boolean }) {
       {/* 1. Choix du pack */}
       <fieldset className="grid gap-3">
         <legend className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3">1 · Emplacement &amp; durée</legend>
-        {PAR_FORMAT.map((g) => (
+        {parFormat.map((g) => (
           <div key={g.format}>
-            <div className="mb-1.5 text-[12.5px] font-bold text-ink">{FORMAT_LABEL[g.format]}</div>
+            <div className="mb-1.5 text-[12.5px] font-bold text-ink">{FORMAT_LABEL[g.format] ?? g.format}</div>
             <div className="grid gap-2 sm:grid-cols-3">
               {g.packs.map((p) => (
                 <label
@@ -102,8 +115,9 @@ export function ReservationForm({ connected }: { connected: boolean }) {
         </button>
       </div>
       <p className="text-[11.5px] text-ink-3">
-        Votre emplacement est mis en diffusion dès la confirmation du paiement, pour la durée choisie. Vous suivez ses
-        performances dans votre espace annonceur. La rédaction se réserve le droit de refuser un visuel non conforme.
+        Après paiement, votre visuel est <b>vérifié par la rédaction</b> (généralement sous 24 h ouvrées) puis mis en
+        diffusion pour la durée complète choisie — le temps de validation n&apos;est pas décompté. Vous suivez le statut
+        et les performances dans votre espace annonceur. Un visuel non conforme peut être refusé.
       </p>
     </form>
   );

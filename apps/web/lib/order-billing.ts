@@ -1,14 +1,18 @@
 import { prisma, type OrderKind } from "@a4a/db";
 import { getProviderForMethod, type PaymentMethodId } from "@a4a/payments";
 import { removeUpload } from "@/lib/uploads";
-import { TARIFS_EMPLOI, TARIFS_IMMO, TARIFS_WHATSAPP, PACKS_PUB, trouverPalier, type PalierAnnonce } from "@/lib/tarifs";
+import { sendEmail } from "@/lib/email";
+import { trouverPack } from "@/lib/packs";
+import { TARIFS_EMPLOI, TARIFS_IMMO, TARIFS_WHATSAPP, formatFCFA, trouverPalier, type PalierAnnonce } from "@/lib/tarifs";
 
-/** Grille tarifaire correspondant au type de commande. */
-function grillePourKind(kind: OrderKind): PalierAnnonce[] {
-  if (kind === "listing_emploi") return TARIFS_EMPLOI;
-  if (kind === "listing_immobilier") return TARIFS_IMMO;
-  if (kind === "ad_reservation") return PACKS_PUB;
-  return TARIFS_WHATSAPP;
+/**
+ * Palier tarifaire d'une commande. Les packs publicitaires viennent de la base
+ * (grille éditable au Studio) ; les autres grilles restent dans lib/tarifs.ts.
+ */
+async function palierPourOrder(kind: OrderKind, tierId: string): Promise<PalierAnnonce | undefined> {
+  if (kind === "ad_reservation") return trouverPack(tierId);
+  const grille = kind === "listing_emploi" ? TARIFS_EMPLOI : kind === "listing_immobilier" ? TARIFS_IMMO : TARIFS_WHATSAPP;
+  return trouverPalier(grille, tierId);
 }
 
 export type StartOrderResult = { ok: true; checkoutUrl: string } | { ok: false; error: string };
@@ -27,7 +31,7 @@ export async function startOrderCheckout(params: {
   listingId?: string;
   campaignId?: string;
 }): Promise<StartOrderResult> {
-  const palier = trouverPalier(grillePourKind(params.kind), params.tierId);
+  const palier = await palierPourOrder(params.kind, params.tierId);
   if (!palier) return { ok: false, error: "Formule invalide." };
 
   const compte = await prisma.user.findUnique({ where: { id: params.userId }, select: { id: true } });
@@ -86,15 +90,17 @@ export async function fulfillOrder(providerRef: string): Promise<FulfillOrderRes
   if (!order) return { ok: false, error: "Commande inconnue.", notFound: true };
   if (order.status === "paid") return { ok: true }; // déjà traitée
 
-  const palier = trouverPalier(grillePourKind(order.kind), order.tier);
+  const palier = await palierPourOrder(order.kind, order.tier);
   if (!palier) return { ok: false, error: "Palier introuvable pour cette commande." };
 
   const now = new Date();
   const echeance = new Date(now.getTime() + palier.jours * 24 * 3600 * 1000);
 
   if (order.kind === "ad_reservation") {
-    // Réservation payée : la campagne (créée en brouillon) s'active pour la
-    // durée du pack, et l'acheteur devient « partner » pour suivre ses stats.
+    // Réservation payée : la campagne attend la VALIDATION de la rédaction
+    // avant diffusion (statut pending_review). Les dates posées ici sont
+    // provisoires — l'approbation les recale pour la durée pleine du pack.
+    // L'acheteur devient « partner » dès maintenant pour suivre son dossier.
     const echeanceCampagne = new Date(now.getTime() + palier.jours * 24 * 3600 * 1000);
     await prisma.$transaction([
       prisma.order.update({ where: { id: order.id }, data: { status: "paid" } }),
@@ -102,7 +108,7 @@ export async function fulfillOrder(providerRef: string): Promise<FulfillOrderRes
         ? [
             prisma.adCampaign.update({
               where: { id: order.campaignId },
-              data: { status: "active", startAt: now, endAt: echeanceCampagne, advertiserUserId: order.userId },
+              data: { status: "pending_review", startAt: now, endAt: echeanceCampagne, advertiserUserId: order.userId },
             }),
           ]
         : []),
@@ -112,6 +118,27 @@ export async function fulfillOrder(providerRef: string): Promise<FulfillOrderRes
       where: { id: order.userId, role: { in: ["reader", "member"] } },
       data: { role: "partner" },
     });
+    // Prévient la régie qu'une validation est attendue — best effort : un
+    // échec d'e-mail ne doit jamais faire échouer le webhook de paiement.
+    if (order.campaignId) {
+      const campagne = await prisma.adCampaign.findUnique({
+        where: { id: order.campaignId },
+        select: { advertiser: true },
+      });
+      const destinataires = [process.env.SMTP_USER, process.env.CONTACT_TO ?? "contact@abidjan4all.info"]
+        .filter((a): a is string => Boolean(a))
+        .filter((a, i, t) => t.indexOf(a) === i);
+      if (destinataires.length > 0) {
+        const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://abidjan4all.info";
+        const url = `${base}/admin/ads/${order.campaignId}`;
+        sendEmail({
+          to: destinataires.join(", "),
+          subject: `Réservation publicitaire à valider — ${campagne?.advertiser ?? "annonceur"}`,
+          html: `<p>Une réservation d'emplacement vient d'être payée (${palier.label}, ${formatFCFA(palier.prix)}).</p><p>La campagne est <b>en attente de validation</b> : approuvez ou refusez la diffusion depuis le Studio.</p><p><a href="${url}">${url}</a></p>`,
+          text: `Réservation payée (${palier.label}, ${formatFCFA(palier.prix)}). À valider au Studio : ${url}`,
+        }).catch(() => {});
+      }
+    }
     return { ok: true };
   }
 

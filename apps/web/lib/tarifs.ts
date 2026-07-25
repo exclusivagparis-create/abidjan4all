@@ -80,8 +80,9 @@ export const TARIFS_WHATSAPP: PalierAnnonce[] = [
 
 /**
  * Packs de réservation d'emplacement en self-service (page /publicite) : prix
- * forfaitaire par format et par durée. Ajustables ici. `format` doit exister
- * dans AdFormat.
+ * forfaitaire par format et par durée. La grille VIVANTE est en base (AdPack,
+ * éditable au Studio /admin/ads/tarifs) — celle-ci n'est plus que le repli si
+ * la table est vide, et la référence des anciennes commandes (lib/packs.ts).
  */
 export type PackPub = PalierAnnonce & { format: AdFormat };
 

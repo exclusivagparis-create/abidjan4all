@@ -29,7 +29,7 @@ async function inviteToSetPassword(userId: string, name: string, email: string):
   });
 }
 
-const ASSIGNABLE_ROLES: Role[] = ["reader", "member", "journalist", "editor", "admin", "partner"];
+const ASSIGNABLE_ROLES: Role[] = ["reader", "member", "journalist", "editor", "admin", "partner", "ad_manager"];
 
 /** Garde : seul un admin encore présent en base peut administrer les comptes. */
 async function requireAdmin() {
