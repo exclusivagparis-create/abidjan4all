@@ -65,6 +65,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Statistiques", href: isAdmin ? "/admin/stats" : undefined, icon: "▲" },
     { label: "Redirections", href: canPublish ? "/admin/redirections" : undefined, icon: "↪" },
   ];
+  // Mode d'emploi : accessible à tous les rôles du Studio, Gestionnaire Régie compris.
+  const support: NavItem[] = [{ label: "Aide & mode d'emploi", href: "/admin/aide", icon: "❓" }];
 
   // Contenu de la barre latérale, partagé entre l'affichage fixe (grand
   // écran) et le tiroir (téléphone/tablette).
@@ -80,6 +82,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <SidebarSection title="Contenu" items={contenu} />
       <SidebarSection title="Communauté" items={communaute} />
       <SidebarSection title="Business" items={business} />
+      <SidebarSection title="Support" items={support} />
 
       <div className="mt-auto flex items-center gap-2.5 border-t border-white/10 px-2 pt-3">
         <div className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-pill bg-[linear-gradient(135deg,#E8641A,#D6282D)] text-[13px] font-bold text-white">

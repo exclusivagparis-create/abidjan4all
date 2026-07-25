@@ -20,8 +20,9 @@ export default auth((req) => {
     if (!STUDIO_ROLES.includes(user.role)) {
       return Response.redirect(new URL("/", req.nextUrl));
     }
-    // Gestionnaire Régie : accès Studio limité à la régie publicitaire.
-    if (user.role === "ad_manager" && !pathname.startsWith("/admin/ads")) {
+    // Gestionnaire Régie : accès Studio limité à la régie publicitaire
+    // (plus la page d'aide, commune à toute l'équipe).
+    if (user.role === "ad_manager" && !pathname.startsWith("/admin/ads") && pathname !== "/admin/aide") {
       return Response.redirect(new URL("/admin/ads", req.nextUrl));
     }
   }
