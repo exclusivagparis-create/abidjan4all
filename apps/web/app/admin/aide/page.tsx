@@ -101,6 +101,7 @@ const SOMMAIRE: Array<[string, Array<[string, string]>]> = [
     "Business",
     [
       ["brand-content", "Brand Content"],
+      ["affiliation", "Affiliation"],
       ["evenements", "Événements"],
       ["intelligence", "A4A Intelligence"],
       ["annonces", "Petites annonces"],
@@ -322,6 +323,16 @@ export default async function AidePage() {
             s&apos;inscrivent depuis la page /formation et leur progression est suivie automatiquement. Utilisez-le pour
             les modules d&apos;éducation aux médias, de formation professionnelle ou les partenariats pédagogiques.
           </p>
+          <p>
+            <b>Cours payants :</b> donnez un prix au cours et l&apos;inscription passe par le paiement en ligne. Un
+            prix à <b>0</b> laisse le cours gratuit. Les abonnés <b>A4A+ Pro et Corporate</b> accèdent à tous les cours
+            payants <b>sans supplément</b> — c&apos;est un argument de leur abonnement.
+          </p>
+          <Astuce>
+            Une inscription payée est <b>définitive</b> : l&apos;élève garde l&apos;accès au cours même si son
+            abonnement s&apos;arrête. Ne baissez pas le prix d&apos;un cours déjà vendu sans y réfléchir — les
+            premiers acheteurs ont payé plus cher.
+          </Astuce>
         </Module>
 
         <Module id="factchecks" icon="✓" title="A4A Vérifie (fact-checking)" acces="publication">
@@ -626,6 +637,23 @@ export default async function AidePage() {
           <Astuce>
             Le « À partir de … FCFA » de la page /publicite est calculé automatiquement sur le pack le moins cher en
             vente.
+          </Astuce>
+        </Module>
+
+        <Module id="affiliation" icon="⇗" title="Affiliation" acces="regie">
+          <p>
+            Les <b>liens partenaires rémunérés à la commission</b> : transferts d&apos;argent, assurances, services
+            utiles à la diaspora. Vous créez un lien, le Studio vous donne une <b>adresse courte</b> du type{" "}
+            <code>abidjan4all.info/go/wave-transfert</code> à coller dans vos articles.
+          </p>
+          <p>
+            Chaque clic est compté avant la redirection. Ce compteur est votre <b>moyen de vérifier</b> les commissions
+            que le partenaire vous déclare.
+          </p>
+          <Astuce>
+            Préférez <b>désactiver</b> un lien plutôt que le supprimer : l&apos;adresse courte vit dans des articles
+            déjà publiés. Un lien désactivé ramène simplement le lecteur à l&apos;accueil ; un lien supprimé fait la
+            même chose, mais vous perdez son compteur de clics.
           </Astuce>
         </Module>
 

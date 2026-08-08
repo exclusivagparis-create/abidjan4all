@@ -5,7 +5,16 @@ import { sendEmail } from "@/lib/email";
 import { trouverPack } from "@/lib/packs";
 import { ouvrirAbonnement } from "@/lib/intelligence";
 import { annulerInscription, confirmerInscription } from "@/lib/events";
-import { TARIFS_EMPLOI, TARIFS_IMMO, TARIFS_WHATSAPP, formatFCFA, trouverPalier, type PalierAnnonce } from "@/lib/tarifs";
+import { ouvrirAccesRecruteur } from "@/lib/recruteur";
+import {
+  TARIFS_EMPLOI,
+  TARIFS_IMMO,
+  TARIFS_RECRUTEUR,
+  TARIFS_WHATSAPP,
+  formatFCFA,
+  trouverPalier,
+  type PalierAnnonce,
+} from "@/lib/tarifs";
 
 /**
  * Palier tarifaire d'une commande. Les packs publicitaires viennent de la base
@@ -40,7 +49,26 @@ async function palierPourOrder(kind: OrderKind, tierId: string): Promise<PalierA
       description: billet.description,
     };
   }
-  const grille = kind === "listing_emploi" ? TARIFS_EMPLOI : kind === "listing_immobilier" ? TARIFS_IMMO : TARIFS_WHATSAPP;
+  if (kind === "course_enrollment") {
+    // A4A Academy : le « palier » est le cours lui-même (tier = son id).
+    const cours = await prisma.course.findUnique({ where: { id: tierId } });
+    if (!cours) return undefined;
+    return {
+      id: cours.id,
+      label: cours.title,
+      prix: cours.price,
+      jours: 3650, // accès sans échéance : l'inscription reste acquise
+      description: `Accès au cours « ${cours.title} ».`,
+    };
+  }
+  const grille =
+    kind === "listing_emploi"
+      ? TARIFS_EMPLOI
+      : kind === "listing_immobilier"
+        ? TARIFS_IMMO
+        : kind === "recruteur"
+          ? TARIFS_RECRUTEUR
+          : TARIFS_WHATSAPP;
   return trouverPalier(grille, tierId);
 }
 
@@ -189,6 +217,29 @@ export async function fulfillOrder(providerRef: string): Promise<FulfillOrderRes
       serieId: order.tier,
       dureeMois: serie?.dureeMois ?? 12,
       orderId: order.id,
+    });
+    return { ok: true };
+  }
+
+  if (order.kind === "recruteur") {
+    // Accès à la CVthèque : ouvert ou prolongé pour la durée du palier.
+    await prisma.order.update({ where: { id: order.id }, data: { status: "paid" } });
+    await ouvrirAccesRecruteur({
+      userId: order.userId,
+      tier: palier.id,
+      jours: palier.jours,
+      orderId: order.id,
+    });
+    return { ok: true };
+  }
+
+  if (order.kind === "course_enrollment") {
+    // A4A Academy : l'inscription au cours est définitive une fois payée.
+    await prisma.order.update({ where: { id: order.id }, data: { status: "paid" } });
+    await prisma.enrollment.upsert({
+      where: { courseId_userId: { courseId: order.tier, userId: order.userId } },
+      create: { courseId: order.tier, userId: order.userId },
+      update: {},
     });
     return { ok: true };
   }

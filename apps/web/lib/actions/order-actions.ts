@@ -6,7 +6,7 @@ import { prisma } from "@a4a/db";
 import type { PaymentMethodId } from "@a4a/payments";
 import { auth } from "@/auth";
 import { startOrderCheckout, fulfillOrder, failOrder } from "@/lib/order-billing";
-import { trouverPalier, TARIFS_WHATSAPP } from "@/lib/tarifs";
+import { trouverPalier, TARIFS_RECRUTEUR, TARIFS_WHATSAPP } from "@/lib/tarifs";
 import { listActivePacks } from "@/lib/packs";
 import { saveImageUpload } from "@/lib/uploads";
 
@@ -18,6 +18,8 @@ function retourOk(kind: string): string {
   if (kind === "ad_reservation") return "/espace-annonceur?bienvenue=1";
   if (kind === "brief_abonnement") return "/intelligence?abonne=1";
   if (kind === "event_ticket") return "/espace-membre?billet=1";
+  if (kind === "recruteur") return "/cv?recruteur=1";
+  if (kind === "course_enrollment") return "/formation?inscrit=1";
   return "/annonces?depot=paye";
 }
 function retourEchec(kind: string): string {
@@ -25,6 +27,8 @@ function retourEchec(kind: string): string {
   if (kind === "ad_reservation") return "/publicite/reserver?echec=1";
   if (kind === "brief_abonnement") return "/intelligence?echec=1";
   if (kind === "event_ticket") return "/evenements?echec=1";
+  if (kind === "recruteur") return "/recruteur?echec=1";
+  if (kind === "course_enrollment") return "/formation?echec=1";
   return "/annonces?echec=1";
 }
 
@@ -117,6 +121,28 @@ export async function startBriefCheckoutAction(serieId: string, formData: FormDa
     method,
   });
   if (!result.ok) redirect(`/intelligence/${serie.slug}?indisponible=1`);
+  redirect(result.checkoutUrl);
+}
+
+/** Souscription à un accès recruteur (CVthèque). */
+export async function startRecruteurCheckoutAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user) redirect("/login?next=/recruteur");
+
+  const tierId = String(formData.get("tier") ?? "");
+  const method = String(formData.get("method") ?? "") as PaymentMethodId;
+  if (!TARIFS_RECRUTEUR.some((t) => t.id === tierId) || !METHODS.includes(method)) {
+    redirect("/recruteur?echec=saisie");
+  }
+
+  const result = await startOrderCheckout({
+    userId: session.user.id,
+    email: session.user.email ?? "",
+    kind: "recruteur",
+    tierId,
+    method,
+  });
+  if (!result.ok) redirect("/recruteur?indisponible=1");
   redirect(result.checkoutUrl);
 }
 

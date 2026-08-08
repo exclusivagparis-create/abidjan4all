@@ -12,6 +12,19 @@ export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }> };
 
+const METHODES: Array<[string, string]> = [
+  ["momo", "MTN MoMo"],
+  ["orange", "Orange Money"],
+  ["wave", "Wave"],
+  ["moov", "Moov Money"],
+  ["djamo", "Djamo"],
+  ["card", "Carte bancaire"],
+  ["paypal", "PayPal"],
+];
+
+/** Offres A4A+ qui donnent accès aux cours payants (miroir de l'action). */
+const PLANS_INCLUANT_FORMATION = ["pro", "corporate"];
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const course = await prisma.course.findUnique({ where: { slug }, select: { title: true } });
@@ -34,6 +47,21 @@ export default async function CoursePage({ params }: Props) {
         where: { courseId_userId: { courseId: course.id, userId: session.user.id } },
       })
     : null;
+
+  // Le cours est-il à payer pour CE visiteur ? Un abonné Pro/Corporate y a
+  // droit sans supplément — l'argument est mis en avant sur /abonnement.
+  const sub = session?.user
+    ? await prisma.subscription.findUnique({
+        where: { userId: session.user.id },
+        select: { plan: true, status: true, currentPeriodEnd: true },
+      })
+    : null;
+  const abonnementCouvrant =
+    !!sub &&
+    PLANS_INCLUANT_FORMATION.includes(sub.plan) &&
+    sub.status !== "canceled" &&
+    (!sub.currentPeriodEnd || sub.currentPeriodEnd > new Date());
+  const payant = Boolean(session?.user) && course.price > 0 && !abonnementCouvrant;
 
   const enroll = enrollAction.bind(null, course.slug);
   const modules = [...new Set(course.lessons.map((l) => l.module))];
@@ -78,14 +106,33 @@ export default async function CoursePage({ params }: Props) {
               ) : null}
             </div>
           ) : (
-            <form action={enroll} className="flex flex-wrap items-center justify-between gap-3">
-              <p className="font-serif text-[15px] text-ink-2">
-                {session?.user
-                  ? "Rejoignez la formation pour suivre votre progression."
-                  : "Connectez-vous pour vous inscrire et suivre votre progression."}
+            <form action={enroll} className="flex flex-wrap items-end justify-between gap-3">
+              <p className="max-w-[46ch] font-serif text-[15px] text-ink-2">
+                {!session?.user
+                  ? "Connectez-vous pour vous inscrire et suivre votre progression."
+                  : payant
+                    ? "Cette formation est payante — elle est incluse dans l'abonnement A4A+ Pro."
+                    : "Rejoignez la formation pour suivre votre progression."}
               </p>
+              {/* Cours payant sans abonnement couvrant : on demande le moyen
+                  de paiement ici, l'action bascule vers le règlement. */}
+              {payant ? (
+                <label className="grid gap-1.5 text-xs font-semibold text-ink-2 sm:min-w-[200px]">
+                  Moyen de paiement
+                  <select
+                    name="method"
+                    className="rounded-[8px] border border-line bg-surface px-3 py-2.5 text-[13.5px] text-ink outline-none focus:border-ink-3"
+                  >
+                    {METHODES.map(([v, l]) => (
+                      <option key={v} value={v}>
+                        {l}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
               <button type="submit" className="rounded-pill bg-red px-5 py-2.5 text-[13px] font-bold text-white">
-                {course.price > 0 ? "S'inscrire (inclus A4A+ Pro)" : "S'inscrire gratuitement"}
+                {payant ? `S'inscrire — ${formatXOF(course.price)}` : "S'inscrire gratuitement"}
               </button>
             </form>
           )}

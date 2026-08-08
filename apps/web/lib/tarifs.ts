@@ -71,6 +71,16 @@ export const TARIFS_IMMO: PalierAnnonce[] = [
   { id: "vitrine", label: "Vitrine", prix: 25000, jours: 60, description: "60 jours + mise en avant de la rubrique immobilier." },
 ];
 
+/**
+ * Accès recruteur à la CVthèque (pilier 5 du Business Model 2026-2031) :
+ * les coordonnées des candidats sont réservées aux recruteurs abonnés.
+ */
+export const TARIFS_RECRUTEUR: PalierAnnonce[] = [
+  { id: "decouverte", label: "Découverte", prix: 50000, jours: 30, description: "1 mois d'accès aux coordonnées de la CVthèque." },
+  { id: "trimestre", label: "Trimestre", prix: 120000, jours: 90, description: "3 mois d'accès — un mois offert." },
+  { id: "annuel", label: "Annuel", prix: 400000, jours: 365, description: "12 mois d'accès au meilleur tarif, pour recruter toute l'année." },
+];
+
 /** Adhésion WhatsApp Club : accès au groupe privé pour une durée donnée. */
 export const TARIFS_WHATSAPP: PalierAnnonce[] = [
   { id: "mensuel", label: "Mensuel", prix: 2000, jours: 30, description: "Accès 1 mois au groupe WhatsApp privé A4A." },

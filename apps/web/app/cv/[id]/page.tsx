@@ -5,6 +5,7 @@ import { prisma } from "@a4a/db";
 import { auth } from "@/auth";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { peutVoirCoordonnees } from "@/lib/recruteur";
 import { initials } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,8 @@ export default async function CvPubliquePage({ params }: { params: Promise<{ id:
   // CV privé : seul son propriétaire peut le consulter.
   const estProprietaire = session?.user?.id === cv.userId;
   if (!cv.isPublic && !estProprietaire) notFound();
+
+  const coordonneesVisibles = estProprietaire || (await peutVoirCoordonnees(session?.user));
 
   const experiences = (cv.experiences as Experience[]) ?? [];
   const education = (cv.education as Education[]) ?? [];
@@ -115,12 +118,30 @@ export default async function CvPubliquePage({ params }: { params: Promise<{ id:
           </section>
         ) : null}
 
+        {/* Coordonnées : le produit vendu aux recruteurs (pilier 5). Le CV
+            reste public — seul le moyen de joindre le candidat est réservé.
+            Le candidat voit toujours ses propres coordonnées. */}
         {(cv.contactEmail || cv.phone) && cv.isPublic ? (
-          <section className="rounded-[12px] border border-line bg-surface-2 px-5 py-4">
-            <h2 className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3">Contact</h2>
-            {cv.contactEmail ? <div className="text-[14px]"><a href={`mailto:${cv.contactEmail}`} className="text-green hover:underline">{cv.contactEmail}</a></div> : null}
-            {cv.phone ? <div className="text-[14px] text-ink-2">{cv.phone}</div> : null}
-          </section>
+          coordonneesVisibles ? (
+            <section className="rounded-[12px] border border-line bg-surface-2 px-5 py-4">
+              <h2 className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3">Contact</h2>
+              {cv.contactEmail ? <div className="text-[14px]"><a href={`mailto:${cv.contactEmail}`} className="text-green hover:underline">{cv.contactEmail}</a></div> : null}
+              {cv.phone ? <div className="text-[14px] text-ink-2">{cv.phone}</div> : null}
+            </section>
+          ) : (
+            <section className="rounded-[12px] border border-[#0E5A8A] bg-[rgba(14,90,138,0.06)] px-5 py-5">
+              <h2 className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-[#0E5A8A]">
+                Coordonnées réservées aux recruteurs
+              </h2>
+              <p className="mb-3 max-w-[54ch] text-[13.5px] leading-[1.55] text-ink-2">
+                L&apos;e-mail et le téléphone de ce candidat sont accessibles avec un accès recruteur A4A — comme pour
+                l&apos;ensemble de la CVthèque.
+              </p>
+              <Link href="/recruteur" className="inline-block rounded-pill bg-[#0E5A8A] px-5 py-2.5 text-[13px] font-bold text-white">
+                Découvrir l&apos;accès recruteur
+              </Link>
+            </section>
+          )
         ) : null}
 
         {estProprietaire ? (

@@ -140,6 +140,8 @@ enum OrderKind {
   ad_reservation
   brief_abonnement // abonnement A4A Intelligence (pilier B2B)
   event_ticket // billet d'événement A4A (pilier événementiel)
+  recruteur // accès recruteur à la CVthèque (pilier marketplace)
+  course_enrollment // inscription payante à un cours A4A Academy (pilier formation)
 }
 
 enum OrderStatus {
@@ -186,6 +188,7 @@ model User {
   whatsappMembership      WhatsappMembership?
   briefAbonnements        BriefAbonnement[]
   eventRegistrations      EventRegistration[]
+  recruiterAccess         RecruiterAccess?
   advertiserCampaigns     AdCampaign[]             @relation("AdvertiserCampaigns")
   comments                Comment[]
   favorites               Article[]                @relation("Favorites")
@@ -780,6 +783,40 @@ model WhatsappMembership {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Accès recruteur à la CVthèque (pilier 5) : les coordonnées des candidats
+/// ne sont visibles que d'un recruteur abonné en cours de validité.
+model RecruiterAccess {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  tier      String
+  expiresAt DateTime
+  orderId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Lien d'affiliation traçable (pilier 8) : transferts d'argent, assurances,
+/// partenaires. Le clic passe par /go/:code, qui compte puis redirige.
+model AffiliateLink {
+  id      String @id @default(cuid())
+  code    String @unique
+  partner String
+  label   String
+  url     String
+  /// Commission annoncée par le partenaire (informative, pour le suivi).
+  commission String?
+  clicks  Int     @default(0)
+  actif   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([actif])
 }
 
 // ---------------------------------------------------------------------------
