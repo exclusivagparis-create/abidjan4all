@@ -100,6 +100,7 @@ const SOMMAIRE: Array<[string, Array<[string, string]>]> = [
   [
     "Business",
     [
+      ["brand-content", "Brand Content"],
       ["evenements", "Événements"],
       ["intelligence", "A4A Intelligence"],
       ["annonces", "Petites annonces"],
@@ -458,6 +459,34 @@ export default async function AidePage() {
         {/* BUSINESS                                                      */}
         {/* ------------------------------------------------------------ */}
         <h2 className="mt-2 text-[12px] font-bold uppercase tracking-[0.1em] text-ink-3">Business</h2>
+
+        <Module id="brand-content" icon="◆" title="Brand Content" acces="regie">
+          <p>
+            Les <b>contenus de marque</b> vendus aux entreprises : interview de dirigeant, reportage en entreprise,
+            communiqué sponsorisé, sponsoring de newsletter, formats courts. Le module a deux parties.
+          </p>
+          <ul>
+            <li>
+              <b>Le catalogue</b> — les offres présentées sur la page publique <i>Publicité › Brand Content</i>, avec
+              leur prix, l&apos;unité facturée et la liste des livrables (une ligne par élément). Un prix à <b>0</b>{" "}
+              affiche « sur devis ».
+            </li>
+            <li>
+              <b>Les demandes reçues</b> — chaque formulaire rempli sur le site arrive ici <i>et</i> par e-mail (avec
+              l&apos;adresse du demandeur en réponse). Suivez l&apos;affaire avec les états <b>Nouveau → En cours →
+              Gagné / Perdu</b> et gardez une note interne de la négociation.
+            </li>
+          </ul>
+          <p>
+            <b>Sponsor de newsletter :</b> il se règle dans le module <i>Newsletters</i>, sur l&apos;édition concernée
+            (nom, accroche, logo, lien). L&apos;encart apparaît en tête du message, précédé de la mention obligatoire
+            « Cet envoi vous est offert par ». Laissez le nom vide pour un envoi sans sponsor.
+          </p>
+          <Astuce>
+            Supprimer une offre du catalogue ne supprime pas les demandes déjà reçues : votre historique commercial est
+            conservé, la demande indique seulement « offre non précisée ».
+          </Astuce>
+        </Module>
 
         <Module id="evenements" icon="◷" title="Événements" acces="publication">
           <p>

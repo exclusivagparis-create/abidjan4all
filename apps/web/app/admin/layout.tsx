@@ -21,11 +21,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/login?next=/admin");
   }
 
-  const [reviewCount, pendingComments, pendingListings, pendingReservations] = await Promise.all([
+  const [reviewCount, pendingComments, pendingListings, pendingReservations, brandLeads] = await Promise.all([
     prisma.article.count({ where: { status: "review" } }),
     prisma.comment.count({ where: { status: "pending" } }),
     prisma.listing.count({ where: { status: "pending" } }),
     prisma.adCampaign.count({ where: { status: "pending_review" } }),
+    prisma.brandLead.count({ where: { status: "nouveau" } }),
   ]);
 
   const canPublish = PUBLISH_ROLES.includes(user.role as (typeof PUBLISH_ROLES)[number]);
@@ -64,6 +65,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Petites annonces", href: canPublish ? "/admin/annonces" : undefined, icon: "▤", badge: pendingListings, badgeColor: "var(--orange)" },
     { label: "Régie publicitaire", href: isRegie ? "/admin/ads" : undefined, icon: "◈", badge: pendingReservations, badgeColor: "var(--orange)" },
     { label: "Grille des prix", href: isRegie ? "/admin/ads/tarifs" : undefined, icon: "⛁" },
+    { label: "Brand Content", href: isRegie || canPublish ? "/admin/brand-content" : undefined, icon: "◆", badge: brandLeads, badgeColor: "var(--orange)" },
     { label: "Statistiques", href: isAdmin ? "/admin/stats" : undefined, icon: "▲" },
     { label: "Redirections", href: canPublish ? "/admin/redirections" : undefined, icon: "↪" },
   ];

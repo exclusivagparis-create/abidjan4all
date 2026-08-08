@@ -585,6 +585,12 @@ model NewsletterEdition {
   /// confirmés de cette newsletter — comportement d'origine préservé.
   recipientEmails Json  @default("[]")
   recipientCount Int    @default(0)
+  /// Sponsor exclusif de l'envoi (Business Model 2026-2031 : 600 000 FCFA
+  /// l'envoi). Vide = aucun encart sponsor dans le message.
+  sponsorName     String?
+  sponsorBaseline String?
+  sponsorLogoUrl  String?
+  sponsorLinkUrl  String?
   sentAt       DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -774,6 +780,63 @@ model WhatsappMembership {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Brand Content premium (pilier 2 du Business Model 2026-2031) : A4A Business
+// Interview, A4A Inside, formats courts sponsorisés… Le catalogue est éditable
+// au Studio ; les demandes des annonceurs alimentent un pipeline commercial.
+// ---------------------------------------------------------------------------
+
+enum BrandLeadStatus {
+  nouveau
+  en_cours
+  gagne
+  perdu
+}
+
+model BrandOffer {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  title       String
+  pitch       String
+  description String
+  /// Prix indicatif en FCFA (0 = sur devis).
+  prix        Int
+  /// Unité facturée (« l'interview », « l'article », « l'envoi »).
+  unite       String
+  /// Ce que le client reçoit, une ligne par élément.
+  livrables   Json    @default("[]")
+  actif       Boolean @default(true)
+  ordre       Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads BrandLead[]
+
+  @@index([actif, ordre])
+}
+
+/// Demande d'un annonceur sur une offre de brand content.
+model BrandLead {
+  id      String      @id @default(cuid())
+  offer   BrandOffer? @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  offerId String?
+
+  societe String
+  contact String
+  email   String
+  tel     String?
+  message String
+
+  status    BrandLeadStatus @default(nouveau)
+  /// Note interne de la régie (suivi de la négociation).
+  note      String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([status, createdAt])
 }
 
 // ---------------------------------------------------------------------------

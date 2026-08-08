@@ -70,6 +70,14 @@ export default async function EditionPage({
     introHtml: edition.introHtml,
     articles: orderedArticles,
     unsubscribeUrl: "#",
+    sponsor: edition.sponsorName
+      ? {
+          name: edition.sponsorName,
+          baseline: edition.sponsorBaseline,
+          logoUrl: edition.sponsorLogoUrl,
+          linkUrl: edition.sponsorLinkUrl,
+        }
+      : null,
   });
 
   return (
@@ -101,6 +109,35 @@ export default async function EditionPage({
                 <div className="mb-1.5 text-xs font-semibold text-ink-2">Introduction</div>
                 <PageBodyEditor initial={edition.introHtml} />
               </div>
+              {/* Sponsor exclusif de l'envoi (Brand Content, 600 000 F l'envoi). */}
+              <fieldset className="grid gap-2.5 rounded-[10px] border border-dashed border-line bg-surface-2 p-4">
+                <legend className="px-1 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+                  Sponsor de l&apos;envoi (optionnel)
+                </legend>
+                <p className="text-[11.5px] text-ink-3">
+                  Laissez le nom vide pour un envoi sans sponsor. L&apos;encart est annoncé « Cet envoi vous est offert
+                  par » — la mention est obligatoire.
+                </p>
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  <label className="grid gap-1 text-[11px] font-semibold text-ink-3">
+                    Nom du sponsor
+                    <input name="sponsorName" defaultValue={edition.sponsorName ?? ""} maxLength={80} className="rounded-[8px] border border-line bg-bg px-3 py-2 text-[13px]" />
+                  </label>
+                  <label className="grid gap-1 text-[11px] font-semibold text-ink-3">
+                    Lien (https)
+                    <input name="sponsorLinkUrl" type="url" defaultValue={edition.sponsorLinkUrl ?? ""} className="rounded-[8px] border border-line bg-bg px-3 py-2 text-[13px]" />
+                  </label>
+                  <label className="grid gap-1 text-[11px] font-semibold text-ink-3">
+                    Accroche
+                    <input name="sponsorBaseline" defaultValue={edition.sponsorBaseline ?? ""} maxLength={160} className="rounded-[8px] border border-line bg-bg px-3 py-2 text-[13px]" />
+                  </label>
+                  <label className="grid gap-1 text-[11px] font-semibold text-ink-3">
+                    Logo (adresse depuis la médiathèque)
+                    <input name="sponsorLogoUrl" defaultValue={edition.sponsorLogoUrl ?? ""} placeholder="/uploads/…" className="rounded-[8px] border border-line bg-bg px-3 py-2 text-[13px]" />
+                  </label>
+                </div>
+              </fieldset>
+
               <div>
                 <div className="mb-1.5 text-xs font-semibold text-ink-2">Articles inclus</div>
                 <div className="grid max-h-[220px] gap-1.5 overflow-y-auto rounded border border-line bg-bg p-3">

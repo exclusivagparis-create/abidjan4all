@@ -43,7 +43,21 @@ export async function updateEditionAction(id: string, formData: FormData): Promi
   const articleIds = formData.getAll("articleIds").map((s) => String(s)).slice(0, 12);
   if (subject.length < 2) redirect(`/admin/newsletters/${id}?erreur=1`);
 
-  await prisma.newsletterEdition.update({ where: { id }, data: { subject, introHtml, articleIds } });
+  // Sponsor exclusif de l'envoi (Brand Content). Nom vide = pas d'encart :
+  // on efface alors tout le bloc pour ne pas laisser un logo orphelin.
+  const sponsorName = String(formData.get("sponsorName") ?? "").trim().slice(0, 80) || null;
+  const sponsorLinkUrl = String(formData.get("sponsorLinkUrl") ?? "").trim() || null;
+  if (sponsorLinkUrl && !/^https?:\/\//.test(sponsorLinkUrl)) redirect(`/admin/newsletters/${id}?erreur=sponsor`);
+  const sponsor = sponsorName
+    ? {
+        sponsorName,
+        sponsorBaseline: String(formData.get("sponsorBaseline") ?? "").trim().slice(0, 160) || null,
+        sponsorLogoUrl: String(formData.get("sponsorLogoUrl") ?? "").trim() || null,
+        sponsorLinkUrl,
+      }
+    : { sponsorName: null, sponsorBaseline: null, sponsorLogoUrl: null, sponsorLinkUrl: null };
+
+  await prisma.newsletterEdition.update({ where: { id }, data: { subject, introHtml, articleIds, ...sponsor } });
   revalidatePath(`/admin/newsletters/${id}`);
   redirect(`/admin/newsletters/${id}?ok=1`);
 }
@@ -128,6 +142,14 @@ export async function sendEditionAction(id: string): Promise<void> {
       introHtml: edition.introHtml,
       articles,
       unsubscribeUrl: unsubUrl(edition.newsletterId, s.email),
+      sponsor: edition.sponsorName
+        ? {
+            name: edition.sponsorName,
+            baseline: edition.sponsorBaseline,
+            logoUrl: edition.sponsorLogoUrl,
+            linkUrl: edition.sponsorLinkUrl,
+          }
+        : null,
     });
     const ok = await sendEmail({ to: s.email, subject: edition.subject, html });
     if (ok) sent += 1;
