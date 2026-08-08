@@ -16,11 +16,13 @@ const METHODS: PaymentMethodId[] = ["momo", "orange", "wave", "moov", "djamo", "
 function retourOk(kind: string): string {
   if (kind === "whatsapp") return "/club?ok=1";
   if (kind === "ad_reservation") return "/espace-annonceur?bienvenue=1";
+  if (kind === "brief_abonnement") return "/intelligence?abonne=1";
   return "/annonces?depot=paye";
 }
 function retourEchec(kind: string): string {
   if (kind === "whatsapp") return "/club?echec=1";
   if (kind === "ad_reservation") return "/publicite/reserver?echec=1";
+  if (kind === "brief_abonnement") return "/intelligence?echec=1";
   return "/annonces?echec=1";
 }
 
@@ -93,6 +95,26 @@ export async function startAdReservationAction(formData: FormData): Promise<void
     await prisma.adCampaign.delete({ where: { id: campaign.id } }).catch(() => {});
     redirect("/publicite/reserver?indisponible=1");
   }
+  redirect(result.checkoutUrl);
+}
+
+/** Souscription à une série A4A Intelligence (abonnement B2B). */
+export async function startBriefCheckoutAction(serieId: string, formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user) redirect(`/login?next=/intelligence`);
+
+  const method = String(formData.get("method") ?? "") as PaymentMethodId;
+  const serie = await prisma.briefSerie.findUnique({ where: { id: serieId }, select: { actif: true, slug: true } });
+  if (!serie?.actif || !METHODS.includes(method)) redirect("/intelligence?echec=saisie");
+
+  const result = await startOrderCheckout({
+    userId: session.user.id,
+    email: session.user.email ?? "",
+    kind: "brief_abonnement",
+    tierId: serieId,
+    method,
+  });
+  if (!result.ok) redirect(`/intelligence/${serie.slug}?indisponible=1`);
   redirect(result.checkoutUrl);
 }
 

@@ -100,6 +100,7 @@ const SOMMAIRE: Array<[string, Array<[string, string]>]> = [
   [
     "Business",
     [
+      ["intelligence", "A4A Intelligence"],
       ["annonces", "Petites annonces"],
       ["regie", "Régie publicitaire"],
       ["tarifs", "Grille des prix des packs"],
@@ -414,6 +415,28 @@ export default async function AidePage() {
             des abonnements avec leurs factures (PDF téléchargeables). C&apos;est la vue « business » de votre lectorat
             payant — les paiements eux-mêmes (Mobile Money, carte, PayPal) sont traités automatiquement.
           </p>
+          <p>Quatre offres sont proposées aux lecteurs :</p>
+          <ul>
+            <li>
+              <b>Essentiel</b> (2 000 F/mois) — tout le journal sans publicité, archives et newsletter quotidienne.
+            </li>
+            <li>
+              <b>Diaspora</b> (3 500 F/mois) — Essentiel, plus l&apos;accès prioritaire aux offres d&apos;emploi en
+              Côte d&apos;Ivoire et le webinaire mensuel.
+            </li>
+            <li>
+              <b>Pro</b> (4 000 F/mois) — Essentiel, plus l&apos;intelligence économique cacao et les rapports marchés.
+            </li>
+            <li>
+              <b>Corporate</b> (50 000 F/mois) — Pro, plus la recherche IA sur l&apos;archive, deux interviews
+              dirigeants par an et les licences multi-comptes.
+            </li>
+          </ul>
+          <Astuce>
+            Les tarifs et les avantages de chaque offre se modifient dans le code (<code>services/payments</code>) —
+            demandez à votre développeur. Attention : le montant sert à retrouver l&apos;offre au moment du paiement,
+            deux offres ne doivent jamais avoir le même prix.
+          </Astuce>
         </Module>
 
         <Module id="users" icon="☺" title="Utilisateurs" acces="admin">
@@ -434,6 +457,39 @@ export default async function AidePage() {
         {/* BUSINESS                                                      */}
         {/* ------------------------------------------------------------ */}
         <h2 className="mt-2 text-[12px] font-bold uppercase tracking-[0.1em] text-ink-3">Business</h2>
+
+        <Module id="intelligence" icon="◲" title="A4A Intelligence" acces="publication">
+          <p>
+            Les <b>publications économiques vendues par abonnement</b> aux entreprises : rapport cacao, revue des
+            investissements, classement des entreprises, études sur mesure, revue de presse corporate.
+          </p>
+          <p>Le module s&apos;organise à deux niveaux :</p>
+          <ul>
+            <li>
+              <b>La publication</b> — le produit vendu : son titre, son prix, sa durée d&apos;abonnement, sa
+              périodicité et le public visé. Vous pouvez la <b>retirer de la vente</b> sans rien supprimer.
+            </li>
+            <li>
+              <b>Les éditions</b> — les livraisons successives. Chacune porte un <b>repère</b> (2026-07, T3-2026…), un
+              titre, un <b>résumé public</b> et, au choix, un contenu en ligne et/ou un <b>PDF</b>.
+            </li>
+          </ul>
+          <p>
+            <b>Ce qui est public, ce qui ne l&apos;est pas :</b> le résumé d&apos;une édition est visible de tous —
+            c&apos;est lui qui donne envie de s&apos;abonner. Le PDF n&apos;est jamais servi directement : il passe par
+            une adresse qui vérifie l&apos;abonnement à chaque téléchargement. Une édition reste invisible tant que vous
+            ne l&apos;avez pas <b>publiée</b>.
+          </p>
+          <p>
+            <b>Les abonnés</b> apparaissent automatiquement après un paiement en ligne. Pour une vente conclue hors
+            ligne (contrat, convention, gratuité), ouvrez l&apos;accès à la main depuis l&apos;adresse e-mail du compte.
+            Un réabonnement anticipé ajoute les mois à l&apos;échéance en cours — l&apos;abonné ne perd rien.
+          </p>
+          <Astuce>
+            Une publication qui a déjà des abonnés ne peut pas être supprimée : retirez-la de la vente. C&apos;est
+            volontaire — un client payant ne doit jamais perdre l&apos;accès à ce qu&apos;il a acheté.
+          </Astuce>
+        </Module>
 
         <Module id="annonces" icon="▤" title="Petites annonces" acces="publication">
           <p>

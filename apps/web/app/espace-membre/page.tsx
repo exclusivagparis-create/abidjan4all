@@ -10,6 +10,7 @@ import { logout } from "@/lib/actions/auth-actions";
 import { cancelSubscriptionAction } from "@/lib/actions/billing-actions";
 import { updateProfileAction } from "@/lib/actions/community-actions";
 import { PushOptIn } from "@/components/push-optin";
+import { mesAbonnements } from "@/lib/intelligence";
 import { formatDateFull, initials } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Espace membre" };
@@ -64,6 +65,7 @@ export default async function EspaceMembrePage({
   });
   if (!user) redirect("/login");
 
+  const briefs = await mesAbonnements(user.id);
   const sub = user.subscription;
   const plan = sub ? planById(sub.plan) : undefined;
   const paying = sub && sub.plan !== "free";
@@ -101,6 +103,11 @@ export default async function EspaceMembrePage({
                 className="rounded-pill bg-[#1A6B3C] px-4 py-2 text-xs font-bold text-white"
               >
                 📊 Espace annonceur
+              </Link>
+            ) : null}
+            {briefs.length > 0 ? (
+              <Link href="/intelligence" className="rounded-pill bg-[#0E5A8A] px-4 py-2 text-xs font-bold text-white">
+                ◲ A4A Intelligence
               </Link>
             ) : null}
             <Link
@@ -196,6 +203,30 @@ export default async function EspaceMembrePage({
             </div>
           </div>
         </section>
+
+        {/* A4A Intelligence — publications B2B souscrites (pilier 4). */}
+        {briefs.length > 0 ? (
+          <section className="mb-8">
+            <div className="mb-3.5 flex items-center justify-between">
+              <h2 className="font-serif text-[22px] font-semibold">Mes publications A4A Intelligence</h2>
+              <Link href="/intelligence" className="text-xs font-semibold text-blue">
+                Toutes les publications →
+              </Link>
+            </div>
+            <div className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
+              {briefs.map((a) => (
+                <Link
+                  key={a.id}
+                  href={`/intelligence/${a.serie.slug}`}
+                  className="flex flex-wrap items-center justify-between gap-2 border-b border-line-2 px-5 py-3.5 last:border-b-0 hover:bg-surface-2"
+                >
+                  <span className="text-[14px] font-semibold">{a.serie.title}</span>
+                  <span className="text-[12px] text-ink-3">Accès jusqu&apos;au {formatDateFull(a.expiresAt)}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {/* Mes groupes (maquette : liste + accès catalogue) */}
         <section className="mb-8">

@@ -3,7 +3,7 @@
  * DF-03 : PayDunya/CinetPay (MoMo, Orange Money, carte) + Stripe/PayPal (international).
  */
 
-export type PlanId = "essentiel" | "pro" | "corporate";
+export type PlanId = "essentiel" | "diaspora" | "pro" | "corporate";
 export type PaymentMethodId = "momo" | "orange" | "wave" | "moov" | "djamo" | "card" | "paypal";
 
 export interface Plan {
@@ -16,7 +16,10 @@ export interface Plan {
   highlight?: boolean;
 }
 
-/** Offres A4A+ (DATA_MODEL.md : Essentiel 2 000 · Pro 4 000 · Corporate sur devis). */
+/**
+ * Offres A4A+ — grille du Business Model 2026-2031 (§4.1 pilier 3) :
+ * Essentiel 2 000 · Diaspora 3 500 · Pro 4 000 · Corporate 50 000.
+ */
 export const PLANS: Plan[] = [
   {
     id: "essentiel",
@@ -27,7 +30,19 @@ export const PLANS: Plan[] = [
       "Articles premium en illimité",
       "Archives complètes",
       "Sans publicité",
-      "Newsletter abonnés",
+      "Newsletter quotidienne La Matinale",
+    ],
+  },
+  {
+    id: "diaspora",
+    name: "Diaspora",
+    price: 3500,
+    tagline: "Rester relié au pays, où que vous soyez.",
+    features: [
+      "Tout Essentiel",
+      "Accès prioritaire aux offres d'emploi en Côte d'Ivoire",
+      "Webinaire diaspora mensuel",
+      "Alertes démarches et actualité consulaire",
     ],
   },
   {
@@ -38,21 +53,21 @@ export const PLANS: Plan[] = [
     highlight: true,
     features: [
       "Tout Essentiel",
-      "Rapports Business & Cacao",
+      "Intelligence économique cacao & café",
+      "Rapports marchés mensuels",
       "Données et indicateurs exportables",
-      "5 articles cadeaux / mois",
     ],
   },
   {
     id: "corporate",
     name: "Corporate",
-    price: null,
-    tagline: "Accès multi-comptes pour votre organisation.",
+    price: 50000,
+    tagline: "L'offre des directions et des équipes.",
     features: [
       "Tout Pro",
-      "Licences multi-utilisateurs",
-      "Veille sectorielle dédiée",
-      "Facturation centralisée",
+      "Recherche IA sur l'archive A4A",
+      "2 interviews dirigeants par an",
+      "Rapports sur mesure et licences multi-comptes",
     ],
   },
 ];

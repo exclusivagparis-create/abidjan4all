@@ -59,6 +59,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Utilisateurs", href: isAdmin ? "/admin/users" : undefined, icon: "☺" },
   ];
   const business: NavItem[] = [
+    { label: "A4A Intelligence", href: canPublish ? "/admin/intelligence" : undefined, icon: "◲" },
     { label: "Petites annonces", href: canPublish ? "/admin/annonces" : undefined, icon: "▤", badge: pendingListings, badgeColor: "var(--orange)" },
     { label: "Régie publicitaire", href: isRegie ? "/admin/ads" : undefined, icon: "◈", badge: pendingReservations, badgeColor: "var(--orange)" },
     { label: "Grille des prix", href: isRegie ? "/admin/ads/tarifs" : undefined, icon: "⛁" },

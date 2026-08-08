@@ -70,6 +70,7 @@ enum CommentStatus {
 enum Plan {
   free
   essentiel
+  diaspora // A4A+ Diaspora (Business Model 2026-2031, pilier 3)
   pro
   corporate
 }
@@ -137,6 +138,7 @@ enum OrderKind {
   listing_immobilier
   whatsapp
   ad_reservation
+  brief_abonnement // abonnement A4A Intelligence (pilier B2B)
 }
 
 enum OrderStatus {
@@ -181,6 +183,7 @@ model User {
   cvProfile               CvProfile?
   orders                  Order[]
   whatsappMembership      WhatsappMembership?
+  briefAbonnements        BriefAbonnement[]
   advertiserCampaigns     AdCampaign[]             @relation("AdvertiserCampaigns")
   comments                Comment[]
   favorites               Article[]                @relation("Favorites")
@@ -769,6 +772,91 @@ model WhatsappMembership {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// A4A Intelligence — publications économiques B2B (pilier 4 du Business Model
+// 2026-2031). Une SÉRIE est un produit d'abonnement annuel (« Rapport mensuel
+// Cacao & Café ») ; ses ÉDITIONS sont les livraisons successives, dont le
+// contenu intégral est réservé aux abonnés en cours de validité.
+// ---------------------------------------------------------------------------
+
+enum BriefKind {
+  rapport // rapport périodique (mensuel Cacao & Café…)
+  revue // revue trimestrielle (Investissements Afrique de l'Ouest…)
+  classement // Top 100 Entreprises CI
+  etude // étude sectorielle sur mesure
+  revue_presse // revue de presse personnalisée corporate
+}
+
+model BriefSerie {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  kind        BriefKind
+  title       String
+  /// Accroche commerciale affichée sur la vitrine /intelligence.
+  pitch       String
+  description String
+  /// Public visé (« Traders, courtiers, exportateurs »).
+  cible       String
+  /// Prix de l'abonnement en FCFA, pour `dureeMois` mois de livraisons.
+  prixAnnuel  Int
+  dureeMois   Int       @default(12)
+  /// Rythme annoncé (« mensuel », « trimestriel », « annuel »).
+  rythme      String
+  coverUrl    String?
+  actif       Boolean   @default(true)
+  ordre       Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  editions    BriefEdition[]
+  abonnements BriefAbonnement[]
+
+  @@index([actif, ordre])
+}
+
+model BriefEdition {
+  id      String     @id @default(cuid())
+  serie   BriefSerie @relation(fields: [serieId], references: [id], onDelete: Cascade)
+  serieId String
+
+  /// Repère de livraison, unique dans la série (« 2026-07 », « T3-2026 »).
+  numero String
+  title  String
+  /// Résumé public (teaser) — visible de tous, y compris non-abonnés.
+  resume String
+  /// Corps réservé aux abonnés (blocs riches, même format que les articles).
+  body   Json?
+  /// PDF téléchargeable, réservé aux abonnés.
+  fileUrl String?
+
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([serieId, numero])
+  @@index([serieId, publishedAt])
+}
+
+/// Abonnement d'un compte à une série, pour une période donnée.
+model BriefAbonnement {
+  id      String     @id @default(cuid())
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  serie   BriefSerie @relation(fields: [serieId], references: [id], onDelete: Cascade)
+  serieId String
+
+  startAt   DateTime @default(now())
+  expiresAt DateTime
+  /// Commande à l'origine de l'abonnement (null = accès accordé par la régie).
+  orderId   String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, serieId])
+  @@index([serieId])
 }
 
 // ---------------------------------------------------------------------------

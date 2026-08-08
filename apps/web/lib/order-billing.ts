@@ -3,6 +3,7 @@ import { getProviderForMethod, type PaymentMethodId } from "@a4a/payments";
 import { removeUpload } from "@/lib/uploads";
 import { sendEmail } from "@/lib/email";
 import { trouverPack } from "@/lib/packs";
+import { ouvrirAbonnement } from "@/lib/intelligence";
 import { TARIFS_EMPLOI, TARIFS_IMMO, TARIFS_WHATSAPP, formatFCFA, trouverPalier, type PalierAnnonce } from "@/lib/tarifs";
 
 /**
@@ -11,6 +12,18 @@ import { TARIFS_EMPLOI, TARIFS_IMMO, TARIFS_WHATSAPP, formatFCFA, trouverPalier,
  */
 async function palierPourOrder(kind: OrderKind, tierId: string): Promise<PalierAnnonce | undefined> {
   if (kind === "ad_reservation") return trouverPack(tierId);
+  if (kind === "brief_abonnement") {
+    // A4A Intelligence : le « palier » est la série elle-même (tier = son id).
+    const serie = await prisma.briefSerie.findUnique({ where: { id: tierId } });
+    if (!serie) return undefined;
+    return {
+      id: serie.id,
+      label: serie.title,
+      prix: serie.prixAnnuel,
+      jours: Math.round(serie.dureeMois * 30.4), // informatif : la durée réelle est en mois
+      description: serie.pitch,
+    };
+  }
   const grille = kind === "listing_emploi" ? TARIFS_EMPLOI : kind === "listing_immobilier" ? TARIFS_IMMO : TARIFS_WHATSAPP;
   return trouverPalier(grille, tierId);
 }
@@ -139,6 +152,19 @@ export async function fulfillOrder(providerRef: string): Promise<FulfillOrderRes
         }).catch(() => {});
       }
     }
+    return { ok: true };
+  }
+
+  if (order.kind === "brief_abonnement") {
+    // A4A Intelligence : ouverture (ou prolongation) de l'abonnement à la série.
+    const serie = await prisma.briefSerie.findUnique({ where: { id: order.tier }, select: { dureeMois: true } });
+    await prisma.order.update({ where: { id: order.id }, data: { status: "paid" } });
+    await ouvrirAbonnement({
+      userId: order.userId,
+      serieId: order.tier,
+      dureeMois: serie?.dureeMois ?? 12,
+      orderId: order.id,
+    });
     return { ok: true };
   }
 

@@ -1,5 +1,5 @@
 import { prisma } from "@a4a/db";
-import { getProviderForMethod, planById, type PaymentMethodId, type PlanId } from "@a4a/payments";
+import { getProviderForMethod, planById, PLANS, type PaymentMethodId, type PlanId } from "@a4a/payments";
 
 /**
  * Abonnement payant en cours de validité (paywall, espace membre).
@@ -34,7 +34,7 @@ export class CompteIntrouvableError extends Error {
 export async function startCheckout(
   userId: string,
   email: string,
-  planId: Exclude<PlanId, "corporate">,
+  planId: PlanId,
   method: PaymentMethodId
 ): Promise<{ checkoutUrl: string }> {
   const plan = planById(planId);
@@ -81,9 +81,13 @@ export async function startCheckout(
   return { checkoutUrl: session.checkoutUrl };
 }
 
-function planForAmount(amount: number): Exclude<PlanId, "corporate"> | null {
-  const plan = ["essentiel", "pro"].find((p) => planById(p)?.price === amount);
-  return (plan as Exclude<PlanId, "corporate">) ?? null;
+/**
+ * Retrouve l'offre payée à partir du montant encaissé. Dérivé de PLANS et non
+ * d'une liste écrite à la main : à l'ajout de « Diaspora », une liste figée
+ * aurait laissé le paiement sans offre correspondante — encaissé, jamais activé.
+ */
+function planForAmount(amount: number): PlanId | null {
+  return PLANS.find((p) => p.price === amount)?.id ?? null;
 }
 
 /**

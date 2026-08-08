@@ -42,7 +42,9 @@ export default async function AbonnementPage({
           ) : null}
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        {/* 4 offres depuis l'ajout de Diaspora : 2 colonnes en tablette, 4 en
+            grand écran — 3 colonnes laissaient une carte seule sur sa ligne. */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
           {PLANS.map((plan) => (
             <div
               key={plan.id}

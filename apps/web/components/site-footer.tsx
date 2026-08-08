@@ -35,6 +35,7 @@ export async function SiteFooter() {
           <Link href="/publicite" className="hover:text-ink">Annoncer / Publicité</Link>
           <Link href="/contact" className="hover:text-ink">Contact</Link>
           <Link href="/formation" className="hover:text-ink">A4A Formation</Link>
+          <Link href="/intelligence" className="hover:text-ink">A4A Intelligence</Link>
           <Link href="/recherche" className="hover:text-ink">Recherche</Link>
           <Link href="/abonnement" className="hover:text-ink">S&apos;abonner à A4A+</Link>
         </nav>

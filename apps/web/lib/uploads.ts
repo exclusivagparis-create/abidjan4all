@@ -9,6 +9,7 @@ import path from "path";
 export const UPLOAD_DIR = process.env.UPLOADS_DIR ?? path.join(process.cwd(), "public", "uploads");
 
 export const MAX_UPLOAD = 8 * 1024 * 1024; // 8 Mo
+export const MAX_DOCUMENT = 25 * 1024 * 1024; // 25 Mo — rapports PDF illustrés
 
 export const IMAGE_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -31,9 +32,35 @@ export async function saveImageUpload(file: File): Promise<{ ok: true; url: stri
   return { ok: true, url: `/uploads/${name}` };
 }
 
-/** Supprime un fichier `/uploads/…` du disque (silencieux si absent). */
+/**
+ * Écrit un PDF (éditions A4A Intelligence) et renvoie son URL INTERNE
+ * `/documents/…`. Ce préfixe n'est volontairement PAS servi par la route
+ * publique `/uploads/[name]` : le fichier est payant, il ne sort que par une
+ * route qui vérifie l'abonnement.
+ */
+export async function saveDocumentUpload(file: File): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  if (file.size === 0) return { ok: false, error: "Fichier vide." };
+  if (file.size > MAX_DOCUMENT) return { ok: false, error: "Fichier trop lourd (25 Mo max)." };
+  if (file.type !== "application/pdf") return { ok: false, error: "Seuls les fichiers PDF sont acceptés." };
+
+  const name = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.pdf`;
+  await mkdir(UPLOAD_DIR, { recursive: true });
+  await writeFile(path.join(UPLOAD_DIR, name), Buffer.from(await file.arrayBuffer()));
+  return { ok: true, url: `/documents/${name}` };
+}
+
+/** Chemin disque d'un document `/documents/…`, ou null si le nom est douteux. */
+export function documentPath(url: string | null | undefined): string | null {
+  if (!url?.startsWith("/documents/")) return null;
+  const name = path.basename(url);
+  // Noms générés par saveDocumentUpload uniquement — aucune traversée possible.
+  if (!/^[a-z0-9-]+\.pdf$/.test(name)) return null;
+  return path.join(UPLOAD_DIR, name);
+}
+
+/** Supprime un fichier `/uploads/…` ou `/documents/…` du disque (silencieux si absent). */
 export async function removeUpload(url: string | null | undefined): Promise<void> {
-  if (url?.startsWith("/uploads/")) {
+  if (url?.startsWith("/uploads/") || url?.startsWith("/documents/")) {
     await unlink(path.join(UPLOAD_DIR, path.basename(url))).catch(() => {});
   }
 }
