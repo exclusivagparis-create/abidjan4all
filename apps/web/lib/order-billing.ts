@@ -4,6 +4,7 @@ import { removeUpload } from "@/lib/uploads";
 import { sendEmail } from "@/lib/email";
 import { trouverPack } from "@/lib/packs";
 import { ouvrirAbonnement } from "@/lib/intelligence";
+import { annulerInscription, confirmerInscription } from "@/lib/events";
 import { TARIFS_EMPLOI, TARIFS_IMMO, TARIFS_WHATSAPP, formatFCFA, trouverPalier, type PalierAnnonce } from "@/lib/tarifs";
 
 /**
@@ -24,11 +25,28 @@ async function palierPourOrder(kind: OrderKind, tierId: string): Promise<PalierA
       description: serie.pitch,
     };
   }
+  if (kind === "event_ticket") {
+    // Billetterie : le « palier » est la catégorie de billet (tier = son id).
+    const billet = await prisma.eventTicket.findUnique({
+      where: { id: tierId },
+      include: { event: { select: { title: true } } },
+    });
+    if (!billet) return undefined;
+    return {
+      id: billet.id,
+      label: `${billet.event.title} — ${billet.label}`,
+      prix: billet.prix,
+      jours: 0, // sans objet : un billet ne court pas sur une durée
+      description: billet.description,
+    };
+  }
   const grille = kind === "listing_emploi" ? TARIFS_EMPLOI : kind === "listing_immobilier" ? TARIFS_IMMO : TARIFS_WHATSAPP;
   return trouverPalier(grille, tierId);
 }
 
-export type StartOrderResult = { ok: true; checkoutUrl: string } | { ok: false; error: string };
+export type StartOrderResult =
+  /** `orderId` permet à l'appelant de rattacher son objet métier à la commande. */
+  { ok: true; checkoutUrl: string; orderId: string } | { ok: false; error: string };
 
 /**
  * Démarre le paiement d'une commande one-off (dépôt d'annonce payant, adhésion
@@ -84,7 +102,7 @@ export async function startOrderCheckout(params: {
   // abonnements (les identifiants ne sont pas des Payment).
   const checkoutUrl =
     session.provider === "mock" ? `/paiement/mock-order/${order.id}` : session.checkoutUrl;
-  return { ok: true, checkoutUrl };
+  return { ok: true, checkoutUrl, orderId: order.id };
 }
 
 export type FulfillOrderResult = { ok: true } | { ok: false; error: string; notFound?: boolean };
@@ -155,6 +173,13 @@ export async function fulfillOrder(providerRef: string): Promise<FulfillOrderRes
     return { ok: true };
   }
 
+  if (order.kind === "event_ticket") {
+    // Billet payé : l'inscription (créée « en attente ») est confirmée.
+    await prisma.order.update({ where: { id: order.id }, data: { status: "paid" } });
+    await confirmerInscription(order.id);
+    return { ok: true };
+  }
+
   if (order.kind === "brief_abonnement") {
     // A4A Intelligence : ouverture (ou prolongation) de l'abonnement à la série.
     const serie = await prisma.briefSerie.findUnique({ where: { id: order.tier }, select: { dureeMois: true } });
@@ -208,6 +233,13 @@ export async function failOrder(providerRef: string): Promise<void> {
   });
   if (orders.length === 0) return;
   await prisma.order.updateMany({ where: { providerRef, status: "pending" }, data: { status: "failed" } });
+
+  // Billet abandonné : l'inscription en attente est annulée, la place se libère.
+  const abandonnees = await prisma.order.findMany({
+    where: { providerRef, kind: "event_ticket" },
+    select: { id: true },
+  });
+  await Promise.all(abandonnees.map((o) => annulerInscription(o.id)));
 
   // Réservation abandonnée : on retire la campagne restée en brouillon.
   for (const o of orders) {

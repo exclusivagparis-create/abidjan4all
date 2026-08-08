@@ -139,6 +139,7 @@ enum OrderKind {
   whatsapp
   ad_reservation
   brief_abonnement // abonnement A4A Intelligence (pilier B2B)
+  event_ticket // billet d'événement A4A (pilier événementiel)
 }
 
 enum OrderStatus {
@@ -184,6 +185,7 @@ model User {
   orders                  Order[]
   whatsappMembership      WhatsappMembership?
   briefAbonnements        BriefAbonnement[]
+  eventRegistrations      EventRegistration[]
   advertiserCampaigns     AdCampaign[]             @relation("AdvertiserCampaigns")
   comments                Comment[]
   favorites               Article[]                @relation("Favorites")
@@ -772,6 +774,124 @@ model WhatsappMembership {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// A4A Événements — Forum Diaspora, A4A Awards, webinaires (pilier 7 du
+// Business Model 2026-2031). Un ÉVÉNEMENT propose une ou plusieurs CATÉGORIES
+// de billets ; chaque INSCRIPTION porte un code d'entrée unique. Les billets
+// payants passent par le flux de commande commun.
+// ---------------------------------------------------------------------------
+
+enum EventKind {
+  forum
+  awards
+  webinaire
+  conference
+}
+
+enum EventStatus {
+  draft
+  published
+  ended
+  cancelled
+}
+
+enum RegistrationStatus {
+  pending // billet payant : en attente du règlement
+  confirmed
+  cancelled
+}
+
+model Event {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  kind        EventKind
+  title       String
+  pitch       String
+  description String
+  coverUrl    String?
+
+  /// Événement en ligne (webinaire) : pas de lieu physique.
+  enLigne Boolean @default(false)
+  lieu    String?
+  ville   String?
+
+  startAt DateTime
+  endAt   DateTime?
+
+  /// Jauge totale, toutes catégories confondues (null = illimitée).
+  capacite Int?
+
+  /// Lien de connexion, révélé aux seuls inscrits confirmés.
+  accessUrl String?
+
+  status    EventStatus @default(draft)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  tickets       EventTicket[]
+  registrations EventRegistration[]
+  sponsors      EventSponsor[]
+
+  @@index([status, startAt])
+}
+
+/// Catégorie de billet (« Standard », « VIP », « Étudiant »). Prix 0 = gratuit.
+model EventTicket {
+  id      String @id @default(cuid())
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String
+
+  label       String
+  description String
+  prix        Int
+  /// Places pour cette catégorie (null = seule la jauge de l'événement compte).
+  quota       Int?
+  ordre       Int     @default(0)
+  actif       Boolean @default(true)
+
+  registrations EventRegistration[]
+
+  @@index([eventId, ordre])
+}
+
+model EventRegistration {
+  id       String      @id @default(cuid())
+  event    Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId  String
+  ticket   EventTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId String
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+
+  status RegistrationStatus @default(pending)
+  /// Commande à l'origine de l'inscription (null = billet gratuit).
+  orderId String?
+  /// Code d'entrée présenté à l'accueil, unique sur tout le site.
+  code    String             @unique
+
+  createdAt DateTime @default(now())
+
+  /// Une inscription par personne et par événement.
+  @@unique([eventId, userId])
+  @@index([ticketId])
+}
+
+/// Sponsor d'un événement (le sponsoring est un revenu du pilier 7).
+model EventSponsor {
+  id      String @id @default(cuid())
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String
+
+  name    String
+  logoUrl String?
+  linkUrl String?
+  /// Niveau affiché (« Partenaire officiel », « Sponsor Gold »…).
+  niveau  String
+  ordre   Int     @default(0)
+
+  @@index([eventId, ordre])
 }
 
 // ---------------------------------------------------------------------------

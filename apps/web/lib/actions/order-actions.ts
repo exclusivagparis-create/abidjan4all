@@ -17,12 +17,14 @@ function retourOk(kind: string): string {
   if (kind === "whatsapp") return "/club?ok=1";
   if (kind === "ad_reservation") return "/espace-annonceur?bienvenue=1";
   if (kind === "brief_abonnement") return "/intelligence?abonne=1";
+  if (kind === "event_ticket") return "/espace-membre?billet=1";
   return "/annonces?depot=paye";
 }
 function retourEchec(kind: string): string {
   if (kind === "whatsapp") return "/club?echec=1";
   if (kind === "ad_reservation") return "/publicite/reserver?echec=1";
   if (kind === "brief_abonnement") return "/intelligence?echec=1";
+  if (kind === "event_ticket") return "/evenements?echec=1";
   return "/annonces?echec=1";
 }
 

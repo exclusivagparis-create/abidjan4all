@@ -11,6 +11,8 @@ import { cancelSubscriptionAction } from "@/lib/actions/billing-actions";
 import { updateProfileAction } from "@/lib/actions/community-actions";
 import { PushOptIn } from "@/components/push-optin";
 import { mesAbonnements } from "@/lib/intelligence";
+import { mesInscriptions } from "@/lib/events";
+import { annulerMonInscriptionAction } from "@/lib/actions/event-actions";
 import { formatDateFull, initials } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Espace membre" };
@@ -65,7 +67,7 @@ export default async function EspaceMembrePage({
   });
   if (!user) redirect("/login");
 
-  const briefs = await mesAbonnements(user.id);
+  const [briefs, inscriptions] = await Promise.all([mesAbonnements(user.id), mesInscriptions(user.id)]);
   const sub = user.subscription;
   const plan = sub ? planById(sub.plan) : undefined;
   const paying = sub && sub.plan !== "free";
@@ -203,6 +205,50 @@ export default async function EspaceMembrePage({
             </div>
           </div>
         </section>
+
+        {/* Mes événements — billets et codes d'entrée (pilier 7). */}
+        {inscriptions.length > 0 ? (
+          <section className="mb-8">
+            <div className="mb-3.5 flex items-center justify-between">
+              <h2 className="font-serif text-[22px] font-semibold">Mes événements</h2>
+              <Link href="/evenements" className="text-xs font-semibold text-blue">
+                Tous les événements →
+              </Link>
+            </div>
+            <div className="grid gap-3">
+              {inscriptions.map((r) => (
+                <div key={r.id} className="rounded-[14px] border border-line bg-surface px-5 py-4 shadow-[var(--shadow-sm)]">
+                  <div className="mb-1 flex flex-wrap items-center gap-2.5">
+                    <Link href={`/evenements/${r.event.slug}`} className="text-[15px] font-semibold hover:underline">
+                      {r.event.title}
+                    </Link>
+                    <span
+                      className="text-[11.5px] font-bold"
+                      style={{ color: r.status === "confirmed" ? "var(--green)" : "var(--orange)" }}
+                    >
+                      {r.status === "confirmed" ? "Confirmé" : "En attente de paiement"}
+                    </span>
+                  </div>
+                  <p className="mb-2 text-[12.5px] text-ink-3">
+                    {formatDateFull(r.event.startAt)} ·{" "}
+                    {r.event.enLigne ? "En ligne" : [r.event.lieu, r.event.ville].filter(Boolean).join(", ") || "lieu à préciser"}{" "}
+                    · billet {r.ticket.label}
+                  </p>
+                  {r.status === "confirmed" ? (
+                    <p className="mb-2 text-[13px]">
+                      Code d&apos;entrée : <b className="font-mono tracking-wider">{r.code}</b>
+                    </p>
+                  ) : null}
+                  <form action={annulerMonInscriptionAction.bind(null, r.id)}>
+                    <button type="submit" className="text-[11.5px] font-semibold text-ink-3 underline hover:text-red">
+                      Annuler mon inscription
+                    </button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {/* A4A Intelligence — publications B2B souscrites (pilier 4). */}
         {briefs.length > 0 ? (

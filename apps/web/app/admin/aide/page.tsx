@@ -100,6 +100,7 @@ const SOMMAIRE: Array<[string, Array<[string, string]>]> = [
   [
     "Business",
     [
+      ["evenements", "Événements"],
       ["intelligence", "A4A Intelligence"],
       ["annonces", "Petites annonces"],
       ["regie", "Régie publicitaire"],
@@ -457,6 +458,42 @@ export default async function AidePage() {
         {/* BUSINESS                                                      */}
         {/* ------------------------------------------------------------ */}
         <h2 className="mt-2 text-[12px] font-bold uppercase tracking-[0.1em] text-ink-3">Business</h2>
+
+        <Module id="evenements" icon="◷" title="Événements" acces="publication">
+          <p>
+            Forums, cérémonies, conférences et webinaires, avec <b>billetterie en ligne</b>. Un événement se construit
+            en trois temps :
+          </p>
+          <ol>
+            <li>
+              <b>La fiche</b> — titre, accroche, dates, lieu (ou « en ligne »), programme, visuel et <b>jauge</b>
+              globale. Elle reste invisible du public tant que vous ne l&apos;avez pas publiée.
+            </li>
+            <li>
+              <b>Les catégories de billets</b> — « Standard », « VIP », « Étudiant »… chacune avec son prix, sa
+              description et son quota. Un prix à <b>0 crée un billet gratuit</b> : l&apos;inscription est confirmée
+              aussitôt, sans passer par le paiement.
+            </li>
+            <li>
+              <b>Les partenaires</b> — logos et niveaux affichés en bas de la page. Le sponsoring d&apos;édition est
+              une recette à part entière.
+            </li>
+          </ol>
+          <p>
+            <b>Le jour J :</b> chaque inscrit dispose d&apos;un <b>code d&apos;entrée</b> unique (visible dans son
+            espace membre) à présenter à l&apos;accueil. Le bouton <b>Export des inscrits</b> vous donne la liste
+            complète en tableur — noms, billets, codes, états — pour l&apos;émargement ou les badges.
+          </p>
+          <p>
+            <b>Inscriptions « en attente » :</b> ce sont des billets payants dont le règlement n&apos;a pas abouti.
+            Vous pouvez les confirmer à la main (paiement reçu autrement) ou les annuler — annuler <b>libère la
+            place</b> pour quelqu&apos;un d&apos;autre.
+          </p>
+          <Astuce>
+            Pour un webinaire, cochez « en ligne » et renseignez le lien de connexion : il n&apos;est révélé
+            qu&apos;aux inscrits confirmés, jamais au public.
+          </Astuce>
+        </Module>
 
         <Module id="intelligence" icon="◲" title="A4A Intelligence" acces="publication">
           <p>
