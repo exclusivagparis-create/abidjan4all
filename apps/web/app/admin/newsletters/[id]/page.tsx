@@ -10,7 +10,7 @@ import {
   updateEditionAction,
 } from "@/lib/actions/newsletter-actions";
 import { PageBodyEditor } from "@/components/admin/page-body-editor";
-import { buildEditionHtml } from "@/lib/newsletter";
+import { buildEditionHtml, recoitEdition, SEGMENTS } from "@/lib/newsletter";
 import { emailConfigured } from "@/lib/email";
 import { formatDate } from "@/lib/format";
 
@@ -55,14 +55,17 @@ export default async function EditionPage({
   const inscrits = await prisma.newsletterSubscription.findMany({
     where: { newsletterId: edition.newsletterId, confirmed: true },
     orderBy: { createdAt: "desc" },
-    select: { id: true, email: true, createdAt: true, user: { select: { name: true } } },
+    select: { id: true, email: true, createdAt: true, segments: true, user: { select: { name: true } } },
   });
   const choisis = Array.isArray(edition.recipientEmails) ? (edition.recipientEmails as string[]) : [];
   const selectionPartielle = choisis.length > 0;
   const estChoisi = (email: string) => !selectionPartielle || choisis.includes(email);
-  const recipients = selectionPartielle
-    ? inscrits.filter((s) => estChoisi(s.email)).length
-    : inscrits.length;
+  // Destinataires réels : sélection manuelle ET ciblage d'audience combinés,
+  // pour que le chiffre affiché soit celui qui partira vraiment.
+  const cible = Array.isArray(edition.segments) ? (edition.segments as string[]) : [];
+  const recipients = inscrits.filter(
+    (s) => estChoisi(s.email) && recoitEdition(cible, s.segments)
+  ).length;
 
   const previewHtml = buildEditionHtml({
     newsletterName: edition.newsletter.name,
@@ -109,6 +112,27 @@ export default async function EditionPage({
                 <div className="mb-1.5 text-xs font-semibold text-ink-2">Introduction</div>
                 <PageBodyEditor initial={edition.introHtml} />
               </div>
+              {/* Ciblage d'audience — La Matinale segmentée. */}
+              <fieldset className="grid gap-2 rounded-[10px] border border-dashed border-line bg-surface-2 p-4">
+                <legend className="px-1 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
+                  Audience visée
+                </legend>
+                <p className="text-[11.5px] text-ink-3">
+                  Ne rien cocher = envoi à <b>tous les inscrits</b>. Sinon, l&apos;édition ne part qu&apos;aux inscrits
+                  qui ont retenu au moins un de ces centres d&apos;intérêt — plus ceux qui n&apos;en ont choisi aucun
+                  (ils veulent tout recevoir).
+                </p>
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  {SEGMENTS.map((s) => (
+                    <label key={s.id} className="flex items-center gap-2 text-[12.5px]">
+                      <input type="checkbox" name="segments" value={s.id} defaultChecked={cible.includes(s.id)} />
+                      <span className="font-semibold">{s.label}</span>
+                      <span className="text-ink-3">— {s.description}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
               {/* Sponsor exclusif de l'envoi (Brand Content, 600 000 F l'envoi). */}
               <fieldset className="grid gap-2.5 rounded-[10px] border border-dashed border-line bg-surface-2 p-4">
                 <legend className="px-1 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">

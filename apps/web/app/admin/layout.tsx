@@ -68,6 +68,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Brand Content", href: isRegie || canPublish ? "/admin/brand-content" : undefined, icon: "◆", badge: brandLeads, badgeColor: "var(--orange)" },
     { label: "Affiliation", href: isRegie || canPublish ? "/admin/affiliation" : undefined, icon: "⇗" },
     { label: "Statistiques", href: isAdmin ? "/admin/stats" : undefined, icon: "▲" },
+    { label: "KPI Business Model", href: isAdmin ? "/admin/kpi" : undefined, icon: "◎" },
     { label: "Redirections", href: canPublish ? "/admin/redirections" : undefined, icon: "↪" },
   ];
   // Mode d'emploi : accessible à tous les rôles du Studio, Gestionnaire Régie compris.

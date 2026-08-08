@@ -108,6 +108,7 @@ const SOMMAIRE: Array<[string, Array<[string, string]>]> = [
       ["regie", "Régie publicitaire"],
       ["tarifs", "Grille des prix des packs"],
       ["stats", "Statistiques"],
+      ["kpi", "KPI Business Model"],
       ["redirections", "Redirections"],
     ],
   ],
@@ -413,6 +414,22 @@ export default async function AidePage() {
             module, avec leur date et leur éventuel compte lié. Les personnes désabonnées ne reçoivent plus rien, même
             si elles avaient été cochées avant leur désinscription.
           </p>
+          <p>
+            <b>Audience visée (La Matinale segmentée).</b> À l&apos;inscription, le lecteur peut cocher ce qui
+            l&apos;intéresse : <b>Côte d&apos;Ivoire</b>, <b>Diaspora</b>, <b>Afrique</b>, <b>Business</b>. Sur une
+            édition, vous cochez à votre tour les segments visés :
+          </p>
+          <ul>
+            <li>Aucun segment coché sur l&apos;édition = <b>envoi à tous</b>, comme avant.</li>
+            <li>
+              Des segments cochés = l&apos;édition part aux inscrits ayant retenu <b>au moins un</b> de ces centres
+              d&apos;intérêt, <b>plus</b> ceux qui n&apos;en ont coché aucun (ils veulent tout recevoir).
+            </li>
+          </ul>
+          <Astuce>
+            Le nombre de destinataires affiché en haut de l&apos;édition tient compte du ciblage <i>et</i> de la
+            sélection manuelle : c&apos;est bien le nombre d&apos;envois qui partiront.
+          </Astuce>
         </Module>
 
         <Module id="groupes" icon="◉" title="Groupes" acces="admin">
@@ -669,6 +686,25 @@ export default async function AidePage() {
             <li>Les visiteurs sont comptés par jour (pas de suivi d&apos;une journée à l&apos;autre : choix de confidentialité).</li>
             <li>« Vidéos vues » compte les affichages de page, pas les lectures effectives.</li>
           </ul>
+        </Module>
+
+        <Module id="kpi" icon="◎" title="KPI Business Model" acces="admin">
+          <p>
+            Les douze indicateurs de pilotage du business plan 2026-2031, mesurés sur les données réelles du site et
+            confrontés aux <b>cibles 2027, 2028 et 2030</b> du document : visiteurs, inscrits newsletter, abonnés
+            Premium, churn, annonceurs actifs, interviews vendues, abonnés B2B, ARPU, LTV.
+          </p>
+          <p>
+            <b>Trois indicateurs restent « non mesuré »</b> — taux d&apos;ouverture de la newsletter, NPS,
+            téléchargements de l&apos;application mobile. Ils supposent respectivement un pixel de suivi dans les
+            e-mails, une enquête de satisfaction, et une application mobile : aucun n&apos;existe aujourd&apos;hui. Le
+            tableau le dit plutôt que d&apos;afficher une estimation.
+          </p>
+          <Astuce>
+            Le churn et la LTV ne deviendront fiables qu&apos;après douze mois d&apos;exploitation : ils comparent le
+            parc d&apos;abonnés d&apos;il y a un an aux résiliations de l&apos;année. D&apos;ici là, lisez-les comme
+            des ordres de grandeur.
+          </Astuce>
         </Module>
 
         <Module id="redirections" icon="↪" title="Redirections" acces="publication">

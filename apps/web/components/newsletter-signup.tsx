@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { subscribeNewsletterAction, type SignupResult } from "@/lib/actions/newsletter-signup-actions";
+import { SEGMENTS } from "@/lib/newsletter-segments";
 
 /** Bloc d'inscription à la newsletter — page d'accueil (CRM, DF-03). */
 export function NewsletterSignup({ nom, description }: { nom: string; description: string }) {
@@ -61,6 +62,21 @@ export function NewsletterSignup({ nom, description }: { nom: string; descriptio
                   {pending ? "…" : "S'inscrire"}
                 </button>
               </div>
+              {/* Centres d'intérêt : rien de coché = tout recevoir. */}
+              <fieldset className="mt-3">
+                <legend className="mb-1.5 text-[11px] font-semibold text-[#AEB8CC]">
+                  Ce qui vous intéresse <span className="text-[#8894AC]">(facultatif — sinon vous recevez tout)</span>
+                </legend>
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                  {SEGMENTS.map((s) => (
+                    <label key={s.id} className="flex items-center gap-1.5 text-[12.5px] text-white">
+                      <input type="checkbox" name="segments" value={s.id} className="accent-[#F5C24B]" />
+                      {s.label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
               {state?.ok === false ? (
                 <p className="mt-2 text-[12.5px] font-semibold text-[#F5C24B]">{state.error}</p>
               ) : (

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@a4a/db";
 import { auth } from "@/auth";
 import { emailConfigured, emailLayout, sendEmail } from "@/lib/email";
-import { unsubUrl } from "@/lib/newsletter";
+import { segmentsValides, unsubUrl } from "@/lib/newsletter";
 
 export type SignupResult = { ok: true; email: string } | { ok: false; error: string };
 
@@ -42,10 +42,18 @@ export async function subscribeNewsletterAction(
   const lettre = await newsletterParDefaut();
   if (!lettre) return { ok: false, error: "Aucune newsletter n'est disponible pour l'instant." };
 
+  // Centres d'intérêt (La Matinale segmentée). Rien de coché = tout recevoir.
+  const segments = segmentsValides(formData.getAll("segments").map((s) => String(s)));
+
   const dejaInscrit = await prisma.newsletterSubscription.findUnique({
     where: { newsletterId_email: { newsletterId: lettre.id, email } },
     select: { id: true },
   });
+
+  // Déjà inscrit : on met ses préférences à jour sans le dire (anti-énumération).
+  if (dejaInscrit) {
+    await prisma.newsletterSubscription.update({ where: { id: dejaInscrit.id }, data: { segments } });
+  }
 
   if (!dejaInscrit) {
     // Rattache l'inscription au compte si la personne est connectée.
@@ -56,7 +64,7 @@ export async function subscribeNewsletterAction(
 
     await prisma.$transaction([
       prisma.newsletterSubscription.create({
-        data: { newsletterId: lettre.id, email, confirmed: true, userId },
+        data: { newsletterId: lettre.id, email, confirmed: true, userId, segments },
       }),
       prisma.newsletter.update({
         where: { id: lettre.id },

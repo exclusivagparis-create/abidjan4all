@@ -30,6 +30,10 @@ type EditionArticle = {
   rubrique: { slug: string; name: string; color: string };
 };
 
+// Segments d'audience : définis à part (ce module importe `node:crypto`, que
+// le formulaire d'inscription — composant client — ne peut pas empaqueter).
+export { SEGMENTS, SEGMENT_IDS, segmentsValides, recoitEdition } from "@/lib/newsletter-segments";
+
 /** Sponsor exclusif d'un envoi (Brand Content : 600 000 FCFA l'envoi). */
 export type EditionSponsor = {
   name: string;

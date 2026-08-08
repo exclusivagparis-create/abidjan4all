@@ -587,6 +587,9 @@ model NewsletterEdition {
   /// Destinataires choisis à la main (adresses). Vide = tous les inscrits
   /// confirmés de cette newsletter — comportement d'origine préservé.
   recipientEmails Json  @default("[]")
+  /// Segments d'audience visés (ci, diaspora, afrique, business).
+  /// Vide = tous les segments — comportement d'origine préservé.
+  segments        Json  @default("[]")
   recipientCount Int    @default(0)
   /// Sponsor exclusif de l'envoi (Business Model 2026-2031 : 600 000 FCFA
   /// l'envoi). Vide = aucun encart sponsor dans le message.
@@ -610,6 +613,9 @@ model NewsletterSubscription {
 
   email     String
   confirmed Boolean  @default(false)
+  /// Centres d'intérêt choisis à l'inscription (ci, diaspora, afrique,
+  /// business). Vide = reçoit tout, quel que soit le ciblage d'une édition.
+  segments  String[] @default([])
   createdAt DateTime @default(now())
 
   @@unique([newsletterId, email])

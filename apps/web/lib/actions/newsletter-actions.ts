@@ -6,7 +6,7 @@ import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
 import { sanitizeArticleHtml } from "@/lib/sanitize-html";
 import { emailConfigured, sendEmail } from "@/lib/email";
-import { buildEditionHtml, unsubUrl } from "@/lib/newsletter";
+import { buildEditionHtml, recoitEdition, segmentsValides, unsubUrl } from "@/lib/newsletter";
 
 async function requirePublisher() {
   const session = await auth();
@@ -57,7 +57,13 @@ export async function updateEditionAction(id: string, formData: FormData): Promi
       }
     : { sponsorName: null, sponsorBaseline: null, sponsorLogoUrl: null, sponsorLinkUrl: null };
 
-  await prisma.newsletterEdition.update({ where: { id }, data: { subject, introHtml, articleIds, ...sponsor } });
+  // Ciblage d'audience (La Matinale segmentée). Rien de coché = envoi général.
+  const segments = segmentsValides(formData.getAll("segments").map((s) => String(s)));
+
+  await prisma.newsletterEdition.update({
+    where: { id },
+    data: { subject, introHtml, articleIds, segments, ...sponsor },
+  });
   revalidatePath(`/admin/newsletters/${id}`);
   redirect(`/admin/newsletters/${id}?ok=1`);
 }
@@ -125,14 +131,19 @@ export async function sendEditionAction(id: string): Promise<void> {
   // inscrits confirmés. Le filtre sur les inscrits reste appliqué dans les deux
   // cas : une adresse désinscrite entre-temps ne doit pas recevoir l'envoi.
   const choisis = Array.isArray(edition.recipientEmails) ? (edition.recipientEmails as string[]) : [];
-  const subs = await prisma.newsletterSubscription.findMany({
+  const tous = await prisma.newsletterSubscription.findMany({
     where: {
       newsletterId: edition.newsletterId,
       confirmed: true,
       ...(choisis.length > 0 ? { email: { in: choisis } } : {}),
     },
-    select: { email: true },
+    select: { email: true, segments: true },
   });
+
+  // Ciblage d'audience : filtré en mémoire, car la règle « inscrit sans
+  // préférence = reçoit tout » ne s'exprime pas dans un `where` Prisma.
+  const cible = Array.isArray(edition.segments) ? (edition.segments as string[]) : [];
+  const subs = tous.filter((s) => recoitEdition(cible, s.segments));
 
   let sent = 0;
   for (const s of subs) {
