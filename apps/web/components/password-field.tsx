@@ -18,6 +18,8 @@ export function PasswordField({
   required = true,
   placeholder = "••••••••••",
   minLength,
+  hint,
+  className,
 }: {
   name: string;
   label: string;
@@ -25,6 +27,10 @@ export function PasswordField({
   required?: boolean;
   placeholder?: string;
   minLength?: number;
+  /** Mention affichée sous le champ (« 8 caractères minimum. »). */
+  hint?: string;
+  /** Habillage du champ, quand la page a sa propre convention de styles. */
+  className?: string;
 }) {
   const [visible, setVisible] = useState(false);
   const id = useId();
@@ -45,7 +51,10 @@ export function PasswordField({
           placeholder={placeholder}
           // pr-11 : réserve la place du bouton pour qu'un mot de passe long
           // ne passe pas dessous.
-          className="w-full rounded-[8px] border border-line bg-surface-2 py-2.5 pl-3.5 pr-11 text-sm text-ink outline-none focus:border-ink-3"
+          className={
+            className ??
+            "w-full rounded-[8px] border border-line bg-surface-2 py-2.5 pl-3.5 pr-11 text-sm text-ink outline-none focus:border-ink-3"
+          }
         />
         <button
           type="button"
@@ -61,6 +70,7 @@ export function PasswordField({
           </span>
         </button>
       </div>
+      {hint ? <span className="text-[11px] font-normal text-ink-3">{hint}</span> : null}
     </div>
   );
 }

@@ -6,8 +6,11 @@ import {
   updateOwnNameAction,
   type ProfileResult,
 } from "@/lib/actions/profile-actions";
+import { PasswordField } from "@/components/password-field";
 
 const field = "rounded-[8px] border border-line bg-bg px-3.5 py-2.5 text-[14px] text-ink outline-none focus:border-ink-3";
+// Même habillage, mais avec la place réservée au bouton œil à droite.
+const fieldOeil = "w-full rounded-[8px] border border-line bg-bg py-2.5 pl-3.5 pr-11 text-[14px] text-ink outline-none focus:border-ink-3";
 const label = "grid gap-1.5 text-xs font-semibold text-ink-2";
 
 function Feedback({ result }: { result: ProfileResult | undefined }) {
@@ -61,18 +64,22 @@ export function ProfileSettings({ name, email }: { name: string; email: string }
       <section className="rounded-[14px] border border-line bg-surface p-6 shadow-[var(--shadow-sm)]">
         <h2 className="mb-4 text-sm font-bold uppercase tracking-[0.06em] text-ink-3">Mot de passe</h2>
         <form action={pwdAction} className="grid max-w-[420px] gap-4">
-          <label className={label}>
-            Mot de passe actuel
-            <input name="current" type="password" required autoComplete="current-password" className={field} />
-          </label>
-          <label className={label}>
-            Nouveau mot de passe (8 caractères min.)
-            <input name="next" type="password" required minLength={8} autoComplete="new-password" className={field} />
-          </label>
-          <label className={label}>
-            Confirmer le nouveau mot de passe
-            <input name="confirm" type="password" required minLength={8} autoComplete="new-password" className={field} />
-          </label>
+          <PasswordField name="current" label="Mot de passe actuel" autoComplete="current-password" className={fieldOeil} />
+          <PasswordField
+            name="next"
+            label="Nouveau mot de passe"
+            autoComplete="new-password"
+            minLength={8}
+            hint="8 caractères minimum."
+            className={fieldOeil}
+          />
+          <PasswordField
+            name="confirm"
+            label="Confirmer le nouveau mot de passe"
+            autoComplete="new-password"
+            minLength={8}
+            className={fieldOeil}
+          />
           <div className="flex items-center gap-3">
             <button type="submit" disabled={pwdPending} className="justify-self-start rounded-pill bg-brand-fill px-5 py-2.5 text-xs font-bold text-brand-on disabled:opacity-60">
               {pwdPending ? "Modification…" : "Changer le mot de passe"}

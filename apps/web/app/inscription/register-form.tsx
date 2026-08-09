@@ -3,9 +3,13 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { registerAction, type RegisterResult } from "@/lib/actions/register-actions";
+import { PasswordField } from "@/components/password-field";
 
 const inp =
   "w-full rounded-[10px] border border-line bg-surface px-3.5 py-2.5 text-[14px] text-ink outline-none focus:border-ink-3";
+// Même habillage, avec la place réservée au bouton œil à droite.
+const inpOeil =
+  "w-full rounded-[10px] border border-line bg-surface py-2.5 pl-3.5 pr-11 text-[14px] text-ink outline-none focus:border-ink-3";
 
 export function RegisterForm() {
   const [state, action, pending] = useActionState<RegisterResult | undefined, FormData>(registerAction, undefined);
@@ -41,15 +45,21 @@ export function RegisterForm() {
         Adresse e-mail
         <input name="email" type="email" required autoComplete="email" className={inp} />
       </label>
-      <label className="grid gap-1.5 text-xs font-semibold text-ink-2">
-        Mot de passe
-        <input name="password" type="password" required minLength={8} autoComplete="new-password" className={inp} />
-        <span className="text-[11px] font-normal text-ink-3">8 caractères minimum.</span>
-      </label>
-      <label className="grid gap-1.5 text-xs font-semibold text-ink-2">
-        Confirmer le mot de passe
-        <input name="confirm" type="password" required minLength={8} autoComplete="new-password" className={inp} />
-      </label>
+      <PasswordField
+        name="password"
+        label="Mot de passe"
+        autoComplete="new-password"
+        minLength={8}
+        hint="8 caractères minimum."
+        className={inpOeil}
+      />
+      <PasswordField
+        name="confirm"
+        label="Confirmer le mot de passe"
+        autoComplete="new-password"
+        minLength={8}
+        className={inpOeil}
+      />
 
       {/* Pot de miel : invisible pour un humain, rempli par les robots. */}
       <input
