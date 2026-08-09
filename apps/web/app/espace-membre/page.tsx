@@ -13,6 +13,8 @@ import { PushOptIn } from "@/components/push-optin";
 import { mesAbonnements } from "@/lib/intelligence";
 import { mesInscriptions } from "@/lib/events";
 import { annulerMonInscriptionAction } from "@/lib/actions/event-actions";
+import { choisirMesNewslettersAction } from "@/lib/actions/newsletter-admin-actions";
+import { SEGMENTS } from "@/lib/newsletter-segments";
 import { formatDateFull, initials } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Espace membre" };
@@ -67,7 +69,19 @@ export default async function EspaceMembrePage({
   });
   if (!user) redirect("/login");
 
-  const [briefs, inscriptions] = await Promise.all([mesAbonnements(user.id), mesInscriptions(user.id)]);
+  const [briefs, inscriptions, newsletters, mesSouscriptions] = await Promise.all([
+    mesAbonnements(user.id),
+    mesInscriptions(user.id),
+    prisma.newsletter.findMany({ orderBy: { name: "asc" } }),
+    // Rattachées à l'adresse, pas au compte : une inscription faite depuis
+    // l'accueil avant la création du compte doit se retrouver ici.
+    prisma.newsletterSubscription.findMany({
+      where: { email: user.email, confirmed: true },
+      select: { newsletterId: true, segments: true },
+    }),
+  ]);
+  const mesLettres = new Set(mesSouscriptions.map((s) => s.newsletterId));
+  const mesSegments = new Set(mesSouscriptions.flatMap((s) => s.segments));
   const sub = user.subscription;
   const plan = sub ? planById(sub.plan) : undefined;
   const paying = sub && sub.plan !== "free";
@@ -307,6 +321,63 @@ export default async function EspaceMembrePage({
               ))}
             </div>
           )}
+        </section>
+
+        {/* Mes newsletters : le membre choisit ce qu'il reçoit. */}
+        <section className="mb-8 rounded-[14px] border border-line bg-surface p-6 shadow-[var(--shadow-sm)]">
+          <h2 className="mb-1 text-sm font-bold uppercase tracking-[0.06em] text-ink-3">Mes newsletters</h2>
+          <p className="mb-4 text-[12.5px] text-ink-3">
+            Cochez celles que vous voulez recevoir. Décocher vaut désinscription — vous pouvez revenir quand vous
+            voulez.
+          </p>
+          <form action={choisirMesNewslettersAction} className="grid gap-4">
+            <div className="grid gap-2">
+              {newsletters.map((nl) => (
+                <label key={nl.id} className="flex items-start gap-2.5 rounded-[10px] border border-line bg-surface-2 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    name="newsletters"
+                    value={nl.id}
+                    defaultChecked={mesLettres.has(nl.id)}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="block text-[14px] font-semibold">
+                      {nl.name} <span className="font-normal text-ink-3">· {nl.cadence}</span>
+                    </span>
+                    {nl.description ? (
+                      <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-2">{nl.description}</span>
+                    ) : null}
+                  </span>
+                </label>
+              ))}
+              {newsletters.length === 0 ? (
+                <p className="text-[13px] text-ink-3">Aucune newsletter n&apos;est proposée pour l&apos;instant.</p>
+              ) : null}
+            </div>
+
+            {newsletters.length > 0 ? (
+              <fieldset className="rounded-[10px] border border-dashed border-line px-4 py-3">
+                <legend className="px-1 text-[11px] font-semibold text-ink-3">
+                  Ce qui vous intéresse <span className="font-normal">(facultatif — sinon vous recevez tout)</span>
+                </legend>
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  {SEGMENTS.map((s) => (
+                    <label key={s.id} className="flex items-center gap-1.5 text-[12.5px]">
+                      <input type="checkbox" name="segments" value={s.id} defaultChecked={mesSegments.has(s.id)} />
+                      {s.label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            ) : null}
+
+            {newsletters.length > 0 ? (
+              <button type="submit" className="justify-self-start rounded-pill bg-brand-fill px-5 py-2.5 text-xs font-bold text-brand-on">
+                Enregistrer mes choix
+              </button>
+            ) : null}
+          </form>
         </section>
 
         {/* Alertes Web Push (DF-04) */}

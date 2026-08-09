@@ -48,7 +48,8 @@ export function AdminDrawer({ children }: { children: React.ReactNode }) {
             onClick={() => setOuvert(false)}
             className="absolute inset-0 h-full w-full bg-black/50"
           />
-          <div className="absolute inset-y-0 left-0 flex w-[262px] max-w-[85vw] flex-col overflow-y-auto bg-navy px-4 py-5">
+          {/* Même barre de défilement discrète que la barre latérale fixe. */}
+          <div className="absolute inset-y-0 left-0 flex w-[262px] max-w-[85vw] flex-col overflow-y-auto overscroll-contain bg-navy px-4 py-5 [scrollbar-color:rgba(255,255,255,0.28)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:bg-transparent">
             <button
               type="button"
               onClick={() => setOuvert(false)}

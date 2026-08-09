@@ -399,6 +399,30 @@ export default async function AidePage() {
         </Module>
 
         <Module id="newsletters" icon="✉" title="Newsletters" acces="publication">
+          <p>
+            <b>Le catalogue.</b> Vous créez autant de newsletters que vous voulez (La Matinale quotidienne, une lettre
+            hebdomadaire sur le cacao, une lettre diaspora…), chacune avec son nom, sa cadence et sa description. La
+            description est ce que voient les membres au moment de choisir : soignez-la, c&apos;est un argument
+            d&apos;inscription.
+          </p>
+          <ul>
+            <li>
+              <b>Les membres</b> cochent les lettres qu&apos;ils veulent recevoir depuis leur <i>espace membre</i>.
+            </li>
+            <li>
+              <b>Vous</b> pouvez ajouter une adresse à la main sur n&apos;importe quelle lettre — inscription prise en
+              salon, par téléphone, par courrier. Si l&apos;adresse correspond à un compte du site, l&apos;inscription
+              s&apos;y rattache automatiquement.
+            </li>
+            <li>
+              Le bouton <b>Retirer</b> de la liste des inscriptions désabonne une adresse d&apos;une lettre précise.
+            </li>
+          </ul>
+          <Astuce>
+            Une newsletter qui a des inscrits ne peut pas être supprimée : il faut d&apos;abord retirer les
+            inscriptions. C&apos;est volontaire — une liste d&apos;audience se construit lentement et ne doit pas
+            disparaître d&apos;un clic.
+          </Astuce>
           <p>Composer et envoyer une lettre d&apos;information :</p>
           <ol>
             <li>Créez une édition : objet, texte d&apos;introduction (éditeur riche), sélection d&apos;articles.</li>

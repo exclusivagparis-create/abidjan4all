@@ -110,8 +110,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="flex min-h-screen bg-bg text-ink">
       {/* SIDEBAR (Back-office CMS.dc.html) — fixe à partir de lg seulement :
-          246 px sur un téléphone ne laissaient que 129 px au contenu. */}
-      <aside className="sticky top-0 hidden h-screen w-[246px] flex-none flex-col bg-navy px-4 py-5 lg:flex">
+          246 px sur un téléphone ne laissaient que 129 px au contenu.
+
+          `overflow-y-auto` est indispensable : le menu dépasse désormais la
+          hauteur d'écran, et sans défilement les dernières entrées sortaient
+          du bloc navy — elles s'affichaient sur le fond blanc de la page, sans
+          moyen de les atteindre. Barre de défilement discrète, accordée au
+          fond sombre (une barre système claire jurerait sur le navy). */}
+      <aside className="sticky top-0 hidden h-screen w-[246px] flex-none flex-col overflow-y-auto overscroll-contain bg-navy px-4 py-5 [scrollbar-color:rgba(255,255,255,0.28)_transparent] [scrollbar-width:thin] lg:flex [&::-webkit-scrollbar-thumb]:rounded-pill [&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-thumb:hover]:bg-white/40 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:bg-transparent">
         {sidebar}
       </aside>
 
