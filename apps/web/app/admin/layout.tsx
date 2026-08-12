@@ -70,6 +70,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Statistiques", href: isAdmin ? "/admin/stats" : undefined, icon: "▲" },
     { label: "KPI Business Model", href: isAdmin ? "/admin/kpi" : undefined, icon: "◎" },
     { label: "Redirections", href: canPublish ? "/admin/redirections" : undefined, icon: "↪" },
+    { label: "Accès API", href: isAdmin ? "/admin/api" : undefined, icon: "⚿" },
   ];
   // Mode d'emploi : accessible à tous les rôles du Studio, Gestionnaire Régie compris.
   const support: NavItem[] = [{ label: "Aide & mode d'emploi", href: "/admin/aide", icon: "❓" }];

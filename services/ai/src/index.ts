@@ -3,11 +3,11 @@
  * générative). Utilise l'API Claude (SDK officiel) quand AI_API_KEY est
  * renseignée ; sinon, replis heuristiques déterministes pour le développement.
  *
- * Variables : AI_API_KEY (clé API Anthropic), AI_MODEL (défaut claude-opus-4-8).
+ * Variables : AI_API_KEY (clé API Anthropic), AI_MODEL (défaut claude-opus-5).
  */
 import Anthropic from "@anthropic-ai/sdk";
 
-const DEFAULT_MODEL = "claude-opus-4-8";
+const DEFAULT_MODEL = "claude-opus-5";
 
 function getClient(): Anthropic | null {
   const apiKey = process.env.AI_API_KEY;
@@ -16,6 +16,14 @@ function getClient(): Anthropic | null {
 }
 
 const model = () => process.env.AI_MODEL ?? DEFAULT_MODEL;
+
+/**
+ * Sur les modèles actuels, la réflexion est active par défaut et `max_tokens`
+ * plafonne réflexion + réponse : une enveloppe trop juste tronque la sortie au
+ * milieu. Chaque appel ci-dessous réserve donc de la marge et choisit son
+ * niveau d'effort — « low » pour la modération et le dialogue (volume, latence),
+ * « medium » pour le résumé et la traduction (fidélité au texte source).
+ */
 
 function firstText(content: Anthropic.ContentBlock[]): string {
   for (const block of content) {
@@ -41,7 +49,7 @@ export async function summarizeArticle(title: string, text: string): Promise<Art
 
   const response = await client.messages.create({
     model: model(),
-    max_tokens: 2048,
+    max_tokens: 8192,
     thinking: { type: "adaptive" },
     system:
       "Tu es secrétaire de rédaction pour Abidjan4All, média ivoirien. Tu résumes fidèlement, en français, sans rien inventer.",
@@ -52,6 +60,7 @@ export async function summarizeArticle(title: string, text: string): Promise<Art
       },
     ],
     output_config: {
+      effort: "medium",
       format: {
         type: "json_schema",
         schema: {
@@ -110,11 +119,13 @@ export async function moderateText(text: string): Promise<ModerationResult> {
 
   const response = await client.messages.create({
     model: model(),
-    max_tokens: 256,
+    max_tokens: 4096,
+    thinking: { type: "adaptive" },
     system:
       "Tu modères les commentaires d'un média ivoirien. Évalue la toxicité (insultes, haine, menaces, spam) en tenant compte du français ivoirien et du nouchi.",
     messages: [{ role: "user", content: `Commentaire à évaluer :\n"""${text.slice(0, 4000)}"""` }],
     output_config: {
+      effort: "low",
       format: {
         type: "json_schema",
         schema: {
@@ -170,7 +181,8 @@ export async function translateArticle(
   const langue = target === "en" ? "anglais" : "français";
   const response = await client.messages.create({
     model: model(),
-    max_tokens: 8192,
+    max_tokens: 16000,
+    thinking: { type: "adaptive" },
     system:
       `Tu es traducteur de presse pour Abidjan4All, média ivoirien. Tu traduis fidèlement vers le ${langue}, ` +
       "registre journalistique, sans rien ajouter ni omettre. Les noms propres, sigles (BRVM, CAN…) et montants restent tels quels.",
@@ -178,6 +190,7 @@ export async function translateArticle(
       { role: "user", content: `Traduis cet article.\n\nTitre : ${title}\n\n${text.slice(0, 24000)}` },
     ],
     output_config: {
+      effort: "medium",
       format: {
         type: "json_schema",
         schema: {
@@ -231,8 +244,9 @@ export async function chatReply(message: string, sources: SearchSource[]): Promi
 
   const response = await client.messages.create({
     model: model(),
-    max_tokens: 1024,
+    max_tokens: 4096,
     thinking: { type: "adaptive" },
+    output_config: { effort: "low" },
     system:
       "Tu es l'assistant éditorial d'Abidjan4All, média ivoirien. Tu réponds en français, brièvement et cordialement, " +
       "en t'appuyant d'abord sur les extraits fournis (cite-les par leur numéro [n]). Hors de leur périmètre, reste général " +
@@ -293,8 +307,9 @@ export async function answerFromSources(query: string, sources: SearchSource[]):
 
   const response = await client.messages.create({
     model: model(),
-    max_tokens: 1024,
+    max_tokens: 4096,
     thinking: { type: "adaptive" },
+    output_config: { effort: "low" },
     system:
       "Tu es l'assistant de recherche d'Abidjan4All. Tu réponds en français, uniquement à partir des extraits d'articles fournis, en citant les sources par leur numéro [n]. Si les extraits ne suffisent pas, dis-le.",
     messages: [

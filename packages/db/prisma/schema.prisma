@@ -202,6 +202,7 @@ model User {
   pushSubscriptions       PushSubscription[]
   passwordSetTokens       PasswordSetToken[]
   emailVerificationTokens EmailVerificationToken[]
+  apiTokens               ApiToken[]
 }
 
 /// Jeton de confirmation d'adresse e-mail (inscription libre), usage unique.
@@ -225,6 +226,39 @@ model PasswordSetToken {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime @default(now())
+}
+
+/// Jeton d'accès à l'API (/api/v1) et au connecteur MCP (/api/mcp). Permet à un
+/// outil externe — l'application Claude, un script de la rédaction — d'agir au
+/// nom d'un compte du Studio sans jamais partager son mot de passe.
+///
+/// Le secret n'est PAS stocké : seule son empreinte SHA-256 l'est, si bien
+/// qu'une copie de la base ne livre aucun jeton utilisable. Il n'est affiché
+/// qu'une fois, à la création. `prefix` est le début du jeton, gardé en clair
+/// pour que l'administrateur reconnaisse la ligne qu'il veut révoquer.
+model ApiToken {
+  id     String @id @default(cuid())
+  /// Libellé donné par l'administrateur (« Claude Desktop de Georges »).
+  name   String
+  /// Début lisible du jeton, ex. « a4a_7f3c9b21 ».
+  prefix String @unique
+  /// SHA-256 du jeton complet, en hexadécimal.
+  tokenHash String @unique
+
+  /// Portées accordées : articles:read, articles:write, stats:read. Le rôle du
+  /// compte porteur reste le plafond — un jeton ne donne jamais plus de droits
+  /// que son propriétaire n'en a dans le Studio.
+  scopes String[]
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
 }
 
 /// Abonnement Web Push (VAPID) — anonyme ou rattaché à un compte pour
