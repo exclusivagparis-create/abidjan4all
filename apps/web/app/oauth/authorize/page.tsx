@@ -14,6 +14,7 @@ import { prisma } from "@a4a/db";
 import { auth, STUDIO_ROLES } from "@/auth";
 import { SCOPES, autorise, type ApiIdentity, type Scope } from "@/lib/api-auth";
 import { portéesDemandées } from "@/lib/oauth";
+import { changerDeCompteAction } from "@/lib/actions/oauth-actions";
 import { FormulaireAutorisation } from "@/components/oauth-consent";
 
 export const metadata: Metadata = { title: "Autoriser une application · Abidjan4All" };
@@ -29,12 +30,21 @@ interface Params {
   code_challenge_method?: string;
 }
 
-function Refus({ titre, detail }: { titre: string; detail: string }) {
+function Refus({
+  titre,
+  detail,
+  enfants,
+}: {
+  titre: string;
+  detail: string;
+  enfants?: React.ReactNode;
+}) {
   return (
-    <main className="mx-auto grid min-h-screen max-w-[560px] place-items-center px-5">
+    <main className="mx-auto grid min-h-screen max-w-[560px] place-items-center px-5 py-10">
       <div className="w-full rounded-[14px] border border-line bg-surface p-7 shadow-[var(--shadow-sm)]">
         <h1 className="mb-2 font-serif text-[22px] font-semibold text-red">{titre}</h1>
         <p className="text-[14px] leading-[1.6] text-ink-2">{detail}</p>
+        {enfants}
         <p className="mt-4 text-[12.5px] text-ink-3">
           Aucun accès n&apos;a été accordé. Vous pouvez fermer cette fenêtre.
         </p>
@@ -106,11 +116,48 @@ export default async function AutorisationPage({ searchParams }: { searchParams:
     redirect(`/login?next=${encodeURIComponent(`/oauth/authorize?${suite}`)}`);
   }
 
-  if (!STUDIO_ROLES.includes(session.user.role as (typeof STUDIO_ROLES)[number])) {
+  // Le rôle est relu en base plutôt que pris dans le jeton de session : celui-ci
+  // peut dater d'avant un changement de rôle. L'action d'autorisation fait la
+  // même vérification — mais si l'écran se fiait au jeton, un compte rétrogradé
+  // verrait l'écran de consentement puis serait éjecté au clic, sans un mot
+  // d'explication. Autant dire la vérité tout de suite.
+  const compte = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { name: true, email: true, role: true },
+  });
+
+  if (!compte || !STUDIO_ROLES.includes(compte.role as (typeof STUDIO_ROLES)[number])) {
+    // Cas fréquent : on est connecté au site avec son compte de lecture, alors
+    // que le compte de rédaction est un autre. On le dit, et on propose de
+    // changer sans repartir de zéro depuis l'application.
     return (
       <Refus
-        titre="Compte sans accès au Studio"
-        detail="Seuls les membres de la rédaction peuvent autoriser une application à se connecter au site."
+        titre="Ce compte ne peut pas autoriser l’application"
+        detail="Seuls les membres de la rédaction — journaliste, rédaction en chef, administration, gestion de la régie — peuvent connecter une application au site."
+        enfants={
+          <>
+            <p className="mt-4 rounded-[10px] border border-line bg-surface-2 px-4 py-3 text-[13px] text-ink-2">
+              Vous êtes connecté en tant que{" "}
+              <b className="text-ink">{compte?.email ?? session.user.email ?? "compte sans adresse"}</b>
+              {compte?.name ? ` (${compte.name})` : ""}. Si votre compte de rédaction est différent,
+              changez-en&nbsp;: la demande en cours sera conservée.
+            </p>
+            <form action={changerDeCompteAction} className="mt-4">
+              <input type="hidden" name="client_id" value={p.client_id} />
+              <input type="hidden" name="redirect_uri" value={redirectUri} />
+              <input type="hidden" name="scope" value={p.scope ?? ""} />
+              <input type="hidden" name="state" value={p.state ?? ""} />
+              <input type="hidden" name="code_challenge" value={p.code_challenge ?? ""} />
+              <input type="hidden" name="code_challenge_method" value="S256" />
+              <button
+                type="submit"
+                className="rounded-pill bg-brand-fill px-5 py-2.5 text-[13px] font-bold text-brand-on"
+              >
+                Changer de compte
+              </button>
+            </form>
+          </>
+        }
       />
     );
   }
@@ -119,8 +166,8 @@ export default async function AutorisationPage({ searchParams }: { searchParams:
   // pas lui-même dans le Studio n'est même pas proposée.
   const moi: ApiIdentity = {
     userId: session.user.id,
-    name: session.user.name ?? "",
-    role: session.user.role as string,
+    name: compte.name,
+    role: compte.role,
     scopes: SCOPES.map((s) => s.id) as Scope[],
     via: "session",
   };

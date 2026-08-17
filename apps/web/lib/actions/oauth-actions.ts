@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { prisma } from "@a4a/db";
-import { auth, STUDIO_ROLES } from "@/auth";
+import { auth, signOut, STUDIO_ROLES } from "@/auth";
 import { autorise, SCOPE_IDS, type ApiIdentity, type Scope } from "@/lib/api-auth";
 import { creerCode } from "@/lib/oauth";
 
@@ -83,6 +83,33 @@ export async function autoriserAction(formData: FormData): Promise<void> {
   destination.searchParams.set("code", code);
   if (state) destination.searchParams.set("state", state);
   redirect(destination.toString());
+}
+
+/**
+ * « Changer de compte » : déconnecte, puis renvoie vers l'écran de connexion
+ * en gardant la demande d'autorisation en cours. Sans cela, l'utilisateur
+ * arrivé avec le mauvais compte doit refaire tout le parcours depuis Claude.
+ *
+ * La destination est reconstruite à partir des paramètres du formulaire plutôt
+ * que reprise telle quelle : une URL de retour arbitraire glissée ici ferait de
+ * la page un tremplin de redirection.
+ */
+export async function changerDeCompteAction(formData: FormData): Promise<void> {
+  const params = new URLSearchParams();
+  for (const clé of [
+    "client_id",
+    "redirect_uri",
+    "scope",
+    "state",
+    "code_challenge",
+    "code_challenge_method",
+  ]) {
+    const valeur = formData.get(clé);
+    if (typeof valeur === "string" && valeur) params.set(clé, valeur);
+  }
+  params.set("response_type", "code");
+
+  await signOut({ redirectTo: `/login?next=${encodeURIComponent(`/oauth/authorize?${params}`)}` });
 }
 
 /** Clic « Refuser » : on repart vers l'application, sans rien accorder. */
