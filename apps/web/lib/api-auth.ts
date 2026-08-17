@@ -56,6 +56,8 @@ export async function creerJeton(input: {
   scopes: Scope[];
   /** Durée de validité en jours ; absent = pas d'expiration. */
   joursValidite?: number;
+  /** Renseigné quand le jeton naît du flux OAuth, pas du formulaire du Studio. */
+  oauthClientId?: string;
 }): Promise<{ token: string; prefix: string; id: string }> {
   const marqueur = randomBytes(4).toString("hex"); // 8 caractères
   const secret = randomBytes(32).toString("base64url");
@@ -69,6 +71,7 @@ export async function creerJeton(input: {
       tokenHash: hash(token),
       scopes: input.scopes,
       userId: input.userId,
+      oauthClientId: input.oauthClientId ?? null,
       expiresAt: input.joursValidite
         ? new Date(Date.now() + input.joursValidite * 24 * 60 * 60 * 1000)
         : null,

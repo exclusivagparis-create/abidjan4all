@@ -203,6 +203,7 @@ model User {
   passwordSetTokens       PasswordSetToken[]
   emailVerificationTokens EmailVerificationToken[]
   apiTokens               ApiToken[]
+  oauthCodes              OAuthCode[]
 }
 
 /// Jeton de confirmation d'adresse e-mail (inscription libre), usage unique.
@@ -253,12 +254,68 @@ model ApiToken {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
+  /// Renseigné quand le jeton a été délivré par le flux OAuth plutôt que créé
+  /// à la main dans le Studio : permet d'afficher « émis pour Claude » et de
+  /// tout révoquer d'un coup si l'application est débranchée.
+  oauthClient   OAuthClient? @relation(fields: [oauthClientId], references: [id], onDelete: Cascade)
+  oauthClientId String?
+
   lastUsedAt DateTime?
   expiresAt  DateTime?
   revokedAt  DateTime?
   createdAt  DateTime  @default(now())
 
   @@index([userId])
+}
+
+/// Application cliente OAuth, enregistrée dynamiquement (RFC 7591). C'est ainsi
+/// que l'application Claude se déclare : elle appelle /oauth/register, obtient
+/// un client_id, puis lance le flux d'autorisation.
+///
+/// S'enregistrer ne donne aucun droit : tant qu'un membre de la rédaction n'a
+/// pas ouvert l'écran d'autorisation et cliqué « Autoriser », aucun jeton
+/// n'existe. L'enregistrement n'est qu'une déclaration d'identité.
+model OAuthClient {
+  id       String @id @default(cuid())
+  clientId String @unique
+  /// SHA-256 du secret, pour les clients confidentiels. NULL pour les clients
+  /// publics (application de bureau), qui s'appuient sur PKCE.
+  clientSecretHash String?
+  name             String
+  /// Adresses de retour autorisées. La comparaison est stricte : une URL de
+  /// retour non enregistrée fait échouer l'autorisation.
+  redirectUris String[]
+  createdAt    DateTime @default(now())
+
+  codes  OAuthCode[]
+  tokens ApiToken[]
+}
+
+/// Code d'autorisation à usage unique (RFC 6749 §4.1) protégé par PKCE.
+/// Le code n'est pas stocké en clair : seule son empreinte SHA-256 l'est, comme
+/// pour les jetons. Durée de vie courte, une seule utilisation.
+model OAuthCode {
+  id       String @id @default(cuid())
+  codeHash String @unique
+
+  client        OAuthClient @relation(fields: [oauthClientId], references: [id], onDelete: Cascade)
+  oauthClientId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  /// Rappelés ici pour être revérifiés à l'échange : un code volé ne sert à
+  /// rien s'il est présenté depuis une autre adresse de retour.
+  redirectUri   String
+  scopes        String[]
+  codeChallenge String
+  method        String   @default("S256")
+
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([oauthClientId])
 }
 
 /// Abonnement Web Push (VAPID) — anonyme ou rattaché à un compte pour

@@ -25,6 +25,7 @@ export default async function AdminApiPage() {
       revokedAt: true,
       createdAt: true,
       user: { select: { name: true } },
+      oauthClient: { select: { name: true } },
     },
   });
 
@@ -73,6 +74,7 @@ export default async function AdminApiPage() {
                       prefix: j.prefix,
                       scopes: j.scopes,
                       proprietaire: j.user.name,
+                      viaOauth: j.oauthClient?.name ?? null,
                       dernierUsage: j.lastUsedAt ? formatDateFull(j.lastUsedAt) : null,
                       expire: j.expiresAt ? formatDateFull(j.expiresAt) : null,
                       perime: !!j.expiresAt && j.expiresAt.getTime() < Date.now(),

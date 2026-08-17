@@ -33,6 +33,21 @@ const nextConfig: NextConfig = {
   // privilèges sous Windows — activée uniquement dans le build Docker (Linux).
   ...(process.env.DOCKER_BUILD ? { output: "standalone" as const } : {}),
 
+  // Découverte OAuth : les chemins /.well-known/ sont normalisés (RFC 8414 et
+  // 9728), mais un dossier commençant par un point n'est pas un segment de
+  // route fiable dans l'App Router. Une réécriture les fait pointer vers de
+  // vraies routes, sans changer l'adresse vue par le client.
+  async rewrites() {
+    return [
+      { source: "/.well-known/oauth-authorization-server", destination: "/api/oauth/metadata" },
+      { source: "/.well-known/oauth-protected-resource", destination: "/api/oauth/resource-metadata" },
+      // Certains clients suffixent le chemin de la ressource :
+      // /.well-known/oauth-protected-resource/api/mcp
+      { source: "/.well-known/oauth-authorization-server/:path*", destination: "/api/oauth/metadata" },
+      { source: "/.well-known/oauth-protected-resource/:path*", destination: "/api/oauth/resource-metadata" },
+    ];
+  },
+
   async redirects() {
     return [
       // Ancien domaine mobile → domaine canonique, chemin conservé (les

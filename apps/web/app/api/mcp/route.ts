@@ -479,13 +479,17 @@ function lienStudio(chemin: string): string {
 // ---------------------------------------------------------------------------
 
 function refusAuth(message: string) {
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://abidjan4all.info";
   return new Response(
     JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: ERREUR.requeteInvalide, message } }),
     {
       status: 401,
       headers: {
         "content-type": "application/json",
-        "www-authenticate": 'Bearer realm="abidjan4all"',
+        // `resource_metadata` (RFC 9728) indique au client où trouver le
+        // serveur d'autorisation : c'est ce qui déclenche le flux OAuth de
+        // l'application Claude au lieu d'un simple message d'échec.
+        "www-authenticate": `Bearer realm="abidjan4all", resource_metadata="${base}/.well-known/oauth-protected-resource"`,
         "cache-control": "no-store",
       },
     }

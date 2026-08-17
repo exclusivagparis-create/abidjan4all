@@ -123,6 +123,8 @@ export interface JetonVue {
   prefix: string;
   scopes: string[];
   proprietaire: string;
+  /** Nom de l'application si le jeton vient du flux OAuth, sinon null. */
+  viaOauth: string | null;
   dernierUsage: string | null;
   expire: string | null;
   perime: boolean;
@@ -146,9 +148,17 @@ export function LigneJeton({ jeton }: { jeton: JetonVue }) {
   return (
     <tr className={`border-b border-line last:border-0 ${inactif ? "opacity-60" : ""}`}>
       <td className="px-4 py-3">
-        <div className="font-semibold text-ink">{jeton.name}</div>
+        <div className="font-semibold text-ink">
+          {jeton.name}
+          {jeton.viaOauth ? (
+            <span className="ml-2 rounded-pill bg-surface-2 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-ink-3">
+              autorisé
+            </span>
+          ) : null}
+        </div>
         <div className="text-[11.5px] text-ink-3">
           {jeton.proprietaire} · créé le {jeton.cree}
+          {jeton.viaOauth ? " · via l’écran d’autorisation" : ""}
         </div>
         {erreur ? <div className="mt-1 text-[11.5px] font-semibold text-red">{erreur}</div> : null}
       </td>
