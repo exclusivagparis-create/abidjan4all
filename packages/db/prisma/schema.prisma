@@ -205,6 +205,7 @@ model User {
   apiTokens               ApiToken[]
   oauthCodes              OAuthCode[]
   accounts                Account[]
+  accountLinkIntents      AccountLinkIntent[]
 }
 
 /// Jeton de confirmation d'adresse e-mail (inscription libre), usage unique.
@@ -249,6 +250,31 @@ model Account {
   createdAt DateTime @default(now())
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+/// Intention de rattachement, à usage unique et de courte durée.
+///
+/// La politique automatique refuse de rattacher un compte tiers à un compte de
+/// la rédaction — c'est voulu. Mais son titulaire, lui, doit pouvoir le faire
+/// délibérément depuis ses paramètres. Cette table est ce qui distingue les
+/// deux cas : elle est créée par un utilisateur authentifié juste avant le
+/// départ vers Google, et consommée au retour.
+///
+/// Elle existe plutôt qu'un simple drapeau dans un cookie parce qu'un cookie se
+/// fabrique : sans preuve côté serveur, n'importe qui pourrait se déclarer
+/// « en train de rattacher le compte n° X » et détourner le garde-fou.
+model AccountLinkIntent {
+  id        String @id @default(cuid())
+  tokenHash String @unique
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
   @@index([userId])
 }
 

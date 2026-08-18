@@ -1,8 +1,70 @@
 "use server";
 
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { AuthError } from "next-auth";
-import { signIn, signOut } from "@/auth";
-import { FOURNISSEURS, type FournisseurId } from "@/lib/social-login";
+import { prisma } from "@a4a/db";
+import { auth, signIn, signOut } from "@/auth";
+import {
+  COOKIE_INTENTION,
+  creerIntentionRattachement,
+  FOURNISSEURS,
+  INTENTION_TTL_MS,
+  type FournisseurId,
+} from "@/lib/social-login";
+
+/**
+ * Démarre un rattachement délibéré depuis les paramètres. L'intention est
+ * enregistrée en base ; le cookie ne transporte que son jeton, et ne prouve
+ * rien à lui seul.
+ */
+export async function rattacherCompteAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+
+  const demandé = String(formData.get("provider") ?? "");
+  const fournisseur = FOURNISSEURS.find((f) => f.id === demandé);
+  if (!fournisseur) return;
+
+  const jeton = await creerIntentionRattachement(session.user.id);
+  (await cookies()).set(COOKIE_INTENTION, jeton, {
+    httpOnly: true,
+    sameSite: "lax", // « lax » : le cookie doit survivre au retour depuis Google
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: INTENTION_TTL_MS / 1000,
+  });
+
+  await signIn(fournisseur.id as FournisseurId, { redirectTo: "/parametres?lien=ok" });
+}
+
+/**
+ * Détache un compte tiers. Refuse si c'était le dernier moyen d'entrer : un
+ * membre inscrit par Google n'a pas de mot de passe, et se retrouverait dehors.
+ */
+export async function detacherCompteAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+
+  const provider = String(formData.get("provider") ?? "");
+  const moi = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { passwordHash: true, accounts: { select: { id: true, provider: true } } },
+  });
+  if (!moi) return;
+
+  const cible = moi.accounts.find((a) => a.provider === provider);
+  if (!cible) return;
+
+  if (!moi.passwordHash && moi.accounts.length === 1) {
+    redirect("/parametres?lien=dernier_acces");
+  }
+
+  await prisma.account.delete({ where: { id: cible.id } });
+  revalidatePath("/parametres");
+  redirect("/parametres?lien=detache");
+}
 
 /**
  * Lance la connexion par un compte tiers. Le fournisseur est vérifié contre la

@@ -2,12 +2,16 @@ import NextAuth, { CredentialsSignin } from "next-auth";
 import type { Provider } from "next-auth/providers";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import Facebook from "next-auth/providers/facebook";
-import Apple from "next-auth/providers/apple";
 import bcrypt from "bcryptjs";
 import { prisma } from "@a4a/db";
 import { authConfig } from "./auth.config";
-import { resoudreConnexionSociale } from "./lib/social-login";
+import { cookies } from "next/headers";
+import {
+  COOKIE_INTENTION,
+  consommerIntentionRattachement,
+  rattacherDeliberement,
+  resoudreConnexionSociale,
+} from "./lib/social-login";
 
 /** Identifiants corrects mais adresse e-mail jamais confirmée. */
 export class EmailNonVerifieError extends CredentialsSignin {
@@ -23,8 +27,6 @@ export class EmailNonVerifieError extends CredentialsSignin {
 function fournisseursTiers(): Provider[] {
   const liste: Provider[] = [];
   const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = process.env;
-  const { FACEBOOK_CLIENT_ID, FACEBOOK_CLIENT_SECRET } = process.env;
-  const { APPLE_CLIENT_ID, APPLE_CLIENT_SECRET } = process.env;
 
   if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
     liste.push(
@@ -37,12 +39,6 @@ function fournisseursTiers(): Provider[] {
         authorization: { params: { prompt: "select_account" } },
       })
     );
-  }
-  if (FACEBOOK_CLIENT_ID && FACEBOOK_CLIENT_SECRET) {
-    liste.push(Facebook({ clientId: FACEBOOK_CLIENT_ID, clientSecret: FACEBOOK_CLIENT_SECRET }));
-  }
-  if (APPLE_CLIENT_ID && APPLE_CLIENT_SECRET) {
-    liste.push(Apple({ clientId: APPLE_CLIENT_ID, clientSecret: APPLE_CLIENT_SECRET }));
   }
   return liste;
 }
@@ -63,10 +59,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user, account, profile }) {
       if (!account || account.provider === "credentials") return true;
 
+      const email = user.email ?? (profile?.email as string | undefined);
+
+      // Rattachement demandé depuis les paramètres ? Le cookie ne fait
+      // qu'apporter le jeton ; c'est l'intention en base qui fait foi, et elle
+      // ne vaut qu'une fois. Si elle est absente, périmée ou déjà consommée, on
+      // retombe simplement sur la connexion ordinaire.
+      const jeton = (await cookies()).get(COOKIE_INTENTION)?.value;
+      if (jeton) {
+        const titulaire = await consommerIntentionRattachement(jeton);
+        if (titulaire) {
+          const lien = await rattacherDeliberement({
+            userId: titulaire,
+            provider: account.provider,
+            providerAccountId: account.providerAccountId,
+            email,
+          });
+          if (!lien.ok) return `/parametres?lien=${lien.raison}`;
+          user.id = lien.user.id;
+          user.name = lien.user.name;
+          user.role = lien.user.role;
+          return true;
+        }
+      }
+
       const resolution = await resoudreConnexionSociale({
         provider: account.provider,
         providerAccountId: account.providerAccountId,
-        email: user.email ?? (profile?.email as string | undefined),
+        email,
         nom: user.name ?? (profile?.name as string | undefined),
         avatar: user.image ?? null,
         profile: profile as Record<string, unknown> | undefined,

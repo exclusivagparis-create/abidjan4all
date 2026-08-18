@@ -21,14 +21,27 @@
  * suivantes passent par l'identifiant du fournisseur, sans repasser par
  * l'adresse e-mail.
  */
+import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@a4a/db";
 import { STUDIO_ROLES } from "@/lib/roles";
 
-/** Fournisseurs pris en charge, et leurs variables d'environnement. */
+/** Nom du cookie portant le jeton d'intention de rattachement. */
+export const COOKIE_INTENTION = "a4a_lien_social";
+
+/** Durée de vie d'une intention : le temps d'un aller-retour chez Google. */
+export const INTENTION_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * Fournisseurs pris en charge, et leurs variables d'environnement.
+ *
+ * Google seul, à la demande de la rédaction. Facebook exigeait une revue de
+ * l'application par Meta pour obtenir l'adresse e-mail, et Apple un compte
+ * développeur payant avec un secret à regénérer tous les six mois. La liste
+ * reste une liste : en rajouter un tient à une ligne ici, une dans auth.ts et
+ * un logo.
+ */
 export const FOURNISSEURS = [
   { id: "google", label: "Google", envId: "GOOGLE_CLIENT_ID", envSecret: "GOOGLE_CLIENT_SECRET" },
-  { id: "facebook", label: "Facebook", envId: "FACEBOOK_CLIENT_ID", envSecret: "FACEBOOK_CLIENT_SECRET" },
-  { id: "apple", label: "Apple", envId: "APPLE_CLIENT_ID", envSecret: "APPLE_CLIENT_SECRET" },
 ] as const;
 
 export type FournisseurId = (typeof FOURNISSEURS)[number]["id"];
@@ -48,23 +61,120 @@ export function fournisseursActifs(): { id: FournisseurId; label: string }[] {
 /**
  * Le fournisseur affirme-t-il que l'adresse est vérifiée ?
  *
- * Google et Apple portent la revendication `email_verified` (Apple la renvoie
- * parfois sous forme de chaîne « true »). Facebook ne la fournit pas : dans le
- * doute, on répond non — c'est le sens de ce garde-fou.
+ * Google porte la revendication `email_verified`. Le contrôle reste écrit par
+ * fournisseur, et répond NON par défaut : le jour où un autre fournisseur est
+ * ajouté, il faut décider explicitement s'il est digne de confiance — l'oubli
+ * penche du côté prudent.
  */
 export function emailVerifieParFournisseur(
   provider: string,
   profile: Record<string, unknown> | undefined
 ): boolean {
   if (!profile) return false;
-  if (provider === "google" || provider === "apple") {
+  if (provider === "google") {
     const v = profile.email_verified;
     return v === true || v === "true";
   }
   return false;
 }
 
-export type RaisonRefus = "email_absent" | "verif_impossible" | "compte_redaction";
+export type RaisonRefus =
+  | "email_absent"
+  | "verif_impossible"
+  | "compte_redaction"
+  | "deja_lie"
+  | "lien_autre_compte";
+
+// ---------------------------------------------------------------------------
+// Rattachement délibéré, depuis les paramètres
+// ---------------------------------------------------------------------------
+
+function empreinte(v: string): string {
+  return createHash("sha256").update(v, "utf8").digest("hex");
+}
+
+/** Crée une intention et renvoie le jeton à déposer dans le cookie. */
+export async function creerIntentionRattachement(userId: string): Promise<string> {
+  const jeton = randomBytes(32).toString("base64url");
+  await prisma.accountLinkIntent.create({
+    data: {
+      tokenHash: empreinte(jeton),
+      userId,
+      expiresAt: new Date(Date.now() + INTENTION_TTL_MS),
+    },
+  });
+  return jeton;
+}
+
+/**
+ * Consomme une intention. Renvoie l'identifiant du titulaire, ou null si le
+ * jeton est inconnu, déjà utilisé ou périmé.
+ *
+ * Un null n'est pas traité comme une erreur par l'appelant : il retombe sur la
+ * connexion sociale ordinaire. C'est voulu — un cookie resté d'une tentative
+ * précédente ne doit pas empêcher de se connecter normalement.
+ */
+export async function consommerIntentionRattachement(jeton: string): Promise<string | null> {
+  const hash = empreinte(jeton);
+  return prisma.$transaction(async (tx) => {
+    const ligne = await tx.accountLinkIntent.findUnique({
+      where: { tokenHash: hash },
+      select: { id: true, userId: true, usedAt: true, expiresAt: true },
+    });
+    if (!ligne || ligne.usedAt || ligne.expiresAt.getTime() < Date.now()) return null;
+    await tx.accountLinkIntent.update({ where: { id: ligne.id }, data: { usedAt: new Date() } });
+    return ligne.userId;
+  });
+}
+
+/**
+ * Rattache un compte tiers à un compte précis, sur décision de son titulaire.
+ *
+ * Le contrôle « jamais un compte de la rédaction » ne s'applique pas ici : il
+ * protège contre un rattachement subi, or celui-ci est demandé depuis une
+ * session authentifiée. Restent deux garde-fous : ne pas voler un compte tiers
+ * déjà rattaché ailleurs, et ne pas rattacher une adresse qui appartient déjà à
+ * un autre membre — ce qui détournerait ses futures connexions.
+ */
+export async function rattacherDeliberement(input: {
+  userId: string;
+  provider: string;
+  providerAccountId: string;
+  email: string | null | undefined;
+}): Promise<Resolution> {
+  const { userId, provider, providerAccountId } = input;
+
+  const dejaLie = await prisma.account.findUnique({
+    where: { provider_providerAccountId: { provider, providerAccountId } },
+    select: { userId: true },
+  });
+  if (dejaLie) {
+    // Déjà rattaché à ce compte-ci : rien à faire, on laisse entrer.
+    if (dejaLie.userId === userId) {
+      const u = await prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: { id: true, name: true, role: true },
+      });
+      return { ok: true, user: u, nouveau: false };
+    }
+    return { ok: false, raison: "deja_lie" };
+  }
+
+  const email = input.email?.trim().toLowerCase();
+  if (email) {
+    const porteur = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    if (porteur && porteur.id !== userId) return { ok: false, raison: "lien_autre_compte" };
+  }
+
+  const moi = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, name: true, role: true },
+  });
+  if (!moi) return { ok: false, raison: "deja_lie" };
+
+  await prisma.account.create({ data: { provider, providerAccountId, userId } });
+  return { ok: true, user: moi, nouveau: false };
+}
 
 export type Resolution =
   | { ok: true; user: { id: string; name: string; role: string }; nouveau: boolean }
