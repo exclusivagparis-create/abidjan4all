@@ -26,13 +26,17 @@ export class EmailNonVerifieError extends CredentialsSignin {
  */
 function fournisseursTiers(): Provider[] {
   const liste: Provider[] = [];
-  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = process.env;
+  // Nommées en toutes lettres, sans déstructuration : voir la note dans
+  // lib/social-login.ts — seule la forme `process.env.NOM` traverse
+  // correctement la compilation Next.
+  const identifiant = process.env.GOOGLE_CLIENT_ID;
+  const secret = process.env.GOOGLE_CLIENT_SECRET;
 
-  if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+  if (identifiant && secret) {
     liste.push(
       Google({
-        clientId: GOOGLE_CLIENT_ID,
-        clientSecret: GOOGLE_CLIENT_SECRET,
+        clientId: identifiant,
+        clientSecret: secret,
         // `consent` force le choix du compte : sans cela, un navigateur déjà
         // connecté à Google enchaîne sans rien demander, ce qui déroute quand
         // on veut justement changer de compte.

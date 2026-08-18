@@ -41,21 +41,29 @@ export const INTENTION_TTL_MS = 10 * 60 * 1000;
  * un logo.
  */
 export const FOURNISSEURS = [
-  { id: "google", label: "Google", envId: "GOOGLE_CLIENT_ID", envSecret: "GOOGLE_CLIENT_SECRET" },
+  {
+    id: "google",
+    label: "Google",
+    /**
+     * Les variables sont nommées EN TOUTES LETTRES, jamais lues par une clé
+     * calculée. Next.js remplace `process.env.NOM` au moment de la
+     * compilation ; un accès de la forme `process.env[variable]` échappe à ce
+     * traitement et renvoie `undefined` dans le bundle de production — tout en
+     * marchant parfaitement en développement. Le piège est silencieux : les
+     * boutons disparaissent en production sans la moindre erreur.
+     */
+    configure: () => Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+  },
 ] as const;
 
 export type FournisseurId = (typeof FOURNISSEURS)[number]["id"];
 
 /**
  * Fournisseurs réellement utilisables : ceux dont les deux identifiants sont
- * renseignés. Permet de démarrer avec Google seul sans afficher des boutons
- * qui mèneraient à une page d'erreur.
+ * renseignés. Permet de n'afficher aucun bouton tant que rien n'est configuré.
  */
 export function fournisseursActifs(): { id: FournisseurId; label: string }[] {
-  return FOURNISSEURS.filter((f) => process.env[f.envId] && process.env[f.envSecret]).map((f) => ({
-    id: f.id,
-    label: f.label,
-  }));
+  return FOURNISSEURS.filter((f) => f.configure()).map((f) => ({ id: f.id, label: f.label }));
 }
 
 /**
