@@ -16,6 +16,7 @@
  */
 import { prisma, Prisma } from "@a4a/db";
 import { autorise, verifierJeton, type ApiIdentity, type Scope } from "@/lib/api-auth";
+import { telechargerImage } from "@/lib/telechargement-image";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -330,6 +331,78 @@ const OUTILS: Outil[] = [
 
       await prisma.article.update({ where: { id: actuel.id }, data });
       return texte(`Brouillon « ${slug} » mis à jour. Toujours non publié.`);
+    },
+  },
+
+  {
+    name: "uploader_image",
+    title: "Importer une image",
+    scope: "articles:write",
+    ecrit: true,
+    description:
+      "Télécharge une image depuis une adresse publique et la range dans la médiathèque du site. Renvoie l'URL interne, la seule à utiliser dans un article — une image restée chez un tiers disparaît le jour où ce tiers la retire. Formats acceptés : jpg, png, gif, webp ; 8 Mo maximum.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url_source: {
+          type: "string",
+          description: "Adresse publique de l'image à télécharger (http ou https).",
+        },
+        nom_fichier: {
+          type: "string",
+          description: "Nom souhaité, sans extension. Facultatif — un nom est généré sinon.",
+        },
+        alt: {
+          type: "string",
+          description:
+            "Texte alternatif décrivant l'image, lu par les lecteurs d'écran et affiché si l'image ne charge pas. Vivement recommandé.",
+        },
+      },
+      required: ["url_source"],
+      additionalProperties: false,
+    },
+    async run(args, moi) {
+      const source = typeof args.url_source === "string" ? args.url_source.trim() : "";
+      if (!source) return echec("Le paramètre url_source est vide.");
+
+      const resultat = await telechargerImage(
+        source,
+        typeof args.nom_fichier === "string" ? args.nom_fichier : undefined
+      );
+      if (!resultat.ok) return echec(resultat.erreur);
+
+      const alt = typeof args.alt === "string" ? args.alt.trim() : "";
+      const media = await prisma.mediaAsset.create({
+        data: {
+          type: "image",
+          url: resultat.url,
+          alt: alt || null,
+          sizeBytes: resultat.taille,
+          tags: [],
+          uploadedById: moi.userId,
+        },
+        select: { id: true },
+      });
+
+      // Réponse dans la forme demandée par le cahier des charges, complétée
+      // d'une phrase lisible : un client MCP affiche le texte tel quel.
+      const absolue = `${lienStudio("")}${resultat.url}`;
+      return texte(
+        JSON.stringify(
+          {
+            url_interne: absolue,
+            id_media: media.id,
+            statut: "ok",
+            taille_octets: resultat.taille,
+            format: resultat.mime,
+            alt: alt || null,
+          },
+          null,
+          2
+        ) +
+          `\n\nImage rangée dans la médiathèque${alt ? "" : " — pensez à lui donner un texte alternatif"}.` +
+          `\nDans un article, utilisez l'adresse interne ci-dessus.`
+      );
     },
   },
 
