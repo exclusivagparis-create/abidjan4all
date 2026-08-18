@@ -204,6 +204,7 @@ model User {
   emailVerificationTokens EmailVerificationToken[]
   apiTokens               ApiToken[]
   oauthCodes              OAuthCode[]
+  accounts                Account[]
 }
 
 /// Jeton de confirmation d'adresse e-mail (inscription libre), usage unique.
@@ -227,6 +228,28 @@ model PasswordSetToken {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime @default(now())
+}
+
+/// Compte tiers (Google, Facebook, Apple) rattaché à un compte Abidjan4All.
+///
+/// L'identité que nous conservons est `providerAccountId` — l'identifiant
+/// stable donné par le fournisseur — et non l'adresse e-mail : une adresse peut
+/// changer de mains, pas cet identifiant. Une fois le lien créé, les connexions
+/// suivantes passent par lui et ne redemandent aucune vérification d'e-mail.
+model Account {
+  id       String @id @default(cuid())
+  /// « google », « facebook », « apple ».
+  provider String
+  /// Identifiant du compte chez le fournisseur (le « sub » du jeton).
+  providerAccountId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  createdAt DateTime @default(now())
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 /// Jeton d'accès à l'API (/api/v1) et au connecteur MCP (/api/mcp). Permet à un

@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { RegisterForm } from "./register-form";
+import { BoutonsSociaux } from "@/components/social-login";
 
 export const metadata: Metadata = { title: "Créer un compte" };
 export const dynamic = "force-dynamic";
@@ -21,6 +22,9 @@ export default async function InscriptionPage() {
           Gratuit. Votre compte membre donne accès à votre espace, aux groupes, aux commentaires et au dépôt de petites
           annonces.
         </p>
+        <div className="mb-6">
+          <BoutonsSociaux action="inscription" />
+        </div>
         <RegisterForm />
       </main>
       <SiteFooter />

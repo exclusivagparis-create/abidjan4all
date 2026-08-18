@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { LoginForm } from "./login-form";
+import { BoutonsSociaux, RAISONS_SOCIALES } from "@/components/social-login";
 
 export const metadata: Metadata = { title: "Connexion" };
+export const dynamic = "force-dynamic";
 
 export default async function LoginPage({
   searchParams,
@@ -28,6 +30,14 @@ export default async function LoginPage({
             Votre session n&apos;était plus valide et a été fermée. Reconnectez-vous pour continuer.
           </p>
         ) : null}
+        {raison && RAISONS_SOCIALES[raison] ? (
+          <p className="mb-5 rounded-[8px] bg-[rgba(232,100,26,0.1)] px-3.5 py-2.5 text-[12.5px] font-semibold leading-[1.5] text-orange">
+            {RAISONS_SOCIALES[raison]}
+          </p>
+        ) : null}
+        <div className="mb-5">
+          <BoutonsSociaux next={next} action="connexion" />
+        </div>
         <LoginForm next={next} />
       </div>
       {/* Les identifiants de démonstration du seed ne sont plus affichés ici :

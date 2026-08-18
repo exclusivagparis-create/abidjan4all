@@ -2,6 +2,26 @@
 
 import { AuthError } from "next-auth";
 import { signIn, signOut } from "@/auth";
+import { FOURNISSEURS, type FournisseurId } from "@/lib/social-login";
+
+/**
+ * Lance la connexion par un compte tiers. Le fournisseur est vérifié contre la
+ * liste connue : sans ce contrôle, une valeur glissée dans le formulaire
+ * pourrait viser n'importe quel point d'entrée d'Auth.js.
+ *
+ * La destination est restreinte aux chemins internes — une URL absolue ferait
+ * de la page de connexion un tremplin de redirection vers un site tiers.
+ */
+export async function connexionSociale(formData: FormData): Promise<void> {
+  const demandé = String(formData.get("provider") ?? "");
+  const fournisseur = FOURNISSEURS.find((f) => f.id === demandé);
+  if (!fournisseur) return;
+
+  const suite = String(formData.get("next") ?? "");
+  const destination = suite.startsWith("/") && !suite.startsWith("//") ? suite : "/espace-membre";
+
+  await signIn(fournisseur.id as FournisseurId, { redirectTo: destination });
+}
 
 export async function authenticate(
   _prevState: string | undefined,
