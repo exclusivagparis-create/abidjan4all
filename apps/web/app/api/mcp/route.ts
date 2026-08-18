@@ -17,6 +17,7 @@
 import { prisma, Prisma } from "@a4a/db";
 import { autorise, verifierJeton, type ApiIdentity, type Scope } from "@/lib/api-auth";
 import { telechargerImage } from "@/lib/telechargement-image";
+import { compterSensibles, supprimerArticles } from "@/lib/suppression-articles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -403,6 +404,83 @@ const OUTILS: Outil[] = [
           `\n\nImage rangée dans la médiathèque${alt ? "" : " — pensez à lui donner un texte alternatif"}.` +
           `\nDans un article, utilisez l'adresse interne ci-dessus.`
       );
+    },
+  },
+
+  {
+    name: "supprimer_articles",
+    title: "Supprimer des articles",
+    scope: "articles:delete",
+    ecrit: true,
+    description:
+      "Supprime définitivement des articles, par leurs slugs. Irréversible : le Studio n'a pas de corbeille. " +
+      "Exige confirmer=true — un appel sans cette confirmation ne supprime rien et se contente de décrire ce qui serait détruit. " +
+      "Appelez-le d'abord sans confirmation, montrez le récapitulatif à la personne, et ne confirmez qu'après son accord explicite. " +
+      "100 slugs au maximum par appel.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        slugs: {
+          type: "array",
+          items: { type: "string" },
+          maxItems: 100,
+          description: "Slugs des articles à supprimer.",
+        },
+        confirmer: {
+          type: "boolean",
+          description: "false ou absent : simulation. true : suppression réelle et définitive.",
+        },
+      },
+      required: ["slugs"],
+      additionalProperties: false,
+    },
+    async run(args, moi) {
+      const slugs = Array.isArray(args.slugs) ? [...new Set(args.slugs.map(String).filter(Boolean))] : [];
+      if (slugs.length === 0) return echec("Aucun slug fourni.");
+      if (slugs.length > 100) {
+        return echec(`${slugs.length} slugs reçus — 100 au maximum par appel. Procédez en plusieurs fois.`);
+      }
+
+      const existants = await prisma.article.findMany({
+        where: { slug: { in: slugs } },
+        select: { slug: true, title: true, status: true },
+      });
+      const introuvables = slugs.filter((s) => !existants.some((a) => a.slug === s));
+
+      // Sans confirmation, on ne détruit rien : on décrit. C'est le moment où
+      // un humain peut encore dire non, et il ne reviendra pas.
+      if (args.confirmer !== true) {
+        if (existants.length === 0) {
+          return echec(`Aucun de ces ${slugs.length} slugs ne correspond à un article.`);
+        }
+        const { publies, programmes } = await compterSensibles(slugs);
+        return texte(
+          [
+            `SIMULATION — rien n'a été supprimé.`,
+            ``,
+            `${existants.length} article${existants.length > 1 ? "s" : ""} serai${existants.length > 1 ? "ent" : "t"} supprimé${existants.length > 1 ? "s" : ""} définitivement :`,
+            ...existants.slice(0, 20).map((a) => `  • ${a.title} (${a.slug}) — ${a.status}`),
+            existants.length > 20 ? `  … et ${existants.length - 20} autre${existants.length - 20 > 1 ? "s" : ""}` : "",
+            introuvables.length ? `\n${introuvables.length} slug${introuvables.length > 1 ? "s" : ""} introuvable${introuvables.length > 1 ? "s" : ""} : ${introuvables.slice(0, 10).join(", ")}` : "",
+            publies + programmes > 0
+              ? `\n⚠ Dont ${publies} publié${publies > 1 ? "s" : ""}${programmes ? ` et ${programmes} programmé${programmes > 1 ? "s" : ""}` : ""}. Les articles publiés sont en ligne : leurs adresses deviendront introuvables pour les lecteurs et les moteurs de recherche.`
+              : "",
+            `\nPour exécuter, rappelez cet outil avec confirmer=true — après accord explicite de la personne.`,
+          ]
+            .filter(Boolean)
+            .join("\n")
+        );
+      }
+
+      const r = await supprimerArticles(slugs, { id: moi.userId, nom: moi.name });
+      const lignes = [
+        `${r.deleted} article${r.deleted > 1 ? "s" : ""} supprimé${r.deleted > 1 ? "s" : ""}.`,
+        r.errors.length
+          ? `${r.errors.length} erreur${r.errors.length > 1 ? "s" : ""} : ${r.errors.map((e) => `${e.slug} (${e.raison})`).slice(0, 10).join(" · ")}`
+          : `Aucune erreur.`,
+        `Journal : lot ${r.batchId} — le contenu supprimé y est conservé, une restauration manuelle reste possible.`,
+      ];
+      return texte(lignes.join("\n"));
     },
   },
 

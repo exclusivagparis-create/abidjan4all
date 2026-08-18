@@ -231,6 +231,42 @@ model PasswordSetToken {
   createdAt DateTime @default(now())
 }
 
+/// Journal des suppressions d'articles — une ligne par article supprimé.
+///
+/// La suppression est définitive : le Studio n'a pas de corbeille, c'est le
+/// choix retenu. Ce journal est le filet. Il ne sert pas qu'à savoir qui a
+/// supprimé quoi : il conserve `snapshot`, l'article entier tel qu'il était
+/// juste avant sa disparition. Une sélection partie de travers se rattrape
+/// donc à la main depuis la base, sans restaurer une sauvegarde complète —
+/// ce qui annulerait au passage tout le travail fait entre-temps.
+///
+/// L'auteur de la suppression est recopié (identifiant ET nom) plutôt que
+/// rattaché par une clé étrangère : un journal d'audit doit survivre à la
+/// suppression du compte qu'il incrimine.
+model ArticleDeletion {
+  id String @id @default(cuid())
+
+  /// Contenu complet de l'article au moment de sa suppression.
+  snapshot Json
+  /// Recopiés hors du snapshot pour être cherchables sans le déplier.
+  slug   String
+  title  String
+  status ArticleStatus
+
+  deletedById   String
+  deletedByName String
+
+  /// Regroupe les articles effacés dans la même opération : « combien » se lit
+  /// en comptant les lignes d'un même lot.
+  batchId String
+
+  createdAt DateTime @default(now())
+
+  @@index([batchId])
+  @@index([createdAt])
+  @@index([slug])
+}
+
 /// Compte tiers (Google, Facebook, Apple) rattaché à un compte Abidjan4All.
 ///
 /// L'identité que nous conservons est `providerAccountId` — l'identifiant

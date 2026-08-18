@@ -20,6 +20,15 @@ export const SCOPES = [
   { id: "articles:read", label: "Lire les articles", detail: "Rechercher, lire les brouillons et les publications." },
   { id: "articles:write", label: "Rédiger des brouillons", detail: "Créer et modifier des brouillons. Jamais publier." },
   { id: "stats:read", label: "Consulter les statistiques", detail: "Audience, abonnements, chiffres clés du tableau de bord." },
+  {
+    id: "articles:delete",
+    label: "Supprimer des articles",
+    // Portée séparée de « articles:write », et non incluse dedans : celle-ci est
+    // décrite comme « Créer et modifier des brouillons ». Y glisser la
+    // suppression donnerait ce pouvoir, sans le dire, à tous les jetons déjà
+    // délivrés sous cette description.
+    detail: "Suppression définitive, par lot. Réservée à l'administration et à la rédaction en chef.",
+  },
 ] as const;
 
 export type Scope = (typeof SCOPES)[number]["id"];
@@ -170,6 +179,11 @@ export function autorise(identite: ApiIdentity, scope: Scope): boolean {
     return ["journalist", "editor", "admin"].includes(identite.role);
   }
   if (scope === "stats:read") {
+    return PUBLISH_ROLES.includes(identite.role as (typeof PUBLISH_ROLES)[number]);
+  }
+  // Supprimer est irréversible : rédaction en chef et administration seulement,
+  // jamais un journaliste — même muni d'un jeton qui porte la portée.
+  if (scope === "articles:delete") {
     return PUBLISH_ROLES.includes(identite.role as (typeof PUBLISH_ROLES)[number]);
   }
   return true;

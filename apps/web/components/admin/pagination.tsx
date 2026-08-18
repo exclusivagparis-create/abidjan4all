@@ -62,6 +62,7 @@ export function Pagination({
   debut,
   fin,
   base,
+  params,
   libelle = "éléments",
 }: {
   page: number;
@@ -74,6 +75,12 @@ export function Pagination({
   fin: number;
   /** Chemin de la page, sans paramètre — ex. « /admin/media ». */
   base: string;
+  /**
+   * Paramètres à reconduire dans chaque lien : filtres, recherche, tri. Sans
+   * eux, passer à la page 2 d'une liste filtrée ramènerait la liste entière —
+   * et le rédacteur perdrait sa sélection de vue sans comprendre pourquoi.
+   */
+  params?: Record<string, string | undefined>;
   libelle?: string;
 }) {
   if (pages <= 1) {
@@ -87,7 +94,14 @@ export function Pagination({
     ) : null;
   }
 
-  const lien = (n: number) => (n === 1 ? base : `${base}?page=${n}`);
+  const lien = (n: number) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(params ?? {})) if (v) p.set(k, v);
+    // La page 1 reste implicite : « ?page=1 » n'apporte rien et enlaidit l'URL.
+    if (n > 1) p.set("page", String(n));
+    const s = p.toString();
+    return s ? `${base}?${s}` : base;
+  };
 
   return (
     <nav className="mt-8 flex flex-col items-center gap-3" aria-label="Pagination">

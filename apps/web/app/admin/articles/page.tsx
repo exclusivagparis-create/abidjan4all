@@ -1,11 +1,17 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { prisma, type ArticleStatus } from "@a4a/db";
-import { StatusChip } from "@/components/admin/status-chip";
+import { auth, PUBLISH_ROLES } from "@/auth";
+import { ArticlesSelection, type LigneArticle } from "@/components/admin/articles-selection";
+import { Pagination } from "@/components/admin/pagination";
 import { formatDate, initials } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Articles · Studio" };
 export const dynamic = "force-dynamic";
+
+/** Articles par page. La liste en compte plus de six mille depuis la reprise
+ *  des archives : sans pagination, la quasi-totalité restait hors d'atteinte. */
+const PAR_PAGE = 50;
 
 const FILTERS: { key: string; label: string; status?: ArticleStatus }[] = [
   { key: "tout", label: "Tout" },
@@ -18,9 +24,11 @@ const FILTERS: { key: string; label: string; status?: ArticleStatus }[] = [
 export default async function AdminArticles({
   searchParams,
 }: {
-  searchParams: Promise<{ statut?: string; q?: string; rubrique?: string }>;
+  searchParams: Promise<{ statut?: string; q?: string; rubrique?: string; page?: string }>;
 }) {
-  const { statut = "tout", q = "", rubrique = "" } = await searchParams;
+  const { statut = "tout", q = "", rubrique = "", page: pageBrute } = await searchParams;
+  const session = await auth();
+  const peutSupprimer = PUBLISH_ROLES.includes(session?.user?.role as (typeof PUBLISH_ROLES)[number]);
   const filter = FILTERS.find((f) => f.key === statut) ?? FILTERS[0]!;
   const query = q.trim();
 
@@ -30,15 +38,23 @@ export default async function AdminArticles({
     ...(query ? { title: { contains: query, mode: "insensitive" as const } } : {}),
   };
 
+  // Le nombre d'articles du filtre courant borne la pagination ; il est donc
+  // établi avant de rabattre un numéro de page hors limites.
+  const filtres = await prisma.article.count({ where });
+  const pages = Math.max(1, Math.ceil(filtres / PAR_PAGE));
+  const page = Math.min(pages, Math.max(1, Number(pageBrute) || 1));
+
   const [byStatus, rubriques, articles] = await Promise.all([
     prisma.article.groupBy({ by: ["status"], _count: true }),
     prisma.rubrique.findMany({ orderBy: { order: "asc" }, select: { slug: true, name: true } }),
     prisma.article.findMany({
       where,
       orderBy: { updatedAt: "desc" },
-      take: 50,
+      skip: (page - 1) * PAR_PAGE,
+      take: PAR_PAGE,
       select: {
         id: true,
+        slug: true,
         title: true,
         status: true,
         hidden: true,
@@ -56,6 +72,9 @@ export default async function AdminArticles({
   const total = byStatus.reduce((sum, b) => sum + b._count, 0);
   const countOf = (s?: ArticleStatus) => (s ? (byStatus.find((b) => b.status === s)?._count ?? 0) : total);
 
+  // Changer de filtre ou de recherche renvoie en page 1 : `page` n'est jamais
+  // reconduit ici. Rester en page 7 d'une liste qui vient d'en perdre cinq
+  // afficherait un vide inexplicable.
   const qs = (over: Record<string, string>) => {
     const p = new URLSearchParams();
     const merged = { statut: filter.key, q: query, rubrique, ...over };
@@ -63,6 +82,23 @@ export default async function AdminArticles({
     const s = p.toString();
     return s ? `/admin/articles?${s}` : "/admin/articles";
   };
+
+  // Mise en forme côté serveur : le composant de sélection reste un simple
+  // afficheur, sans logique de dates ni de nombres.
+  const lignes: LigneArticle[] = articles.map((a) => ({
+    id: a.id,
+    slug: a.slug,
+    titre: a.title,
+    rubriqueNom: a.rubrique.name,
+    rubriqueCouleur: a.rubrique.color,
+    auteur: a.author.name,
+    initiales: initials(a.author.name),
+    statut: a.status,
+    dateLabel: a.status === "scheduled" ? formatDate(a.scheduledAt) : formatDate(a.publishedAt ?? a.updatedAt),
+    vuesLabel: a.status === "published" ? a.views.toLocaleString("fr-FR") : "—",
+    featuredRank: a.featuredRank,
+    masque: a.hidden,
+  }));
 
   return (
     <div>
@@ -121,54 +157,27 @@ export default async function AdminArticles({
         })}
       </div>
 
-      {/* table (Back-office CMS.dc.html) */}
-      <div className="overflow-x-auto rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
-        <div className="grid grid-cols-[1fr_130px_150px_110px_110px_70px] min-w-[880px] gap-4 border-b border-line bg-surface-2 px-[22px] py-[13px] text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
-          <span>Titre</span>
-          <span>Rubrique</span>
-          <span>Auteur</span>
-          <span>Statut</span>
-          <span>Date</span>
-          <span className="text-right">Vues</span>
-        </div>
-        {articles.map((a) => (
-          <Link
-            key={a.id}
-            href={`/admin/articles/${a.id}`}
-            className="grid grid-cols-[1fr_130px_150px_110px_110px_70px] min-w-[880px] items-center gap-4 border-b border-line-2 px-[22px] py-[15px] last:border-b-0 hover:bg-surface-2/60"
-          >
-            <span className="font-serif text-base font-semibold leading-[1.2]">
-              {a.featuredRank ? <span className="mr-1.5 rounded bg-orange px-1.5 py-0.5 align-middle text-[9px] font-bold text-white">UNE {a.featuredRank}</span> : null}
-              {a.hidden ? <span className="mr-1.5 rounded bg-ink-3 px-1.5 py-0.5 align-middle text-[9px] font-bold text-white">MASQUÉ</span> : null}
-              {a.title}
-            </span>
-            <span
-              className="justify-self-start rounded-pill px-[9px] py-[3px] text-[10.5px] font-bold uppercase"
-              style={{ color: a.rubrique.color, background: `color-mix(in srgb, ${a.rubrique.color} 12%, transparent)` }}
-            >
-              {a.rubrique.name.split(" ")[0]}
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="flex h-[26px] w-[26px] items-center justify-center rounded-pill bg-[linear-gradient(135deg,#E8641A,#D6282D)] text-[11px] font-bold text-white">
-                {initials(a.author.name)}
-              </span>
-              <span className="text-[12.5px] text-ink-2">{a.author.name}</span>
-            </span>
-            <StatusChip status={a.status} />
-            <span className="text-[12.5px] text-ink-3">
-              {a.status === "scheduled"
-                ? formatDate(a.scheduledAt)
-                : formatDate(a.publishedAt ?? a.updatedAt)}
-            </span>
-            <span className="text-right text-[12.5px] font-bold text-ink-2">
-              {a.status === "published" ? a.views.toLocaleString("fr-FR") : "—"}
-            </span>
-          </Link>
-        ))}
-        {articles.length === 0 ? (
-          <p className="px-[22px] py-8 text-center text-[13px] text-ink-3">Aucun article dans ce statut.</p>
-        ) : null}
-      </div>
+      <ArticlesSelection
+        lignes={lignes}
+        peutSupprimer={peutSupprimer}
+        totalFiltre={filtres}
+        filtres={{
+          statut: filter.key === 'tout' ? undefined : filter.key,
+          q: query || undefined,
+          rubrique: rubrique || undefined,
+        }}
+      />
+
+      <Pagination
+        page={page}
+        pages={pages}
+        total={filtres}
+        debut={(page - 1) * PAR_PAGE + 1}
+        fin={(page - 1) * PAR_PAGE + lignes.length}
+        base="/admin/articles"
+        params={{ statut: filter.key === 'tout' ? undefined : filter.key, q: query || undefined, rubrique: rubrique || undefined }}
+        libelle="articles"
+      />
     </div>
   );
 }
