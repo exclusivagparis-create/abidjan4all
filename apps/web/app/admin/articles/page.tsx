@@ -4,6 +4,7 @@ import { prisma, type ArticleStatus } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
 import { ArticlesSelection, type LigneArticle } from "@/components/admin/articles-selection";
 import { Pagination } from "@/components/admin/pagination";
+import { compterDoublons, pageDoublons } from "@/lib/doublons";
 import { formatDate, initials } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Articles · Studio" };
@@ -19,6 +20,10 @@ const FILTERS: { key: string; label: string; status?: ArticleStatus }[] = [
   { key: "scheduled", label: "Programmé", status: "scheduled" },
   { key: "review", label: "Révision", status: "review" },
   { key: "draft", label: "Brouillon", status: "draft" },
+  // Pas un statut : un rapprochement entre articles. Le compteur affiche les
+  // copies EN TROP, pas les articles concernés — c'est ce nombre-là qui
+  // disparaîtra, et celui que le rédacteur veut connaître.
+  { key: "doublons", label: "Doublons" },
 ];
 
 export default async function AdminArticles({
@@ -38,36 +43,64 @@ export default async function AdminArticles({
     ...(query ? { title: { contains: query, mode: "insensitive" as const } } : {}),
   };
 
+  // « Doublons » ne s'exprime pas en clause WHERE : il faut comparer les
+  // articles entre eux. Ce filtre est donc résolu à part, par une requête à
+  // fenêtre qui numérote les exemplaires de chaque titre (cf. lib/doublons.ts).
+  const modeDoublons = statut === "doublons";
+  // Compté systématiquement : la pastille doit annoncer le nombre de copies
+  // même quand le filtre n'est pas actif — c'est ainsi qu'on découvre qu'il
+  // y a quelque chose à nettoyer.
+  const doublons = await compterDoublons();
+
   // Le nombre d'articles du filtre courant borne la pagination ; il est donc
   // établi avant de rabattre un numéro de page hors limites.
-  const filtres = await prisma.article.count({ where });
+  const filtres = modeDoublons ? (await pageDoublons(0, 0)).total : await prisma.article.count({ where });
   const pages = Math.max(1, Math.ceil(filtres / PAR_PAGE));
   const page = Math.min(pages, Math.max(1, Number(pageBrute) || 1));
 
-  const [byStatus, rubriques, articles] = await Promise.all([
+  // En mode doublons, c'est la requête à fenêtre qui décide de la page ; on ne
+  // recharge ensuite que les colonnes d'affichage, en réappliquant son ordre.
+  const copies = modeDoublons ? (await pageDoublons((page - 1) * PAR_PAGE, PAR_PAGE)).copies : [];
+  const rangs = new Map(copies.map((c) => [c.id, c]));
+
+  // Colonnes d'affichage, communes aux deux modes. Extraites plutôt que
+  // dupliquées ou fusionnées par un spread conditionnel : Prisma déduit ses
+  // types de l'objet littéral, et une union d'arguments lui fait perdre le fil.
+  const colonnes = {
+    id: true,
+    slug: true,
+    title: true,
+    status: true,
+    hidden: true,
+    featuredRank: true,
+    views: true,
+    publishedAt: true,
+    scheduledAt: true,
+    updatedAt: true,
+    rubrique: { select: { name: true, color: true } },
+    author: { select: { name: true } },
+  } as const;
+
+  const [byStatus, rubriques, articlesBruts] = await Promise.all([
     prisma.article.groupBy({ by: ["status"], _count: true }),
     prisma.rubrique.findMany({ orderBy: { order: "asc" }, select: { slug: true, name: true } }),
-    prisma.article.findMany({
-      where,
-      orderBy: { updatedAt: "desc" },
-      skip: (page - 1) * PAR_PAGE,
-      take: PAR_PAGE,
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        status: true,
-        hidden: true,
-        featuredRank: true,
-        views: true,
-        publishedAt: true,
-        scheduledAt: true,
-        updatedAt: true,
-        rubrique: { select: { name: true, color: true } },
-        author: { select: { name: true } },
-      },
-    }),
+    modeDoublons
+      ? prisma.article.findMany({ where: { id: { in: copies.map((c) => c.id) } }, select: colonnes })
+      : prisma.article.findMany({
+          where,
+          orderBy: { updatedAt: "desc" },
+          skip: (page - 1) * PAR_PAGE,
+          take: PAR_PAGE,
+          select: colonnes,
+        }),
   ]);
+
+  // `findMany` avec `id: { in: [...] }` ne respecte pas l'ordre de la liste
+  // fournie : on rétablit celui de la requête à fenêtre, sans quoi les
+  // exemplaires d'un même titre se disperseraient dans la page.
+  const articles = modeDoublons
+    ? copies.map((c) => articlesBruts.find((a) => a.id === c.id)).filter((a) => a !== undefined)
+    : articlesBruts;
 
   const total = byStatus.reduce((sum, b) => sum + b._count, 0);
   const countOf = (s?: ArticleStatus) => (s ? (byStatus.find((b) => b.status === s)?._count ?? 0) : total);
@@ -98,6 +131,8 @@ export default async function AdminArticles({
     vuesLabel: a.status === "published" ? a.views.toLocaleString("fr-FR") : "—",
     featuredRank: a.featuredRank,
     masque: a.hidden,
+    rangDoublon: rangs.get(a.id)?.rang ?? null,
+    tailleGroupe: rangs.get(a.id)?.tailleGroupe ?? null,
   }));
 
   return (
@@ -151,7 +186,10 @@ export default async function AdminArticles({
                 active ? "bg-navy text-white" : "border border-line bg-surface text-ink-2"
               }`}
             >
-              {f.label} <span className={active ? "opacity-60" : "text-ink-3"}>{countOf(f.status)}</span>
+              {f.label}{" "}
+              <span className={active ? "opacity-60" : "text-ink-3"}>
+                {f.key === "doublons" ? doublons.copiesEnTrop : countOf(f.status)}
+              </span>
             </Link>
           );
         })}
@@ -160,7 +198,10 @@ export default async function AdminArticles({
       <ArticlesSelection
         lignes={lignes}
         peutSupprimer={peutSupprimer}
-        totalFiltre={filtres}
+        // En mode doublons, le nombre qui compte n'est pas celui des articles
+        // affiches (exemplaires conserves compris) mais celui des copies qui
+        // partiront reellement.
+        totalFiltre={modeDoublons ? doublons.copiesEnTrop : filtres}
         filtres={{
           statut: filter.key === 'tout' ? undefined : filter.key,
           q: query || undefined,

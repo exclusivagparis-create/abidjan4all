@@ -13,6 +13,7 @@ import { prisma, type Prisma, type ArticleStatus } from "@a4a/db";
 import { apiError } from "@/lib/api";
 import { autorise, identifier } from "@/lib/api-auth";
 import { MAX_SLUGS } from "@/lib/suppression-articles";
+import { slugsCopiesExcedentaires } from "@/lib/doublons";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +31,20 @@ export async function GET(request: Request) {
   const statut = searchParams.get("statut") ?? "";
   const q = (searchParams.get("q") ?? "").trim();
   const rubrique = searchParams.get("rubrique") ?? "";
+
+  // Mode doublons : ne renvoie QUE les copies excédentaires, un exemplaire de
+  // chaque titre restant délibérément hors de la liste. Renvoyer ici tous les
+  // articles des groupes en double conduirait à effacer les originaux avec
+  // leurs copies — la sélection porte sur ce qui doit disparaître, pas sur ce
+  // qui se ressemble.
+  if (statut === "doublons") {
+    const { slugs, total } = await slugsCopiesExcedentaires(MAX_SLUGS);
+    const [publies, programmes] = await Promise.all([
+      prisma.article.count({ where: { slug: { in: slugs }, status: "published" } }),
+      prisma.article.count({ where: { slug: { in: slugs }, status: "scheduled" } }),
+    ]);
+    return Response.json({ slugs, total, tronque: total > slugs.length, publies, programmes });
+  }
 
   const where: Prisma.ArticleWhereInput = {
     ...(STATUTS.includes(statut as ArticleStatus) ? { status: statut as ArticleStatus } : {}),

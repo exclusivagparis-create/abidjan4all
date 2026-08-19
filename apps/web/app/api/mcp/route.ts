@@ -95,7 +95,7 @@ const OUTILS: Outil[] = [
     title: "Rechercher des articles",
     scope: "articles:read",
     description:
-      "Cherche dans les articles du site par mots-clés, rubrique ou statut. Renvoie titre, slug, rubrique, statut et date. Utiliser d'abord ceci pour retrouver le slug d'un article avant de le lire ou de le modifier.",
+      "Cherche dans les articles du site par mots-clés, rubrique ou statut. Renvoie titre, slug, rubrique, statut et date, ainsi que le nombre total de correspondances. Utiliser d'abord ceci pour retrouver le slug d'un article avant de le lire ou de le modifier. Pour parcourir un grand ensemble, rappelez l'outil en augmentant « depuis » de la valeur de « limite » à chaque fois, jusqu'à avoir vu le total annoncé.",
     inputSchema: {
       type: "object",
       properties: {
@@ -107,6 +107,12 @@ const OUTILS: Outil[] = [
           description: "Filtre sur le statut. Par défaut, tous statuts confondus.",
         },
         limite: { type: "integer", minimum: 1, maximum: 50, description: "Nombre de résultats (20 par défaut)." },
+        depuis: {
+          type: "integer",
+          minimum: 0,
+          description:
+            "Rang du premier résultat renvoyé, 0 pour le début. Sert à parcourir au-delà des premiers résultats : 0, puis 20, puis 40… L'ordre est stable, mais une publication survenue entre deux appels peut décaler les rangs.",
+        },
       },
       additionalProperties: false,
     },
@@ -126,11 +132,18 @@ const OUTILS: Outil[] = [
         where.status = args.statut as Prisma.ArticleWhereInput["status"];
       }
       const take = Math.min(50, Math.max(1, Number(args.limite) || 20));
+      const skip = Math.max(0, Number(args.depuis) || 0);
 
-      const rows = await prisma.article.findMany({
+      const [total, rows] = await Promise.all([
+        prisma.article.count({ where }),
+        prisma.article.findMany({
         where,
         take,
-        orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+        skip,
+        // `id` en dernier critère : sans départage stable, deux articles de même
+        // date pourraient s'échanger d'un appel à l'autre, et la pagination
+        // sauterait l'un en montrant l'autre deux fois.
+        orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }, { id: "asc" }],
         select: {
           slug: true,
           title: true,
@@ -143,18 +156,32 @@ const OUTILS: Outil[] = [
           rubrique: { select: { slug: true, name: true } },
           author: { select: { name: true } },
         },
-      });
+        }),
+      ]);
 
-      if (rows.length === 0) return texte("Aucun article ne correspond.");
+      if (total === 0) return texte("Aucun article ne correspond.");
+      if (rows.length === 0) {
+        return texte(
+          `Aucun résultat à partir du rang ${skip} — il n'y a que ${total} article${total > 1 ? "s" : ""} en tout.`
+        );
+      }
+
+      const fin = skip + rows.length;
+      const entete =
+        `Résultats ${skip + 1} à ${fin} sur ${total}.` +
+        (fin < total ? ` Pour la suite, rappelez l'outil avec depuis=${fin}.` : ` Fin de la liste.`);
+
       return texte(
-        rows
-          .map(
-            (a) =>
-              `• ${a.title}\n  slug: ${a.slug} · rubrique: ${a.rubrique.name} · statut: ${a.status}` +
-              `${a.premium ? " · A4A+" : ""} · ${a.views} vues · signé ${a.author.name}` +
-              `\n  ${a.dek ?? "(pas de chapeau)"}`
-          )
-          .join("\n\n")
+        entete +
+          "\n\n" +
+          rows
+            .map(
+              (a) =>
+                `• ${a.title}\n  slug: ${a.slug} · rubrique: ${a.rubrique.name} · statut: ${a.status}` +
+                `${a.premium ? " · A4A+" : ""} · ${a.views} vues · signé ${a.author.name}` +
+                `\n  ${a.dek ?? "(pas de chapeau)"}`
+            )
+            .join("\n\n")
       );
     },
   },

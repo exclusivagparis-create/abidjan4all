@@ -28,6 +28,10 @@ export interface LigneArticle {
   vuesLabel: string;
   featuredRank: number | null;
   masque: boolean;
+  /** En mode doublons : 1 = exemplaire conservé, au-delà = copie. Sinon null. */
+  rangDoublon: number | null;
+  /** Nombre d'exemplaires portant ce titre. */
+  tailleGroupe: number | null;
 }
 
 /** Par paquets côté navigateur : la progression est réelle, et aucune requête
@@ -49,6 +53,10 @@ export function ArticlesSelection({
   /** Filtre courant, reconduit vers l'API pour élargir la sélection. */
   filtres: { statut?: string; q?: string; rubrique?: string };
 }) {
+  // En mode doublons, « cocher la page » ne doit prendre que les copies : la
+  // case d'en-tête cocherait sinon aussi les exemplaires à conserver, et une
+  // suppression ferait disparaître les articles au lieu de les dédoublonner.
+  const modeDoublons = filtres.statut === "doublons";
   const router = useRouter();
   const [choisis, setChoisis] = useState<Set<string>>(new Set());
   const [elargissement, setElargissement] = useState(false);
@@ -60,7 +68,10 @@ export function ArticlesSelection({
   const [bilan, setBilan] = useState<{ ton: "ok" | "partiel" | "erreur"; texte: string } | null>(null);
   const caseEntete = useRef<HTMLInputElement>(null);
 
-  const surLaPage = useMemo(() => lignes.map((l) => l.slug), [lignes]);
+  const surLaPage = useMemo(
+    () => lignes.filter((l) => !modeDoublons || l.rangDoublon !== 1).map((l) => l.slug),
+    [lignes, modeDoublons]
+  );
   const tousCoches = surLaPage.length > 0 && surLaPage.every((s) => choisis.has(s));
   const partiel = surLaPage.some((s) => choisis.has(s)) && !tousCoches;
 
@@ -221,7 +232,7 @@ export function ArticlesSelection({
                 type="checkbox"
                 checked={tousCoches}
                 onChange={basculerPage}
-                aria-label="Tout sélectionner sur cette page"
+                aria-label={modeDoublons ? "Sélectionner les copies de cette page" : "Tout sélectionner sur cette page"}
                 className="h-[15px] w-[15px] cursor-pointer accent-[var(--red)]"
               />
             ) : null}
@@ -267,6 +278,19 @@ export function ArticlesSelection({
                 {a.masque ? (
                   <span className="mr-1.5 rounded bg-ink-3 px-1.5 py-0.5 align-middle text-[9px] font-bold text-white">
                     MASQUÉ
+                  </span>
+                ) : null}
+                {/* En mode doublons, dire lequel survit à un nettoyage : sans
+                    cette marque, rien ne distingue à l'œil l'exemplaire gardé
+                    des copies, et la sélection intelligente paraîtrait
+                    arbitraire. */}
+                {a.rangDoublon === 1 ? (
+                  <span className="mr-1.5 rounded bg-green px-1.5 py-0.5 align-middle text-[9px] font-bold text-white">
+                    À CONSERVER
+                  </span>
+                ) : a.rangDoublon ? (
+                  <span className="mr-1.5 rounded bg-orange px-1.5 py-0.5 align-middle text-[9px] font-bold text-white">
+                    COPIE {a.rangDoublon} / {a.tailleGroupe}
                   </span>
                 ) : null}
                 {a.titre}
@@ -325,7 +349,9 @@ export function ArticlesSelection({
             >
               {elargissement
                 ? "Sélection…"
-                : `Sélectionner les ${totalFiltre.toLocaleString("fr-FR")} articles du filtre`}
+                : modeDoublons
+                  ? `Sélectionner les ${totalFiltre.toLocaleString("fr-FR")} copies excédentaires`
+                  : `Sélectionner les ${totalFiltre.toLocaleString("fr-FR")} articles du filtre`}
             </button>
           ) : null}
 
