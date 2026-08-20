@@ -127,3 +127,31 @@ export async function deleteMedia(id: string): Promise<MediaResult> {
   revalidatePath("/admin/media");
   return { ok: true };
 }
+
+/**
+ * Recherche dans la médiathèque, pour les sélecteurs d'images de l'éditeur.
+ *
+ * Les sélecteurs reçoivent les 500 visuels les plus récents ; la médiathèque en
+ * compte plus de six mille depuis la reprise des archives. Sans cette
+ * recherche, filtrer côté client ne fouille que ces 500 — et un rédacteur qui
+ * cherche une photo d'archive conclut à tort qu'elle n'existe pas.
+ */
+export async function chercherMedias(q: string): Promise<{ id: string; url: string; alt: string | null }[]> {
+  const session = await auth();
+  if (!session?.user || !STUDIO_ROLES.includes(session.user.role as (typeof STUDIO_ROLES)[number])) {
+    return [];
+  }
+
+  const terme = q.trim();
+  if (terme.length < 2) return [];
+
+  return prisma.mediaAsset.findMany({
+    where: {
+      type: "image",
+      OR: [{ alt: { contains: terme, mode: "insensitive" } }, { url: { contains: terme, mode: "insensitive" } }],
+    },
+    orderBy: { createdAt: "desc" },
+    take: 60,
+    select: { id: true, url: true, alt: true },
+  });
+}

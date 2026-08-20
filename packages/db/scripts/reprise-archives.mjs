@@ -18,8 +18,14 @@
  * Sans `--appliquer`, le script ne fait que compter et montrer — c'est le mode
  * par défaut, sur une base de quatre mille articles en production.
  *
+ *  3. DOUBLONS D'IMAGES — conséquence de la passe précédente : elle a repris
+ *     les URL absolues du Markdown alors que le site travaille en relatif, ce
+ *     qui a fait exister chaque fichier deux fois dans la médiathèque. La passe
+ *     `--doublons-images` ramène tout au relatif et fusionne les fiches.
+ *
  *   node scripts/reprise-archives.mjs --rubriques
  *   node scripts/reprise-archives.mjs --images --appliquer
+ *   node scripts/reprise-archives.mjs --doublons-images --appliquer
  */
 import { PrismaClient } from "@prisma/client";
 import { classer } from "./regles-rubriques.mjs";
@@ -197,13 +203,117 @@ async function passeImages() {
 }
 
 // ---------------------------------------------------------------------------
+// Passe 3 — dédoublonnage des images
+// ---------------------------------------------------------------------------
+
+/** `https://abidjan4all.info/uploads/x.jpg` → `/uploads/x.jpg`. */
+const ABSOLUE = /^https?:\/\/[^/]+(\/uploads\/.+)$/;
+
+/**
+ * La passe `--images` a écrit les URL sous la forme absolue trouvée dans le
+ * Markdown d'origine, alors que tout le reste du site — téléversement,
+ * médiathèque, suppression de fichier — travaille en relatif `/uploads/…`.
+ * Résultat : 6 542 fichiers présents deux fois dans la médiathèque, une fois
+ * sous chaque forme.
+ *
+ * Ce n'est pas qu'une redite visuelle. `supprimerFichier` ne reconnaît que les
+ * URL relatives : un visuel effacé depuis le Studio par sa fiche absolue
+ * laisserait son fichier sur le disque, indéfiniment.
+ *
+ * On ramène donc tout au relatif, et l'exemplaire absolu s'efface au profit de
+ * celui qui existait déjà — le plus ancien, celui que la médiathèque connaît.
+ */
+async function passeDoublonsImages() {
+  entete("Dédoublonnage des images : URL absolues → relatives");
+
+  const medias = await prisma.mediaAsset.findMany({
+    where: { url: { contains: "/uploads/" } },
+    select: { id: true, url: true, createdAt: true },
+  });
+
+  // Par nom de fichier : c'est lui qui dit « même image », pas l'URL.
+  const parFichier = new Map();
+  for (const m of medias) {
+    const relative = ABSOLUE.exec(m.url)?.[1] ?? m.url;
+    if (!parFichier.has(relative)) parFichier.set(relative, []);
+    parFichier.get(relative).push({ ...m, estAbsolue: ABSOLUE.test(m.url) });
+  }
+
+  const aSupprimer = []; // { absolu, garde }
+  const aNormaliser = []; // { id, url } — absolus sans jumeau relatif
+  for (const [relative, exemplaires] of parFichier) {
+    const absolus = exemplaires.filter((e) => e.estAbsolue);
+    if (absolus.length === 0) continue;
+    const garde = exemplaires.find((e) => !e.estAbsolue);
+    if (garde) for (const a of absolus) aSupprimer.push({ absolu: a.id, garde: garde.id });
+    // Aucun jumeau : on garde la fiche, on corrige seulement sa forme d'URL.
+    else for (const a of absolus) aNormaliser.push({ id: a.id, url: relative });
+  }
+
+  console.log(`  fiches médias en double : ${aSupprimer.length}`);
+  console.log(`  fiches à normaliser     : ${aNormaliser.length}`);
+
+  // Les corps d'articles citent eux aussi la forme absolue dans leurs blocs
+  // image : sans cette reprise, ils pointeraient vers des fiches supprimées.
+  const articles = await prisma.article.findMany({ select: { id: true, body: true } });
+  const corrections = [];
+  for (const a of articles) {
+    if (!Array.isArray(a.body)) continue;
+    let touche = false;
+    const corps = a.body.map((b) => {
+      if (!b || b.type !== "image" || typeof b.url !== "string") return b;
+      const rel = ABSOLUE.exec(b.url)?.[1];
+      if (!rel) return b;
+      touche = true;
+      return { ...b, url: rel };
+    });
+    if (touche) corrections.push({ id: a.id, body: corps });
+  }
+  console.log(`  blocs image à réécrire  : ${corrections.length} articles`);
+
+  if (!APPLIQUER) return;
+
+  // Ordre imposé par la clé étrangère : on déplace les couvertures AVANT
+  // d'effacer les fiches vers lesquelles elles pointent.
+  let repointees = 0;
+  for (const { absolu, garde } of aSupprimer) {
+    const r = await prisma.article.updateMany({
+      where: { coverAssetId: absolu },
+      data: { coverAssetId: garde },
+    });
+    repointees += r.count;
+  }
+  console.log(`  images de une repointées : ${repointees}`);
+
+  for (const n of aNormaliser) {
+    await prisma.mediaAsset.update({ where: { id: n.id }, data: { url: n.url } });
+  }
+
+  for (const c of corrections) {
+    await prisma.article.update({ where: { id: c.id }, data: { body: c.body } });
+  }
+
+  const ids = aSupprimer.map((s) => s.absolu);
+  let effacees = 0;
+  for (let i = 0; i < ids.length; i += LOT) {
+    const r = await prisma.mediaAsset.deleteMany({ where: { id: { in: ids.slice(i, i + LOT) } } });
+    effacees += r.count;
+    process.stdout.write(`\r  fiches effacées ${effacees}/${ids.length}`);
+  }
+  console.log("\n  terminé.");
+}
+
+// ---------------------------------------------------------------------------
 
 const passes = [];
 if (args.has("--rubriques")) passes.push(passeRubriques);
 if (args.has("--images")) passes.push(passeImages);
+if (args.has("--doublons-images")) passes.push(passeDoublonsImages);
 
 if (passes.length === 0) {
-  console.error("Usage : node scripts/reprise-archives.mjs [--rubriques] [--images] [--appliquer]");
+  console.error(
+    "Usage : node scripts/reprise-archives.mjs [--rubriques] [--images] [--doublons-images] [--appliquer]"
+  );
   process.exit(1);
 }
 
