@@ -418,8 +418,17 @@ const FICHIERS_ABSENTS = [
   "face-a-la-coree-du-sud-les-elephants-jouent-deja-leur-avenir-mondial-4",
 ];
 
-/** Reste de Markdown dont l'URL est tronquée à la source : illisible. */
-const MARKDOWN_TRONQUE = /!\[[^\]]*\]\([^)]*$/;
+/**
+ * Reste de Markdown d'image tronqué à la source.
+ *
+ * Volontairement large : la passe `--images` a converti TOUTES les images
+ * Markdown complètes en blocs `image`. Un `![` encore présent dans un
+ * paragraphe est donc forcément un fragment mutilé, quel que soit l'endroit où
+ * la troncature est tombée — après l'URL (`…/uploa`), ou avant même le crochet
+ * fermant (`![DINER GALA DU COLLECTIF S'UNIR PO`). Une expression calquée sur
+ * la première forme rencontrée laissait passer la seconde.
+ */
+const MARKDOWN_TRONQUE = /!\[/;
 
 async function passePublier() {
   entete("Publication de l'archive, chronologie reconstituée");
@@ -487,6 +496,34 @@ async function passePublier() {
 }
 
 // ---------------------------------------------------------------------------
+// Passe 6 — fragments de Markdown mutilés
+// ---------------------------------------------------------------------------
+
+/**
+ * Retire les paragraphes qui ne sont qu'un reste de Markdown d'image tronqué.
+ * Séparée de `--publier` pour pouvoir repasser sur des articles DÉJÀ en ligne :
+ * c'est le lecteur qui voit ces fragments, pas le rédacteur.
+ */
+async function passeFragments() {
+  entete("Fragments de Markdown tronqués");
+
+  const articles = await prisma.article.findMany({ select: { id: true, slug: true, body: true } });
+  const corrections = [];
+  for (const a of articles) {
+    if (!Array.isArray(a.body)) continue;
+    const propre = a.body.filter((b) => !(b?.type === "paragraph" && MARKDOWN_TRONQUE.test(b.text ?? "")));
+    if (propre.length !== a.body.length) corrections.push({ id: a.id, slug: a.slug, body: propre });
+  }
+
+  for (const c of corrections) console.log(`  · ${c.slug.slice(0, 70)}`);
+  console.log(`\n  ${corrections.length} articles à nettoyer.`);
+  if (!APPLIQUER) return;
+
+  for (const c of corrections) await prisma.article.update({ where: { id: c.id }, data: { body: c.body } });
+  console.log("  terminé.");
+}
+
+// ---------------------------------------------------------------------------
 
 const passes = [];
 if (args.has("--rubriques")) passes.push(passeRubriques);
@@ -494,6 +531,7 @@ if (args.has("--images")) passes.push(passeImages);
 if (args.has("--doublons-images")) passes.push(passeDoublonsImages);
 if (args.has("--menage")) passes.push(passeMenage);
 if (args.has("--publier")) passes.push(passePublier);
+if (args.has("--fragments")) passes.push(passeFragments);
 
 if (passes.length === 0) {
   console.error(
