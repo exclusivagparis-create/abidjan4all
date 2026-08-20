@@ -88,7 +88,19 @@ export default async function AdminArticles({
       ? prisma.article.findMany({ where: { id: { in: copies.map((c) => c.id) } }, select: colonnes })
       : prisma.article.findMany({
           where,
-          orderBy: { updatedAt: "desc" },
+          // Tri sur la date de PARUTION, pas sur la date de modification.
+          //
+          // `updatedAt` semblait dire « les plus récents d'abord » tant que les
+          // articles étaient touchés un par un. La reprise des archives l'a
+          // démenti : elle a réécrit 4 248 articles en une passe, du plus récent
+          // au plus ancien, si bien que les articles de 2020 se sont retrouvés
+          // en tête de liste — ceux modifiés en dernier. Une date de modification
+          // dit quand une ligne a changé, pas quand l'article a paru ; sur un
+          // journal, c'est la parution qui ordonne.
+          //
+          // Les brouillons n'ont pas de date de parution et passent devant :
+          // ce sont eux qui attendent une décision de la rédaction.
+          orderBy: [{ publishedAt: { sort: "desc", nulls: "first" } }, { updatedAt: "desc" }],
           skip: (page - 1) * PAR_PAGE,
           take: PAR_PAGE,
           select: colonnes,
