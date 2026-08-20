@@ -9,16 +9,15 @@
  * Ne renvoie que des slugs, jamais de contenu : c'est une liste de cibles, pas
  * une extraction. Plafonnée à MAX_SLUGS, la limite d'une opération.
  */
-import { prisma, type Prisma, type ArticleStatus } from "@a4a/db";
+import { prisma } from "@a4a/db";
 import { apiError } from "@/lib/api";
 import { autorise, identifier } from "@/lib/api-auth";
 import { MAX_SLUGS } from "@/lib/suppression-articles";
 import { slugsCopiesExcedentaires } from "@/lib/doublons";
+import { clauseArticles } from "@/lib/filtres-articles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const STATUTS: ArticleStatus[] = ["draft", "review", "scheduled", "published"];
 
 export async function GET(request: Request) {
   const moi = await identifier(request);
@@ -29,8 +28,6 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const statut = searchParams.get("statut") ?? "";
-  const q = (searchParams.get("q") ?? "").trim();
-  const rubrique = searchParams.get("rubrique") ?? "";
 
   // Mode doublons : ne renvoie QUE les copies excédentaires, un exemplaire de
   // chaque titre restant délibérément hors de la liste. Renvoyer ici tous les
@@ -46,15 +43,20 @@ export async function GET(request: Request) {
     return Response.json({ slugs, total, tronque: total > slugs.length, publies, programmes });
   }
 
-  const where: Prisma.ArticleWhereInput = {
-    ...(STATUTS.includes(statut as ArticleStatus) ? { status: statut as ArticleStatus } : {}),
-    ...(rubrique ? { rubrique: { slug: rubrique } } : {}),
-    ...(q ? { title: { contains: q, mode: "insensitive" as const } } : {}),
-  };
+  // Même clause que la liste affichée : la sélection « tout le filtre » ne doit
+  // jamais porter sur d'autres articles que ceux que le rédacteur voit.
+  const where = clauseArticles({
+    statut,
+    q: searchParams.get("q") ?? "",
+    rubrique: searchParams.get("rubrique") ?? "",
+    auteur: searchParams.get("auteur") ?? "",
+    du: searchParams.get("du") ?? "",
+    au: searchParams.get("au") ?? "",
+  });
 
   const lignes = await prisma.article.findMany({
     where,
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ publishedAt: { sort: "desc", nulls: "first" } }, { updatedAt: "desc" }],
     take: MAX_SLUGS,
     select: { slug: true },
   });

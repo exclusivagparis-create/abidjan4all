@@ -50,8 +50,13 @@ export function ArticlesSelection({
   peutSupprimer: boolean;
   /** Nombre d'articles répondant au filtre courant, toutes pages confondues. */
   totalFiltre: number;
-  /** Filtre courant, reconduit vers l'API pour élargir la sélection. */
-  filtres: { statut?: string; q?: string; rubrique?: string };
+  /**
+   * Filtre courant, reconduit tel quel vers l'API pour élargir la sélection.
+   * Toute clé présente est transmise : ajouter un filtre à la page suffit donc
+   * à ce que la sélection « tout le filtre » en tienne compte — sans quoi elle
+   * porterait sur des articles absents de l'écran.
+   */
+  filtres: { statut?: string; q?: string; rubrique?: string; auteur?: string; du?: string; au?: string };
 }) {
   // En mode doublons, « cocher la page » ne doit prendre que les copies : la
   // case d'en-tête cocherait sinon aussi les exemplaires à conserver, et une

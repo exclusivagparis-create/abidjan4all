@@ -5,6 +5,7 @@ import { auth, PUBLISH_ROLES } from "@/auth";
 import { ArticlesSelection, type LigneArticle } from "@/components/admin/articles-selection";
 import { Pagination } from "@/components/admin/pagination";
 import { compterDoublons, pageDoublons } from "@/lib/doublons";
+import { clauseArticles } from "@/lib/filtres-articles";
 import { formatDate, initials } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Articles · Studio" };
@@ -29,19 +30,33 @@ const FILTERS: { key: string; label: string; status?: ArticleStatus }[] = [
 export default async function AdminArticles({
   searchParams,
 }: {
-  searchParams: Promise<{ statut?: string; q?: string; rubrique?: string; page?: string }>;
+  searchParams: Promise<{
+    statut?: string;
+    q?: string;
+    rubrique?: string;
+    auteur?: string;
+    du?: string;
+    au?: string;
+    page?: string;
+  }>;
 }) {
-  const { statut = "tout", q = "", rubrique = "", page: pageBrute } = await searchParams;
+  const {
+    statut = "tout",
+    q = "",
+    rubrique = "",
+    auteur = "",
+    du = "",
+    au = "",
+    page: pageBrute,
+  } = await searchParams;
   const session = await auth();
   const peutSupprimer = PUBLISH_ROLES.includes(session?.user?.role as (typeof PUBLISH_ROLES)[number]);
   const filter = FILTERS.find((f) => f.key === statut) ?? FILTERS[0]!;
   const query = q.trim();
 
-  const where = {
-    ...(filter.status ? { status: filter.status } : {}),
-    ...(rubrique ? { rubrique: { slug: rubrique } } : {}),
-    ...(query ? { title: { contains: query, mode: "insensitive" as const } } : {}),
-  };
+  // Clause partagée avec la route qui sélectionne « tout le filtre » : les deux
+  // doivent voir le même ensemble (cf. lib/filtres-articles.ts).
+  const where = clauseArticles({ statut: filter.status, q: query, rubrique, auteur, du, au });
 
   // « Doublons » ne s'exprime pas en clause WHERE : il faut comparer les
   // articles entre eux. Ce filtre est donc résolu à part, par une requête à
@@ -81,9 +96,17 @@ export default async function AdminArticles({
     author: { select: { name: true } },
   } as const;
 
-  const [byStatus, rubriques, articlesBruts] = await Promise.all([
+  const [byStatus, rubriques, auteurs, articlesBruts] = await Promise.all([
     prisma.article.groupBy({ by: ["status"], _count: true }),
     prisma.rubrique.findMany({ orderBy: { order: "asc" }, select: { slug: true, name: true } }),
+    // Seuls les comptes qui signent réellement quelque chose : une liste de
+    // tous les utilisateurs mêlerait des lecteurs à des auteurs et rendrait le
+    // sélecteur inutilisable.
+    prisma.user.findMany({
+      where: { articles: { some: {} } },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, _count: { select: { articles: true } } },
+    }),
     modeDoublons
       ? prisma.article.findMany({ where: { id: { in: copies.map((c) => c.id) } }, select: colonnes })
       : prisma.article.findMany({
@@ -122,11 +145,23 @@ export default async function AdminArticles({
   // afficherait un vide inexplicable.
   const qs = (over: Record<string, string>) => {
     const p = new URLSearchParams();
-    const merged = { statut: filter.key, q: query, rubrique, ...over };
+    const merged = { statut: filter.key, q: query, rubrique, auteur, du, au, ...over };
     for (const [k, v] of Object.entries(merged)) if (v && v !== "tout") p.set(k, v);
     const s = p.toString();
     return s ? `/admin/articles?${s}` : "/admin/articles";
   };
+
+  // Les filtres reconduits partout : pagination, sélection « tout le filtre »,
+  // et bouton de réinitialisation. Une seule source pour les trois.
+  const filtresActifs = {
+    statut: filter.key === "tout" ? undefined : filter.key,
+    q: query || undefined,
+    rubrique: rubrique || undefined,
+    auteur: auteur || undefined,
+    du: du || undefined,
+    au: au || undefined,
+  };
+  const aDesFiltres = Boolean(query || rubrique || auteur || du || au);
 
   // Mise en forme côté serveur : le composant de sélection reste un simple
   // afficheur, sans logique de dates ni de nombres.
@@ -176,15 +211,56 @@ export default async function AdminArticles({
             </option>
           ))}
         </select>
+        <select name="auteur" defaultValue={auteur} className="rounded-pill border border-line bg-surface px-3 py-2 text-[13px]">
+          <option value="">Tous les auteurs</option>
+          {auteurs.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name} ({a._count.articles})
+            </option>
+          ))}
+        </select>
+
+        {/* Bornes de date, incluses toutes les deux. Étiquetées : deux champs
+            de date côte à côte sans mot ne disent pas lequel est le début. */}
+        <label className="inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
+          Du
+          <input
+            type="date"
+            name="du"
+            defaultValue={du}
+            className="rounded-pill border border-line bg-surface px-3 py-2 text-[13px] outline-none"
+          />
+        </label>
+        <label className="inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
+          au
+          <input
+            type="date"
+            name="au"
+            defaultValue={au}
+            className="rounded-pill border border-line bg-surface px-3 py-2 text-[13px] outline-none"
+          />
+        </label>
+
         <button type="submit" className="rounded-pill bg-navy px-4 py-2 text-[13px] font-semibold text-white">
           Rechercher
         </button>
-        {query || rubrique ? (
-          <Link href={qs({ q: "", rubrique: "" })} className="text-[12.5px] font-semibold text-ink-3">
+        {aDesFiltres ? (
+          <Link
+            href={qs({ q: "", rubrique: "", auteur: "", du: "", au: "" })}
+            className="text-[12.5px] font-semibold text-ink-2"
+          >
             Réinitialiser
           </Link>
         ) : null}
       </form>
+
+      {/* La date filtrée est celle qu'affiche la colonne « Date » : parution
+          pour un article paru, dernière modification pour un brouillon. */}
+      {du || au ? (
+        <p className="mb-3 text-[12.5px] text-ink-2">
+          Période filtrée sur la date affichée — parution, ou dernière modification pour un brouillon.
+        </p>
+      ) : null}
 
       {/* filtres par statut */}
       <div className="mb-[18px] flex flex-wrap items-center gap-2">
@@ -214,11 +290,7 @@ export default async function AdminArticles({
         // affiches (exemplaires conserves compris) mais celui des copies qui
         // partiront reellement.
         totalFiltre={modeDoublons ? doublons.copiesEnTrop : filtres}
-        filtres={{
-          statut: filter.key === 'tout' ? undefined : filter.key,
-          q: query || undefined,
-          rubrique: rubrique || undefined,
-        }}
+        filtres={filtresActifs}
       />
 
       <Pagination
@@ -228,7 +300,7 @@ export default async function AdminArticles({
         debut={(page - 1) * PAR_PAGE + 1}
         fin={(page - 1) * PAR_PAGE + lignes.length}
         base="/admin/articles"
-        params={{ statut: filter.key === 'tout' ? undefined : filter.key, q: query || undefined, rubrique: rubrique || undefined }}
+        params={filtresActifs}
         libelle="articles"
       />
     </div>
