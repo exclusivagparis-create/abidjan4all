@@ -524,6 +524,59 @@ async function passeFragments() {
 }
 
 // ---------------------------------------------------------------------------
+// Passe 7 — redater les archives publiées à la main
+// ---------------------------------------------------------------------------
+
+/** Au-delà de cet écart, la date affichée ne peut pas être la vraie parution. */
+const ECART_TOLERE_JOURS = 30;
+
+/**
+ * Une archive publiée depuis le Studio reçoit `publishedAt = maintenant`, parce
+ * que l'action de publication ignore tout de la chronologie reconstituée. Un
+ * fait divers de 2022 se retrouve alors en tête de l'accueil, daté du jour —
+ * exactement ce que la reconstitution des dates servait à éviter.
+ *
+ * Cette passe compare, pour chaque article portant un identifiant du site
+ * source, la date affichée à la date reconstituée, et signale les écarts. La
+ * tolérance de trente jours laisse passer l'imprécision de la reconstitution
+ * elle-même : on ne corrige que les dates manifestement fausses, jamais celles
+ * qui ne font que différer de quelques jours.
+ *
+ * Elle est idempotente : réappliquée, elle ne touche plus rien.
+ */
+async function passeRedater() {
+  entete("Redatage des archives publiées à la main");
+
+  const articles = await prisma.article.findMany({
+    where: { status: "published" },
+    select: { id: true, title: true, publishedAt: true, coverAsset: { select: { url: true } } },
+  });
+
+  const ecarts = [];
+  for (const a of articles) {
+    const id = identifiantSource(a.coverAsset?.url);
+    if (!id || !a.publishedAt) continue;
+    const cible = dateReconstituee(id);
+    if (!cible) continue;
+    const jours = Math.abs(a.publishedAt - cible) / 86_400_000;
+    if (jours > ECART_TOLERE_JOURS) ecarts.push({ id: a.id, title: a.title, de: a.publishedAt, vers: cible, jours });
+  }
+
+  ecarts.sort((x, y) => y.vers - x.vers);
+  const f = (d) => d.toISOString().slice(0, 10);
+  for (const e of ecarts) {
+    console.log(`  ${f(e.de)} → ${f(e.vers)}  (${Math.round(e.jours)} j)  ${e.title.slice(0, 46)}`);
+  }
+  console.log(`\n  ${ecarts.length} articles à redater.`);
+  if (!APPLIQUER) return;
+
+  for (const e of ecarts) {
+    await prisma.article.update({ where: { id: e.id }, data: { publishedAt: e.vers } });
+  }
+  console.log("  terminé.");
+}
+
+// ---------------------------------------------------------------------------
 
 const passes = [];
 if (args.has("--rubriques")) passes.push(passeRubriques);
@@ -532,6 +585,7 @@ if (args.has("--doublons-images")) passes.push(passeDoublonsImages);
 if (args.has("--menage")) passes.push(passeMenage);
 if (args.has("--publier")) passes.push(passePublier);
 if (args.has("--fragments")) passes.push(passeFragments);
+if (args.has("--redater")) passes.push(passeRedater);
 
 if (passes.length === 0) {
   console.error(
