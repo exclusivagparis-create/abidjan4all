@@ -528,13 +528,19 @@ async function passeFragments() {
 // ---------------------------------------------------------------------------
 
 /**
- * Tout article créé au plus tard ce jour-là vient de l'import des archives ;
- * ceux d'après sont écrits dans le Studio. C'est ce critère, et non la seule
- * présence d'un identifiant source, qui distingue une archive : un article
- * maison peut parfaitement être illustré d'une photo d'archive, et il ne
- * faudrait surtout pas le redater à l'époque de sa photo.
+ * Fenêtre pendant laquelle l'import des archives a écrit ses lignes : les 17 et
+ * 18 août 2026. Les articles écrits dans le Studio l'encadrent — du 12 juillet
+ * au 16 août pour les précédents, à partir du 20 août pour les suivants —, si
+ * bien qu'aucun ne tombe dedans. Mesuré : 4 263 lignes dans la fenêtre, toutes
+ * porteuses d'un identifiant source, et aucune en dehors.
+ *
+ * Borner des deux côtés, et pas seulement « avant la fin de l'import », est ce
+ * qui rend le critère discriminant : un article maison peut être illustré
+ * d'une photo d'archive, et le redater à l'époque de sa photo serait un
+ * contresens. La borne basse l'exclut sans avoir à en juger.
  */
-const FIN_DE_L_IMPORT = new Date("2026-08-19T00:00:00Z");
+const IMPORT_DEBUT = new Date("2026-08-17T00:00:00Z");
+const IMPORT_FIN = new Date("2026-08-19T00:00:00Z");
 
 /**
  * Écart en deçà duquel on ne réécrit pas : la date est déjà la bonne. Deux
@@ -558,7 +564,7 @@ async function passeRedater() {
   entete("Redatage des archives publiées à la main");
 
   const articles = await prisma.article.findMany({
-    where: { status: "published", createdAt: { lt: FIN_DE_L_IMPORT } },
+    where: { status: "published", createdAt: { gte: IMPORT_DEBUT, lt: IMPORT_FIN } },
     select: { id: true, title: true, publishedAt: true, coverAsset: { select: { url: true } } },
   });
 
