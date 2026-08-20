@@ -366,6 +366,16 @@ async function passeMenage() {
   console.log(`\n  ${aEffacer.length} entrées à effacer.`);
   if (!APPLIQUER) return;
 
+  // Le journal d'audit exige de savoir QUI a effacé : la traçabilité n'admet
+  // pas d'auteur anonyme. Un script n'est pas une personne, on l'impute donc au
+  // compte d'administration, et le nom affiché dit que la main était un script.
+  const responsable = await prisma.user.findFirst({
+    where: { role: "admin" },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  if (!responsable) throw new Error("Aucun compte administrateur : impossible d'imputer la suppression.");
+
   for (const a of aEffacer) {
     // Même précaution que la suppression de masse du Studio : l'instantané
     // est écrit AVANT l'effacement, dans la même transaction. Sans lui, une
@@ -379,6 +389,7 @@ async function passeMenage() {
             slug: a.slug,
             title: a.title,
             status: a.status,
+            deletedById: responsable.id,
             deletedByName: "Reprise des archives (script)",
             batchId: "menage-archives",
           },
