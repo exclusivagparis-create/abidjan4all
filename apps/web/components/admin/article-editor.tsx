@@ -1,9 +1,16 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { ArticleStatus } from "@a4a/db";
 import { saveArticle, setArticleHidden, transitionArticle, type ArticleInput } from "@/lib/actions/article-actions";
+import {
+  cleBrouillon,
+  lireBrouillon,
+  oublierBrouillon,
+  useGardeModifications,
+  type BrouillonLocal,
+} from "./garde-modifications";
 import { RichTextEditor } from "./rich-text-editor";
 import { SelecteurImage } from "./selecteur-image";
 import { STATUS_META } from "./status-chip";
@@ -37,9 +44,12 @@ export type EditorArticle = {
   hidden: boolean;
   slug: string | null;
   blocks: Block[];
+  /** Signataire de l'article — modifiable par la rédaction en chef seule. */
+  authorId: string;
 };
 
 export type RubriqueOption = { id: string; slug: string; name: string; color: string };
+export type AuteurOption = { id: string; name: string; role: string };
 export type MediaOption = { id: string; url: string; alt: string | null };
 
 const BLOCK_LABEL: Record<BlockType, string> = {
@@ -68,18 +78,45 @@ export function ArticleEditor({
   canPublish,
   authorName,
   mediaOptions = [],
+  auteurs = [],
+  motsCles = [],
 }: {
   initial: EditorArticle;
   rubriques: RubriqueOption[];
   canPublish: boolean;
   authorName: string;
   mediaOptions?: MediaOption[];
+  /** Signataires possibles — fourni seulement à la rédaction en chef. */
+  auteurs?: AuteurOption[];
+  /** Mots-clés déjà employés sur le site, proposés à la saisie. */
+  motsCles?: string[];
 }) {
   const router = useRouter();
   const [article, setArticle] = useState(initial);
   const [tagInput, setTagInput] = useState("");
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
+
+  // Référence de comparaison : l'état tel qu'il est en base. Remis à jour après
+  // chaque enregistrement, sans quoi l'éditeur se croirait modifié pour
+  // toujours et avertirait à tort.
+  const [enregistre, setEnregistre] = useState(() => JSON.stringify(initial));
+  const modifie = JSON.stringify(article) !== enregistre;
+
+  const cle = cleBrouillon(initial.id);
+  useGardeModifications(modifie, article, cle);
+
+  // Reprise d'un brouillon local laissé par une session interrompue. Proposée,
+  // jamais imposée : la copie locale peut être plus ancienne que la base si
+  // l'article a été repris ailleurs entre-temps, et c'est au rédacteur de
+  // savoir laquelle des deux versions est la sienne.
+  const [reprise, setReprise] = useState<BrouillonLocal<EditorArticle> | null>(null);
+  useEffect(() => {
+    const copie = lireBrouillon<EditorArticle>(cle);
+    if (copie && JSON.stringify(copie.valeur) !== JSON.stringify(initial)) setReprise(copie);
+    // Au montage seulement : une fois la question posée, elle ne se repose pas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const set = <K extends keyof EditorArticle>(key: K, value: EditorArticle[K]) =>
     setArticle((a) => ({ ...a, [key]: value }));
@@ -128,6 +165,9 @@ export function ArticleEditor({
       coverAssetId: article.coverAssetId,
       featuredRank: article.featuredRank,
       blocks: article.blocks,
+      // Toujours transmis ; le serveur l'ignore si le rôle ne permet pas de
+      // changer la signature (cf. saveArticle).
+      authorId: article.authorId,
     };
   }
 
@@ -136,7 +176,12 @@ export function ArticleEditor({
     startTransition(async () => {
       const saved = await saveArticle(toInput());
       if (!saved.ok) return setMessage({ kind: "error", text: saved.error });
-      let id = saved.id;
+      const id = saved.id;
+      // L'état réellement en base à l'issue de l'opération. Construit ici, et
+      // non lu depuis `article` : celui-ci appartient au rendu en cours et
+      // ignorera le changement de statut ci-dessous, si bien que la garde
+      // croirait l'article encore modifié juste après l'avoir publié.
+      let apres: EditorArticle = { ...article, id };
       if (action) {
         const t = await transitionArticle(id, action);
         if (!t.ok) return setMessage({ kind: "error", text: t.error });
@@ -147,9 +192,19 @@ export function ArticleEditor({
           publish: "published",
           unpublish: "draft",
         };
-        set("status", nextStatus[action]);
+        apres = { ...apres, status: nextStatus[action] };
       }
+      // Un seul point d'application : l'éditeur adopte l'état d'après, garde
+      // comprise. Poser le statut sans l'identifiant laissait un écart d'un
+      // champ — assez pour qu'un article tout juste créé se déclare modifié.
+      setArticle(apres);
       setMessage({ kind: "ok", text: action ? "Statut mis à jour." : "Enregistré." });
+
+      // Le travail est en base : la garde n'a plus rien à protéger, et la copie
+      // locale n'a plus de raison d'être.
+      setEnregistre(JSON.stringify(apres));
+      oublierBrouillon(cle);
+
       if (!article.id) router.replace(`/admin/articles/${id}`);
       router.refresh();
     });
@@ -162,13 +217,50 @@ export function ArticleEditor({
     <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[1fr_320px]">
       {/* ====== ÉDITEUR ====== */}
       <div className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
+        {/* Brouillon retrouvé : une session s'est interrompue sans enregistrer. */}
+        {reprise ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F47920] bg-[rgba(244,121,32,0.08)] px-[22px] py-3">
+            <span className="text-[13px] text-ink">
+              <strong className="font-bold">Brouillon non enregistré retrouvé</strong> — laissé le{" "}
+              {new Date(reprise.enregistreLe).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}.
+            </span>
+            <span className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setArticle(reprise.valeur);
+                  setReprise(null);
+                }}
+                className="rounded-pill bg-[#F47920] px-[14px] py-1.5 text-[12.5px] font-bold text-white"
+              >
+                Reprendre
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  oublierBrouillon(cle);
+                  setReprise(null);
+                }}
+                className="rounded-pill border border-line px-[14px] py-1.5 text-[12.5px] font-semibold text-ink-2"
+              >
+                Ignorer
+              </button>
+            </span>
+          </div>
+        ) : null}
+
         <div className="flex items-center justify-between border-b border-line-2 bg-surface-2 px-[22px] py-3">
           <span className="inline-flex items-center gap-[7px] text-xs font-bold" style={{ color: statusMeta.color }}>
             <span className="h-[7px] w-[7px] rounded-pill" style={{ background: statusMeta.color }} />
             {statusMeta.label}
           </span>
-          <span className="text-xs text-ink-3">
-            {words.toLocaleString("fr-FR")} mots · {Math.max(1, Math.round(words / 200))} min de lecture
+          <span className="flex items-center gap-3 text-xs text-ink-3">
+            {/* Dire l'état plutôt que de le laisser deviner : l'avertissement au
+                départ ne doit jamais être la première nouvelle. */}
+            {modifie ? <span className="font-semibold text-[#F47920]">● Modifications non enregistrées</span> : null}
+            <span>
+              {words.toLocaleString("fr-FR")} mots · {Math.max(1, Math.round(words / 200))} min de lecture
+            </span>
           </span>
         </div>
 
@@ -563,9 +655,35 @@ export function ArticleEditor({
           </select>
 
           <label className="mb-1.5 block text-xs font-semibold text-ink-2">Auteur</label>
-          <div className="mb-3.5 rounded-[8px] border border-line bg-surface-2 px-[13px] py-2 text-[13px] font-semibold">
-            {authorName}
-          </div>
+          {canPublish && auteurs.length > 0 ? (
+            <>
+              <select
+                value={article.authorId}
+                onChange={(e) => set("authorId", e.target.value)}
+                className={`${inputCls} mb-1`}
+              >
+                {/* L'auteur courant figure toujours dans la liste, même s'il a
+                    quitté la rédaction : sinon le sélecteur afficherait
+                    quelqu'un d'autre et la signature changerait sans qu'on l'ait
+                    demandé, au premier enregistrement venu. */}
+                {auteurs.some((a) => a.id === article.authorId) ? null : (
+                  <option value={article.authorId}>{authorName}</option>
+                )}
+                {auteurs.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mb-3.5 text-[11.5px] text-ink-2">
+                Modifiable même après publication — le changement prend effet à l&apos;enregistrement.
+              </p>
+            </>
+          ) : (
+            <div className="mb-3.5 rounded-[8px] border border-line bg-surface-2 px-[13px] py-2 text-[13px] font-semibold">
+              {authorName}
+            </div>
+          )}
 
           <label className="mb-2 block text-xs font-semibold text-ink-2">Mots-clés</label>
           <div className="flex flex-wrap gap-[7px]">
@@ -591,9 +709,24 @@ export function ArticleEditor({
                 }
               }}
               placeholder="＋ ajouter ⏎"
+              list="a4a-mots-cles"
               className="w-24 rounded-pill border border-dashed border-line bg-transparent px-[11px] py-[5px] text-xs text-ink outline-none placeholder:text-ink-3"
             />
+            {/* Suggestions natives : le navigateur filtre à la frappe et reste
+                utilisable au clavier. Elles évitent que « Côte d'Ivoire »,
+                « Cote d'Ivoire » et « côte d'ivoire » vivent chacune leur vie —
+                trois mots-clés là où le lecteur en attend un. */}
+            <datalist id="a4a-mots-cles">
+              {motsCles.map((m) => (
+                <option key={m} value={m} />
+              ))}
+            </datalist>
           </div>
+          {motsCles.length > 0 ? (
+            <p className="mt-2 text-[11.5px] text-ink-2">
+              {motsCles.length} mots-clés déjà employés vous sont proposés à la saisie.
+            </p>
+          ) : null}
         </Panel>
 
         <Panel title="Image à la une">

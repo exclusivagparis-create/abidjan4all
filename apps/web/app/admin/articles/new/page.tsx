@@ -3,12 +3,13 @@ import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
 import { ArticleEditor, type EditorArticle } from "@/components/admin/article-editor";
+import { motsClesConnus } from "@/lib/actions/article-actions";
 
 export const metadata: Metadata = { title: "Nouvel article · Studio" };
 export const dynamic = "force-dynamic";
 
 export default async function NewArticlePage() {
-  const [session, rubriques, mediaOptions] = await Promise.all([
+  const [session, rubriques, mediaOptions, motsCles] = await Promise.all([
     auth(),
     prisma.rubrique.findMany({ orderBy: { order: "asc" }, select: { id: true, slug: true, name: true, color: true } }),
     prisma.mediaAsset.findMany({
@@ -17,6 +18,7 @@ export default async function NewArticlePage() {
       take: 500, // le sélecteur défile et se recherche ; plafond large de sécurité
       select: { id: true, url: true, alt: true },
     }),
+    motsClesConnus(),
   ]);
 
   const initial: EditorArticle = {
@@ -36,6 +38,10 @@ export default async function NewArticlePage() {
     hidden: false,
     slug: null,
     blocks: [{ type: "paragraph", text: "" }],
+    // À la création, la signature est celle du rédacteur connecté ; le serveur
+    // l'impose de toute façon (saveArticle n'accepte `authorId` qu'en mise à
+    // jour). Le sélecteur d'auteur n'apparaît donc qu'une fois l'article créé.
+    authorId: session?.user?.id ?? "",
   };
 
   return (
@@ -49,6 +55,7 @@ export default async function NewArticlePage() {
         canPublish={PUBLISH_ROLES.includes((session?.user?.role ?? "") as (typeof PUBLISH_ROLES)[number])}
         authorName={session?.user?.name ?? "—"}
         mediaOptions={mediaOptions}
+        motsCles={motsCles.map((m) => m.mot)}
       />
     </div>
   );

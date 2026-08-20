@@ -118,6 +118,22 @@ const REGLES = {
     "foret", "deforestation", "reboisement", "inondation", "pluie diluvienne",
     "lagune", "biodiversite", "espece protegee", "energie renouvelable", "assainissement",
   ],
+  sante: [
+    "sante", "hopital", "chu", "clinique", "dispensaire", "centre de sante",
+    // « sage-femme » reste à Femmes : la maternité y était déjà rattachée, et
+    // deux rubriques qui se disputent le même mot ne rendent service à personne.
+    "medecin", "chirurgien", "infirmier", "infirmiere", "pharmacien",
+    "malade", "maladie", "epidemie", "pandemie", "virus", "bacterie", "contamination",
+    "paludisme", "sida", "vih", "tuberculose", "covid", "coronavirus", "cholera",
+    "ebola", "dengue", "mpox", "variole", "meningite", "rougeole", "fievre",
+    "vaccin", "vaccination", "depistage", "consultation medicale", "diagnostic",
+    "cancer", "diabete", "hypertension", "drepanocytose", "insuffisance renale",
+    "chirurgie", "operation chirurgicale", "soins", "medicament", "pharmacie",
+    "oms", "ministere de la sante", "couverture maladie", "cmu", "mutuelle de sante",
+    "malnutrition", "nutrition", "mortalite maternelle", "mortalite infantile",
+    "sante mentale", "psychiatrie", "don de sang", "ambulance", "urgences medicales",
+    "antibiotique", "antipaludique", "prevention sanitaire", "hygiene",
+  ],
   femmes: [
     "femme", "feminin", "feminine", "genre", "maternite", "sage-femme", "grossesse",
     "violence conjugale", "excision", "droits des femmes", "autonomisation des femmes",

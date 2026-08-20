@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
 import { ArticleEditor, type EditorArticle } from "@/components/admin/article-editor";
+import { motsClesConnus } from "@/lib/actions/article-actions";
 
 export const metadata: Metadata = { title: "Éditeur · Studio" };
 export const dynamic = "force-dynamic";
@@ -17,11 +18,14 @@ function toLocalInput(d: Date | null): string | null {
 
 export default async function EditArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [session, article, rubriques, mediaRecents] = await Promise.all([
+  const [session, article, rubriques, mediaRecents, auteurs, motsCles] = await Promise.all([
     auth(),
     prisma.article.findUnique({
       where: { id },
-      include: { author: { select: { name: true } }, coverAsset: { select: { id: true, url: true, alt: true } } },
+      include: {
+        author: { select: { id: true, name: true } },
+        coverAsset: { select: { id: true, url: true, alt: true } },
+      },
     }),
     prisma.rubrique.findMany({ orderBy: { order: "asc" }, select: { id: true, slug: true, name: true, color: true } }),
     prisma.mediaAsset.findMany({
@@ -30,6 +34,16 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
       take: 500, // le sélecteur défile et se recherche ; plafond large de sécurité
       select: { id: true, url: true, alt: true },
     }),
+    // Signataires possibles : les comptes de la rédaction. Chargé pour tous,
+    // mais transmis à l'éditeur seulement si le rôle permet de signer — ce
+    // n'est pas une donnée sensible, et l'éviter coûterait une requête en
+    // cascade pour un gain nul.
+    prisma.user.findMany({
+      where: { role: { in: ["journalist", "editor", "admin"] } },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, role: true },
+    }),
+    motsClesConnus(),
   ]);
   if (!article) notFound();
 
@@ -58,6 +72,7 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
     hidden: article.hidden,
     slug: article.slug,
     blocks: Array.isArray(article.body) ? (article.body as EditorArticle["blocks"]) : [],
+    authorId: article.authorId,
   };
 
   return (
@@ -71,6 +86,8 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
         canPublish={PUBLISH_ROLES.includes((session?.user?.role ?? "") as (typeof PUBLISH_ROLES)[number])}
         authorName={article.author.name}
         mediaOptions={mediaOptions}
+        auteurs={auteurs}
+        motsCles={motsCles.map((m) => m.mot)}
       />
     </div>
   );

@@ -29,6 +29,8 @@ const ArticleInputSchema = z.object({
   tags: z.array(z.string().trim().min(1)).max(12),
   scheduledAt: z.string().nullable().optional(), // ISO ou null
   coverAssetId: z.string().nullable().optional(),
+  /** Réservé à la rédaction en chef et à l'administration (cf. saveArticle). */
+  authorId: z.string().optional(),
   featuredRank: z.number().int().min(1).max(5).nullable().optional(),
   blocks: z.array(BlockSchema).max(200),
 });
@@ -97,6 +99,14 @@ export async function saveArticle(raw: unknown): Promise<ActionResult> {
     readingTime: computeReadingTime(input.blocks),
   };
 
+  // Signature de l'article. Un journaliste ne peut pas se dessaisir du sien ni
+  // en attribuer un à quelqu'un d'autre : la signature engage la personne
+  // nommée, et son changement relève de la hiérarchie éditoriale. Le champ est
+  // donc ignoré — pas refusé — pour les autres rôles, afin qu'un formulaire
+  // renvoyant l'auteur courant ne se solde pas par une erreur.
+  const peutSigner = PUBLISH_ROLES.includes(user.role as (typeof PUBLISH_ROLES)[number]);
+  const auteur = peutSigner && input.authorId ? { authorId: input.authorId } : {};
+
   if (input.id) {
     // Une position à la Une est unique : la libérer sur l'article qui la détient.
     if (data.featuredRank != null) {
@@ -109,6 +119,7 @@ export async function saveArticle(raw: unknown): Promise<ActionResult> {
       where: { id: input.id },
       data: {
         ...data,
+        ...auteur,
         seo: { metaTitle: input.title, metaDescription: input.dek ?? "" } as Prisma.InputJsonValue,
       },
     });
@@ -214,4 +225,31 @@ export async function setArticleHidden(id: string, hidden: boolean): Promise<Act
   });
   revalidatePublic();
   return { ok: true, id };
+}
+
+/**
+ * Mots-clés déjà employés, les plus fréquents d'abord.
+ *
+ * Les mots-clés n'ont pas de table : ce sont des chaînes libres portées par
+ * chaque article. Rien ne les rapprochait, si bien que « Côte d'Ivoire »,
+ * « Cote d'Ivoire » et « côte d'ivoire » coexistaient sans que personne le
+ * voie. Les proposer à la saisie est la façon la moins intrusive d'y remédier :
+ * on ne corrige pas le rédacteur, on lui montre ce qui existe déjà.
+ *
+ * `archive`, posé par la reprise sur 4 291 articles, est écarté — le suggérer
+ * en tête reviendrait à le faire recopier sur des articles qui n'en sont pas.
+ */
+export async function motsClesConnus(): Promise<{ mot: string; usages: number }[]> {
+  const user = await requireRole(STUDIO_ROLES);
+  if (!user) return [];
+
+  const lignes = await prisma.$queryRaw<{ mot: string; usages: bigint }[]>`
+    SELECT t AS mot, count(*)::bigint AS usages
+    FROM "Article", unnest(tags) t
+    WHERE t <> 'archive' AND length(trim(t)) > 1
+    GROUP BY t
+    ORDER BY count(*) DESC, t ASC
+    LIMIT 400
+  `;
+  return lignes.map((l) => ({ mot: l.mot, usages: Number(l.usages) }));
 }

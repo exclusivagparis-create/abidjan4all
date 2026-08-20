@@ -593,6 +593,65 @@ async function passeRedater() {
 }
 
 // ---------------------------------------------------------------------------
+// Passe 8 — verser les articles de santé dans leur rubrique
+// ---------------------------------------------------------------------------
+
+/**
+ * La rubrique Santé n'existait pas au moment du premier classement : les
+ * articles de santé sont donc tombés dans « Actualité », le fourre-tout.
+ *
+ * Ne sont déplacés que ceux qui s'y trouvent ENCORE. Un article rangé ailleurs
+ * — à la main par la rédaction, ou par les règles — n'est pas repris : la
+ * machine ne repasse pas derrière une décision déjà prise. Ceux-là sont
+ * seulement signalés, pour que le choix reste humain.
+ *
+ * Les articles étant désormais publiés, le déplacement change leur adresse.
+ * C'est sans danger : la page article redirige en 301 vers la nouvelle
+ * rubrique quand le slug existe ailleurs (cf. app/[rubrique]/[slug]/page.tsx).
+ */
+async function passeSante() {
+  entete("Rubrique Santé : reclassement");
+
+  const rubriques = await prisma.rubrique.findMany({ select: { id: true, slug: true } });
+  const idParSlug = new Map(rubriques.map((r) => [r.slug, r.id]));
+  const sante = idParSlug.get("sante");
+  const actualite = idParSlug.get("actualite");
+  if (!sante) throw new Error("Rubrique « sante » introuvable — la créer d'abord dans le Studio.");
+  if (!actualite) throw new Error("Rubrique « actualite » introuvable.");
+
+  const articles = await prisma.article.findMany({
+    select: { id: true, slug: true, title: true, dek: true, tags: true, rubriqueId: true },
+  });
+
+  const aDeplacer = [];
+  const ailleurs = [];
+  for (const a of articles) {
+    if (a.rubriqueId === sante) continue;
+    if (classer(a)?.rubrique !== "sante") continue;
+    if (a.rubriqueId === actualite) aDeplacer.push(a);
+    else ailleurs.push(a);
+  }
+
+  console.log(`  depuis « Actualité »  : ${aDeplacer.length}`);
+  for (const a of aDeplacer.slice(0, 12)) console.log(`    · ${a.title.slice(0, 66)}`);
+  if (aDeplacer.length > 12) console.log(`    … et ${aDeplacer.length - 12} autres`);
+
+  if (ailleurs.length > 0) {
+    console.log(`\n  déjà classés ailleurs, NON déplacés (à arbitrer) : ${ailleurs.length}`);
+    for (const a of ailleurs.slice(0, 12)) console.log(`    · ${a.title.slice(0, 66)}`);
+    if (ailleurs.length > 12) console.log(`    … et ${ailleurs.length - 12} autres`);
+  }
+
+  if (!APPLIQUER) return;
+
+  for (let i = 0; i < aDeplacer.length; i += LOT) {
+    const ids = aDeplacer.slice(i, i + LOT).map((a) => a.id);
+    await prisma.article.updateMany({ where: { id: { in: ids } }, data: { rubriqueId: sante } });
+  }
+  console.log("\n  terminé.");
+}
+
+// ---------------------------------------------------------------------------
 
 const passes = [];
 if (args.has("--rubriques")) passes.push(passeRubriques);
@@ -602,6 +661,7 @@ if (args.has("--menage")) passes.push(passeMenage);
 if (args.has("--publier")) passes.push(passePublier);
 if (args.has("--fragments")) passes.push(passeFragments);
 if (args.has("--redater")) passes.push(passeRedater);
+if (args.has("--sante")) passes.push(passeSante);
 
 if (passes.length === 0) {
   console.error(

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { SiteHeader } from "@/components/site-header";
@@ -87,7 +87,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ArticlePage({ params }: Props) {
   const { rubrique: rubriqueSlug, slug } = await params;
   const article = await getArticle(rubriqueSlug, slug);
-  if (!article) notFound();
+  if (!article) {
+    // L'article n'est pas sous cette rubrique — mais il existe peut-être
+    // ailleurs : `slug` est unique pour tout le site, la rubrique n'est qu'un
+    // segment d'adresse. Changer la rubrique d'un article depuis le Studio
+    // déplaçait donc son URL en laissant l'ancienne sur une page 404, avec
+    // tous les liens déjà partagés et déjà indexés.
+    //
+    // Une redirection permanente vaut mieux qu'une règle par article : elle
+    // vaut pour tous les déplacements, y compris ceux à venir, sans que
+    // personne ait à y penser au moment de reclasser.
+    const ailleurs = await prisma.article.findUnique({
+      where: { slug },
+      select: { rubrique: { select: { slug: true } } },
+    });
+    if (ailleurs) permanentRedirect(`/${ailleurs.rubrique.slug}/${slug}`);
+    notFound();
+  }
 
   // paywall : débloqué pour les abonnés A4A+ en cours de validité (DF-03)
   const session = await auth();
