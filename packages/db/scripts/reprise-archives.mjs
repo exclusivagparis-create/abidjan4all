@@ -527,8 +527,21 @@ async function passeFragments() {
 // Passe 7 — redater les archives publiées à la main
 // ---------------------------------------------------------------------------
 
-/** Au-delà de cet écart, la date affichée ne peut pas être la vraie parution. */
-const ECART_TOLERE_JOURS = 30;
+/**
+ * Tout article créé au plus tard ce jour-là vient de l'import des archives ;
+ * ceux d'après sont écrits dans le Studio. C'est ce critère, et non la seule
+ * présence d'un identifiant source, qui distingue une archive : un article
+ * maison peut parfaitement être illustré d'une photo d'archive, et il ne
+ * faudrait surtout pas le redater à l'époque de sa photo.
+ */
+const FIN_DE_L_IMPORT = new Date("2026-08-19T00:00:00Z");
+
+/**
+ * Écart en deçà duquel on ne réécrit pas : la date est déjà la bonne. Deux
+ * jours suffisent — une tolérance large laissait passer les archives publiées
+ * à la main dont l'article datait de quelques semaines seulement.
+ */
+const ECART_TOLERE_JOURS = 2;
 
 /**
  * Une archive publiée depuis le Studio reçoit `publishedAt = maintenant`, parce
@@ -536,11 +549,8 @@ const ECART_TOLERE_JOURS = 30;
  * fait divers de 2022 se retrouve alors en tête de l'accueil, daté du jour —
  * exactement ce que la reconstitution des dates servait à éviter.
  *
- * Cette passe compare, pour chaque article portant un identifiant du site
- * source, la date affichée à la date reconstituée, et signale les écarts. La
- * tolérance de trente jours laisse passer l'imprécision de la reconstitution
- * elle-même : on ne corrige que les dates manifestement fausses, jamais celles
- * qui ne font que différer de quelques jours.
+ * Cette passe compare, pour chaque article issu de l'import et portant un
+ * identifiant du site source, la date affichée à la date reconstituée.
  *
  * Elle est idempotente : réappliquée, elle ne touche plus rien.
  */
@@ -548,7 +558,7 @@ async function passeRedater() {
   entete("Redatage des archives publiées à la main");
 
   const articles = await prisma.article.findMany({
-    where: { status: "published" },
+    where: { status: "published", createdAt: { lt: FIN_DE_L_IMPORT } },
     select: { id: true, title: true, publishedAt: true, coverAsset: { select: { url: true } } },
   });
 
