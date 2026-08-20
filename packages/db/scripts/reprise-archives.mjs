@@ -12,23 +12,28 @@
  *     La passe `--images` promeut la première en image de une (`coverAssetId`)
  *     et convertit les suivantes en blocs `image`, que le rendu sait afficher.
  *
- * Aucune passe ne publie ni ne change de statut : les brouillons restent des
- * brouillons. La publication reste une décision de la rédaction.
- *
- * Sans `--appliquer`, le script ne fait que compter et montrer — c'est le mode
- * par défaut, sur une base de quatre mille articles en production.
- *
  *  3. DOUBLONS D'IMAGES — conséquence de la passe précédente : elle a repris
  *     les URL absolues du Markdown alors que le site travaille en relatif, ce
  *     qui a fait exister chaque fichier deux fois dans la médiathèque. La passe
  *     `--doublons-images` ramène tout au relatif et fusionne les fiches.
  *
+ *  4. MÉNAGE — `--menage` efface les entrées qui ne sont pas des articles
+ *     (fragments de live-blog, corps vides, page de mentions légales).
+ *
+ *  5. PUBLICATION — `--publier` met l'archive en ligne en lui rendant sa
+ *     chronologie (voir `dates-archives.mjs`).
+ *
+ * Sans `--appliquer`, le script ne fait que compter et montrer — c'est le mode
+ * par défaut, sur une base de quatre mille articles en production.
+ *
  *   node scripts/reprise-archives.mjs --rubriques
  *   node scripts/reprise-archives.mjs --images --appliquer
  *   node scripts/reprise-archives.mjs --doublons-images --appliquer
+ *   node scripts/reprise-archives.mjs --menage --publier --appliquer
  */
 import { PrismaClient } from "@prisma/client";
 import { classer } from "./regles-rubriques.mjs";
+import { cadences, dateReconstituee, identifiantSource } from "./dates-archives.mjs";
 
 const prisma = new PrismaClient();
 
@@ -304,15 +309,184 @@ async function passeDoublonsImages() {
 }
 
 // ---------------------------------------------------------------------------
+// Passe 4 — ménage : ce qui n'est pas un article
+// ---------------------------------------------------------------------------
+
+/**
+ * La reprise a versé dans les articles des choses qui n'en sont pas : les
+ * entrées minute par minute d'un live-blog France/Allemagne, une page de
+ * mentions légales, deux imports sans titre ni contenu, deux corps vides, et
+ * mon propre article de diagnostic du connecteur.
+ *
+ * Chaque titre est écrit en toutes lettres, jamais reconnu par motif. Un
+ * premier essai par expression régulière (« titre commençant par un nombre »)
+ * a ramassé 43 articles parfaitement légitimes — « 100 milliards de dollars :
+ * le vrai poids de la diaspora africaine », « 49 soldats ivoiriens arrêtés au
+ * Mali », « 66 ans de l'Indépendance ». Sur une opération irréversible, la
+ * liste explicite est la seule forme honnête.
+ */
+const NON_ARTICLES = [
+  "Test connexion Claude — article de diagnostic MCP",
+  "Mentions Légales",
+  // Fragments de live-blog : le direct d'un France/Allemagne, découpé en
+  // entrées qui n'ont aucun sens comme articles autonomes.
+  "78' MBAPPE S'ECROULE DANS LA SURFACE,",
+  "84' BUT NON VALIDE DE KARIM BENZEMA",
+  "90'   Temps additionnel : 6 minutes minimum.",
+  "BUT DE LA FRANCE A LA 20e MINUTE",
+  "BUT DE MBAPPE NON VALIDE POUR UN HORS JEU",
+  "DOMINATION NETTE DE L'ALLEMAGNE DEPUIS LA 57è",
+  "FIN DU MATCH APRES 99' DE JEU : VICTOIRE DE LA FRANCE",
+  "MI-TEMPS DU MATCH FRANCE/ ALLEMAGNE",
+  "REPRISE DE LA SECONDE MI-TEMPS DU MACTH FRANCE/ ALLEMAGNE",
+  // Corps entièrement vides : un titre, et rien derrière.
+  "132 civils tués au centre du Mali: La CEDEAO réagit",
+];
+
+/** Titres de la forme « Article n°3749 » : imports sans titre ni contenu. */
+const SANS_TITRE = /^Article n°\d+$/;
+
+async function passeMenage() {
+  entete("Ménage : entrées qui ne sont pas des articles");
+
+  const candidats = await prisma.article.findMany({
+    where: { status: "draft" },
+    select: { id: true, slug: true, title: true, status: true, body: true },
+  });
+
+  const aEffacer = candidats.filter(
+    (a) =>
+      NON_ARTICLES.includes(a.title) ||
+      SANS_TITRE.test(a.title) ||
+      // Corps littéralement vide (`[]`) : rien à publier.
+      (Array.isArray(a.body) && a.body.length === 0)
+  );
+
+  for (const a of aEffacer) console.log(`  · ${a.title.slice(0, 68)}`);
+  console.log(`\n  ${aEffacer.length} entrées à effacer.`);
+  if (!APPLIQUER) return;
+
+  for (const a of aEffacer) {
+    // Même précaution que la suppression de masse du Studio : l'instantané
+    // est écrit AVANT l'effacement, dans la même transaction. Sans lui, une
+    // erreur d'appréciation sur cette liste serait sans retour.
+    await prisma.$transaction(
+      async (tx) => {
+        const complet = await tx.article.findUnique({ where: { id: a.id } });
+        await tx.articleDeletion.create({
+          data: {
+            snapshot: complet,
+            slug: a.slug,
+            title: a.title,
+            status: a.status,
+            deletedByName: "Reprise des archives (script)",
+            batchId: "menage-archives",
+          },
+        });
+        await tx.comment.deleteMany({ where: { articleId: a.id } });
+        await tx.liveBlog.deleteMany({ where: { articleId: a.id } });
+        await tx.article.delete({ where: { id: a.id } });
+      },
+      { timeout: 15_000, maxWait: 10_000 }
+    );
+  }
+  console.log("  terminé.");
+}
+
+// ---------------------------------------------------------------------------
+// Passe 5 — publication de l'archive
+// ---------------------------------------------------------------------------
+
+/**
+ * Articles dont le fichier image a disparu du volume d'uploads : les publier
+ * afficherait une image cassée. Georges les a explicitement exclus.
+ */
+const FICHIERS_ABSENTS = [
+  "dabou-odieux-un-patriarche-assassine-dans-sa-plantation-deux-parmi-ses-fils-soup-4",
+  "66-ans-de-l-independance-a-lahou-kpanda-une-celebration-sous-le-signe-de-la-rena-4",
+  "face-a-la-coree-du-sud-les-elephants-jouent-deja-leur-avenir-mondial-4",
+];
+
+/** Reste de Markdown dont l'URL est tronquée à la source : illisible. */
+const MARKDOWN_TRONQUE = /!\[[^\]]*\]\([^)]*$/;
+
+async function passePublier() {
+  entete("Publication de l'archive, chronologie reconstituée");
+
+  console.log("  cadence des segments d'ancrage (identifiants/jour) :");
+  for (const c of cadences()) console.log(`    ${c.de} → ${c.a} : ${c.parJour.toLocaleString("fr-FR")}`);
+
+  const articles = await prisma.article.findMany({
+    where: { status: "draft" },
+    select: { id: true, slug: true, title: true, body: true, coverAsset: { select: { url: true } } },
+  });
+
+  const aPublier = [];
+  const ecartes = { sansCouverture: 0, fichierAbsent: 0, nonDatable: 0 };
+
+  for (const a of articles) {
+    if (FICHIERS_ABSENTS.includes(a.slug)) {
+      ecartes.fichierAbsent++;
+      continue;
+    }
+    // Règle métier existante du Studio : pas de couverture, pas de mise en
+    // ligne. Le script ne se donne pas le droit de la contourner.
+    if (!a.coverAsset?.url || a.coverAsset.url.startsWith("placeholder://")) {
+      ecartes.sansCouverture++;
+      continue;
+    }
+    const date = dateReconstituee(identifiantSource(a.coverAsset.url));
+    if (!date) {
+      ecartes.nonDatable++;
+      continue;
+    }
+
+    // Au passage : le fragment de Markdown dont l'URL est tronquée à la source
+    // ne peut pas devenir une image et s'afficherait tel quel au lecteur. Rien
+    // ne s'y perd — son texte alternatif est le titre de l'article.
+    const corps =
+      Array.isArray(a.body) && a.body.some((b) => b?.type === "paragraph" && MARKDOWN_TRONQUE.test(b.text ?? ""))
+        ? a.body.filter((b) => !(b?.type === "paragraph" && MARKDOWN_TRONQUE.test(b.text ?? "")))
+        : null;
+
+    aPublier.push({ id: a.id, date, corps });
+  }
+
+  aPublier.sort((x, y) => y.date - x.date);
+  console.log(`\n  à publier        : ${aPublier.length}`);
+  console.log(`  écartés — sans couverture : ${ecartes.sansCouverture}`);
+  console.log(`  écartés — fichier absent  : ${ecartes.fichierAbsent}`);
+  console.log(`  écartés — non datable     : ${ecartes.nonDatable}`);
+  if (aPublier.length > 0) {
+    const f = (d) => d.toISOString().slice(0, 10);
+    console.log(`  période couverte : ${f(aPublier[aPublier.length - 1].date)} → ${f(aPublier[0].date)}`);
+  }
+
+  if (!APPLIQUER) return;
+
+  let fait = 0;
+  for (const p of aPublier) {
+    await prisma.article.update({
+      where: { id: p.id },
+      data: { status: "published", publishedAt: p.date, ...(p.corps ? { body: p.corps } : {}) },
+    });
+    if (++fait % 200 === 0) process.stdout.write(`\r  publiés ${fait}/${aPublier.length}`);
+  }
+  console.log(`\r  publiés ${fait}/${aPublier.length}\n  terminé.`);
+}
+
+// ---------------------------------------------------------------------------
 
 const passes = [];
 if (args.has("--rubriques")) passes.push(passeRubriques);
 if (args.has("--images")) passes.push(passeImages);
 if (args.has("--doublons-images")) passes.push(passeDoublonsImages);
+if (args.has("--menage")) passes.push(passeMenage);
+if (args.has("--publier")) passes.push(passePublier);
 
 if (passes.length === 0) {
   console.error(
-    "Usage : node scripts/reprise-archives.mjs [--rubriques] [--images] [--doublons-images] [--appliquer]"
+    "Usage : node scripts/reprise-archives.mjs [--rubriques] [--images] [--doublons-images] [--menage] [--publier] [--appliquer]"
   );
   process.exit(1);
 }
