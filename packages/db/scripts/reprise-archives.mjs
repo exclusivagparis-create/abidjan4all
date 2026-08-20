@@ -34,6 +34,7 @@
 import { PrismaClient } from "@prisma/client";
 import { classer } from "./regles-rubriques.mjs";
 import { cadences, dateReconstituee, identifiantSource } from "./dates-archives.mjs";
+import { lireSignature } from "./signatures-archives.mjs";
 
 const prisma = new PrismaClient();
 
@@ -652,6 +653,104 @@ async function passeSante() {
 }
 
 // ---------------------------------------------------------------------------
+// Passe 9 — rendre aux articles leur signataire
+// ---------------------------------------------------------------------------
+
+/**
+ * L'import n'avait pas de champ auteur : les 4 263 archives sont toutes au nom
+ * de Georges AKA, qui dirige le journal mais n'a pas écrit ces articles. La
+ * signature, elle, était restée dans le corps du texte (cf.
+ * signatures-archives.mjs).
+ *
+ * Les comptes manquants sont créés sans mot de passe. Ce n'est pas un oubli :
+ * `authorize` refuse la connexion quand `passwordHash` est nul, si bien que
+ * ces fiches signent des articles sans ouvrir d'accès à qui que ce soit. Elles
+ * portent une adresse en `.invalid`, un domaine que la norme garantit
+ * non routable — aucun courrier ne pourra partir vers elles par accident, et
+ * aucune connexion Google ne pourra s'y rattacher.
+ */
+async function passeAuteurs() {
+  entete("Signatures : rendre les archives à leurs auteurs");
+
+  const archives = await prisma.article.findMany({
+    where: { createdAt: { gte: IMPORT_DEBUT, lt: IMPORT_FIN } },
+    select: { id: true, body: true, author: { select: { name: true } } },
+  });
+
+  const parSignataire = new Map(); // clé → { signataire, ids: [] }
+  const compteur = { anonyme: 0, sigle: 0, inconnu: 0, sansSignature: 0 };
+  const sigles = new Map();
+
+  for (const a of archives) {
+    const lu = lireSignature(a.body);
+    if (!lu) {
+      compteur.sansSignature++;
+      continue;
+    }
+    if (lu.type !== "signataire") {
+      compteur[lu.type]++;
+      if (lu.type === "sigle") sigles.set(lu.texte, (sigles.get(lu.texte) ?? 0) + 1);
+      continue;
+    }
+    const cle = lu.signataire.cle;
+    if (!parSignataire.has(cle)) parSignataire.set(cle, { signataire: lu.signataire, ids: [] });
+    parSignataire.get(cle).ids.push(a.id);
+  }
+
+  // Rapprochement avec les comptes existants : par le nom de compte déclaré
+  // quand la personne signe autrement qu'elle ne s'appelle, par le nom de
+  // signature sinon.
+  const utilisateurs = await prisma.user.findMany({ select: { id: true, name: true, role: true } });
+  const parNom = new Map(utilisateurs.map((u) => [u.name, u]));
+
+  const lignes = [];
+  for (const { signataire, ids } of parSignataire.values()) {
+    const existant = parNom.get(signataire.compte ?? signataire.nom);
+    lignes.push({ signataire, ids, existant });
+  }
+  lignes.sort((x, y) => y.ids.length - x.ids.length);
+
+  for (const l of lignes) {
+    const etat = l.existant ? `compte existant « ${l.existant.name} »` : "COMPTE À CRÉER";
+    console.log(`  ${String(l.ids.length).padStart(5)}  ${l.signataire.nom.padEnd(18)} → ${etat}`);
+  }
+  const attribues = lignes.reduce((n, l) => n + l.ids.length, 0);
+  console.log(`\n  attribués            : ${attribues} / ${archives.length}`);
+  console.log(`  sans signature       : ${compteur.sansSignature + compteur.inconnu}`);
+  console.log(`  correspondance anonyme : ${compteur.anonyme}  (restent à l'administration)`);
+  console.log(`  signés d'un sigle    : ${compteur.sigle}  ${[...sigles.entries()].map(([s, n]) => `${s}×${n}`).join(", ")}`);
+  console.log("    — un sigle n'est pas un nom : seule la rédaction sait qui il désigne.");
+
+  if (!APPLIQUER) return;
+
+  for (const l of lignes) {
+    let auteur = l.existant;
+    if (!auteur) {
+      const identifiant = l.signataire.cle;
+      auteur = await prisma.user.create({
+        data: {
+          email: `${identifiant}@archives.abidjan4all.invalid`,
+          name: l.signataire.nom,
+          role: "journalist",
+          country: "CI",
+          // Sans mot de passe : la fiche signe, elle n'ouvre pas de session.
+          passwordHash: null,
+        },
+        select: { id: true, name: true, role: true },
+      });
+      console.log(`  compte créé : ${auteur.name}`);
+    }
+    for (let i = 0; i < l.ids.length; i += LOT) {
+      await prisma.article.updateMany({
+        where: { id: { in: l.ids.slice(i, i + LOT) } },
+        data: { authorId: auteur.id },
+      });
+    }
+  }
+  console.log("  terminé.");
+}
+
+// ---------------------------------------------------------------------------
 
 const passes = [];
 if (args.has("--rubriques")) passes.push(passeRubriques);
@@ -662,6 +761,7 @@ if (args.has("--publier")) passes.push(passePublier);
 if (args.has("--fragments")) passes.push(passeFragments);
 if (args.has("--redater")) passes.push(passeRedater);
 if (args.has("--sante")) passes.push(passeSante);
+if (args.has("--auteurs")) passes.push(passeAuteurs);
 
 if (passes.length === 0) {
   console.error(
