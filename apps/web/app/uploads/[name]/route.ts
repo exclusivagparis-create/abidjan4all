@@ -43,6 +43,19 @@ export async function GET(_request: Request, { params }: { params: Promise<{ nam
       "Content-Length": String(size),
       // noms uniques horodatés → cache long sans risque
       "Cache-Control": "public, max-age=31536000, immutable",
+      // Le type déclaré fait foi : le navigateur ne doit pas relire le contenu
+      // pour en déduire autre chose. Le format est contrôlé au téléversement,
+      // mais deux avis valent mieux qu'un sur un fichier venu du dehors.
+      "X-Content-Type-Options": "nosniff",
+      // Un SVG est un document XML : il peut porter du script, et servi depuis
+      // notre propre domaine ce script s'exécuterait avec les droits du site —
+      // de quoi dérober la session d'un administrateur qui ouvrirait l'image.
+      // La CSP le prive de tout. Elle ne gêne pas l'affichage d'un SVG dans une
+      // balise <img>, où le script était déjà inerte ; elle protège l'ouverture
+      // directe du fichier, qui est le vrai vecteur.
+      ...(ext === "svg"
+        ? { "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox" }
+        : {}),
     },
   });
 }

@@ -21,9 +21,42 @@ const LEGACY_RUBRIQUES: Array<[source: string, destination: string]> = [
   ["/Tech-Innovation_r26.html", "/business"],
 ];
 
+/**
+ * En-têtes de sécurité. Le site n'en envoyait aucun.
+ *
+ * `Content-Security-Policy` n'est volontairement PAS posée ici : elle demande
+ * un relevé complet des origines réellement chargées (régie, GA4, polices,
+ * lecteurs vidéo) et une recette dédiée. Une CSP trop stricte casse le site en
+ * silence, une CSP trop large ne protège de rien. Elle fait l'objet d'une
+ * étape à part — voir le rapport de revue.
+ */
+const EN_TETES_SECURITE = [
+  // Deux ans, sous-domaines compris : le navigateur refusera tout retour en
+  // clair, même si quelqu'un tape l'adresse en http://.
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+  // Interdit au navigateur de deviner le type d'un fichier : un téléversement
+  // au contenu inattendu ne peut plus être réinterprété en HTML.
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  // Anti-clickjacking. `frame-ancestors` fait foi sur les navigateurs récents,
+  // `X-Frame-Options` couvre les plus anciens — le lectorat en compte.
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+  // Ne fuite pas le chemin consulté vers les sites tiers.
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  // Aucune de ces interfaces n'est utilisée par le site.
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+];
+
 const nextConfig: NextConfig = {
   // Les packages du workspace sont livrés en sources TS : Next les transpile.
   transpilePackages: ["@a4a/ui", "@a4a/db", "@a4a/payments", "@a4a/ai"],
+  // `X-Powered-By: Next.js` annonçait la pile et sa version probable à qui
+  // cherche une faille connue. Aucun intérêt fonctionnel.
+  poweredByHeader: false,
+
+  async headers() {
+    return [{ source: "/:path*", headers: EN_TETES_SECURITE }];
+  },
   // geoip-lite lit ses bases `.dat` sur le disque, à un chemin relatif à son
   // propre dossier : empaqueté par webpack, il les cherche dans .next/ et
   // échoue (500 sur toutes les pages). Laissé externe, il les retrouve.

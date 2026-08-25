@@ -13,7 +13,7 @@ import { AdSlot } from "@/components/ad-slot";
 import { formatDateFull, initials } from "@/lib/format";
 import { auth } from "@/auth";
 import { hasActiveSubscription } from "@/lib/billing";
-import { absoluteUrl, breadcrumbJsonLd, newsArticleJsonLd } from "@/lib/seo";
+import { absoluteUrl, breadcrumbJsonLd, jsonLdScript, newsArticleJsonLd } from "@/lib/seo";
 
 // Idem page rubrique : l'en-tête dépend de la session, donc pas de cache
 // partagé. Le paywall A4A+ lisait déjà la session sur cette page.
@@ -141,11 +141,11 @@ export default async function ArticlePage({ params }: Props) {
         <>
           <script
             type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(newsArticleJsonLd(article)) }}
+            dangerouslySetInnerHTML={{ __html: jsonLdScript(newsArticleJsonLd(article)) }}
           />
           <script
             type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd(article)) }}
+            dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbJsonLd(article)) }}
           />
         </>
       ) : null}

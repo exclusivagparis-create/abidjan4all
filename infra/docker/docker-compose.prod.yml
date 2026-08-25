@@ -29,8 +29,15 @@ services:
         NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
         NEXT_PUBLIC_GA4_ID: ${NEXT_PUBLIC_GA4_ID:-}
     restart: unless-stopped
-    ports:
-      - "3000:3000" # accès direct hors TLS (recette) — le public passe par caddy
+    # Aucun port publié : l'application n'est jointe que par Caddy, sur le
+    # réseau interne de Docker. Le port 3000 était exposé sur toutes les
+    # interfaces et contournait donc le TLS. Il n'était pas joignable depuis
+    # l'extérieur, mais grâce au pare-feu de l'hébergeur seulement — une
+    # protection qu'on ne maîtrise pas. Docker publie d'ailleurs ses ports en
+    # écrivant directement dans iptables, au-dessus d'ufw : un pare-feu local
+    # n'y aurait rien changé.
+    #
+    # Pour joindre l'application en débogage : tunnel SSH (cf. Caddyfile).
     env_file: ../../.env
     volumes:
       - a4a_uploads:/data/uploads # médiathèque : survit aux redéploiements

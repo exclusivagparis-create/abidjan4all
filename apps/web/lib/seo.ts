@@ -110,3 +110,19 @@ export function xmlEscape(s: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
 }
+
+/**
+ * Sérialise un objet JSON-LD pour insertion dans `<script type="application/ld+json">`.
+ *
+ * `JSON.stringify` n'échappe pas le chevron : un titre d'article contenant
+ * `</script>` fermerait la balise et tout ce qui suit serait exécuté comme du
+ * HTML. Aucun contenu en base ne présente aujourd'hui ce motif — vérifié — mais
+ * les titres viennent de la reprise d'un site tiers et du connecteur, deux
+ * sources que la rédaction ne relit pas caractère par caractère.
+ *
+ * L'échappement Unicode reste du JSON parfaitement valide : les moteurs de
+ * recherche lisent la même donnée, le navigateur ne voit plus de balise.
+ */
+export function jsonLdScript(donnees: unknown): string {
+  return JSON.stringify(donnees).replace(/</g, "\u003c").replace(/>/g, "\u003e").replace(/&/g, "\u0026");
+}

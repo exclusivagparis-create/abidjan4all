@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { AuthError } from "next-auth";
 import { prisma } from "@a4a/db";
 import { auth, signIn, signOut } from "@/auth";
+import { limiter } from "@/lib/limite-debit";
 import {
   COOKIE_INTENTION,
   creerIntentionRattachement,
@@ -89,6 +90,22 @@ export async function authenticate(
   _prevState: string | undefined,
   formData: FormData
 ): Promise<string | undefined> {
+  // Rien ne limitait les tentatives : un script pouvait essayer des mots de
+  // passe sans fin, sur un compte d'administration comme sur un autre. Le seau
+  // porte sur l'ADRESSE VISÉE plutôt que sur l'appelant — une attaque
+  // distribuée change d'adresse IP à volonté, mais elle vise forcément un
+  // compte précis, et c'est ce compte qu'il s'agit de protéger.
+  //
+  // Dix essais par quart d'heure : un rédacteur qui se trompe deux ou trois
+  // fois ne s'en aperçoit jamais, une machine s'arrête aussitôt.
+  const cible = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (cible) {
+    const v = limiter(`connexion:${cible}`, 10, 900);
+    if (!v.autorise) {
+      return `Trop de tentatives sur ce compte. Réessayez dans ${Math.ceil(v.attendre / 60)} minutes.`;
+    }
+  }
+
   try {
     await signIn("credentials", formData);
   } catch (error) {

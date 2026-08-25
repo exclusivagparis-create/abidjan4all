@@ -31,7 +31,13 @@ www.abidjan4all.info {
 	redir https://abidjan4all.info{uri} permanent
 }
 
-# Accès direct par IP (recette/debug) — HTTP simple, pas de certificat possible.
-http://212.227.205.163 {
-	reverse_proxy web:3000
-}
+# L'accès direct par IP servait TOUT le site en HTTP clair, page de connexion
+# et Studio compris : identifiants et cookie de session voyageaient en clair
+# pour qui empruntait cette adresse. Un confort de recette payé d'une fuite
+# permanente de crédentiels — supprimé.
+#
+# Pour atteindre l'application sans passer par le domaine (débogage), ouvrir un
+# tunnel plutôt qu'un port :
+#   ssh -L 3000:localhost:3000 root@212.227.205.163
+# puis http://localhost:3000 sur son poste. Rien ne transite en clair sur le
+# réseau, l'accès reste réservé à qui détient déjà la clé SSH.

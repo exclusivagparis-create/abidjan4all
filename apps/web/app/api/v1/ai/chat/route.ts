@@ -4,6 +4,7 @@ import { chatReply, type SearchSource } from "@a4a/ai";
 import { apiError } from "@/lib/api";
 import { absoluteUrl } from "@/lib/seo";
 import { searchArticles } from "@/lib/search";
+import { adresseAppelant, limiter, reponseTropDeRequetes } from "@/lib/limite-debit";
 
 const ChatInput = z.object({
   message: z.string().trim().min(2).max(1000),
@@ -13,6 +14,14 @@ const ChatInput = z.object({
 // POST /api/v1/ai/chat { message, articleId? } → { reply, sources } (contrat §IA)
 // Contexte : l'article courant s'il est fourni, complété par la recherche interne.
 export async function POST(request: Request) {
+  // Ces routes appellent un modèle payant : sans plafond, un simple script
+  // pouvait vider le budget en une nuit. Le compte n'est pas exigé — la
+  // fonction sert au lectorat anonyme — mais la cadence, si.
+  {
+    const v = limiter(`ia-chat:${adresseAppelant(request)}`, 20, 3600);
+    if (!v.autorise) return reponseTropDeRequetes(v.attendre);
+  }
+
   const parsed = ChatInput.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return apiError("invalid_input", "message requis (2 à 1000 caractères).", 400);
 

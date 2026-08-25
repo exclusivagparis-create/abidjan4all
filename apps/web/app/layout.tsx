@@ -4,7 +4,7 @@ import { ThemeProvider, ThemeScript } from "@a4a/ui";
 import { CookieConsent } from "@/components/cookie-consent";
 import { AdSkin } from "@/components/ad-skin";
 import { habillageActif } from "@/lib/ad-skin";
-import { organizationJsonLd, SITE_URL } from "@/lib/seo";
+import { jsonLdScript, organizationJsonLd, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
 const newsreader = Newsreader({
@@ -66,7 +66,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd()) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(organizationJsonLd()) }}
         />
         {skin ? <AdSkin /> : null}
         <ThemeProvider>
