@@ -41,6 +41,41 @@ export const metadata: Metadata = {
 
 const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID;
 
+/**
+ * Identifiant éditeur AdSense. Paramétrable, avec le compte d'Abidjan4All pour
+ * valeur par défaut : la balise doit être présente sur toutes les pages pour
+ * que Google valide le site, y compris si l'environnement n'est pas renseigné.
+ */
+const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? "ca-pub-8158267216064242";
+
+/**
+ * Publicité personnalisée : subordonnée au consentement.
+ *
+ * Google demande de coller sa balise dans le `<head>` de chaque page, sans
+ * condition. On le fait — c'est ce qui permet la validation du site et le
+ * remplissage des emplacements. Mais la balise, seule, dépose des cookies
+ * publicitaires dès la première visite, avant toute question posée au lecteur :
+ * cela contredirait la politique de confidentialité du site, qui promet de ne
+ * mesurer qu'après accord, et le bandeau qui l'applique déjà pour l'audience.
+ *
+ * D'où ce préambule, exécuté AVANT le script de Google : tant que le lecteur
+ * n'a pas accepté, les annonces sont demandées en mode NON PERSONNALISÉ. Elles
+ * s'affichent — donc la régie fonctionne et les revenus rentrent — mais sans
+ * profilage. Le consentement accordé, la personnalisation prend effet au
+ * chargement suivant.
+ *
+ * Écrit en JavaScript nu et non via un composant React : il doit s'exécuter
+ * avant le script asynchrone de Google, donc pendant l'analyse du `<head>`.
+ * En cas d'erreur — navigation privée, stockage refusé — on retombe sur le
+ * mode non personnalisé, jamais l'inverse.
+ */
+const PREAMBULE_ADSENSE = `(function(){
+  window.adsbygoogle = window.adsbygoogle || [];
+  var accord = false;
+  try { accord = localStorage.getItem('a4a-consent') === 'granted'; } catch (e) { accord = false; }
+  if (!accord) window.adsbygoogle.requestNonPersonalizedAds = 1;
+})();`;
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Habillage publicitaire : quand une campagne « habillage » est active, le
   // fond est cliquable et le contenu passe dans un cadre centré (les marges
@@ -62,6 +97,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           href="https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@600;700;800&display=swap"
           rel="stylesheet"
         />
+
+        {/* Google AdSense — présent sur toutes les pages, comme Google l'exige.
+            Le préambule ci-dessus règle la personnalisation selon le consentement. */}
+        {ADSENSE_CLIENT ? (
+          <>
+            <script dangerouslySetInnerHTML={{ __html: PREAMBULE_ADSENSE }} />
+            <script
+              async
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+              crossOrigin="anonymous"
+            />
+          </>
+        ) : null}
       </head>
       <body>
         <script
@@ -88,7 +136,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             children
           )}
         </ThemeProvider>
-        <CookieConsent ga4Id={GA4_ID} />
+        <CookieConsent ga4Id={GA4_ID} adsense={Boolean(ADSENSE_CLIENT)} />
       </body>
     </html>
   );
