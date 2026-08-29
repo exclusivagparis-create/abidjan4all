@@ -121,6 +121,37 @@ export async function enregistrerPageVue(opts: {
       select: { sessionId: true },
     });
 
+    // Compteur « Lu N fois » affiché sous la signature de l'article.
+    //
+    // Le champ `views` existait depuis l'origine mais n'était incrémenté nulle
+    // part : il valait zéro partout, ce qui rendait aussi le bloc « Les plus
+    // lus » de l'accueil arbitraire, puisqu'il trie là-dessus.
+    //
+    // On compte ici plutôt que dans la page : ce chemin écarte déjà les robots
+    // et connaît le visiteur. Et on ne compte qu'UNE FOIS par visiteur et par
+    // article dans la fenêtre de session — sans quoi un rechargement, ou un
+    // lecteur qui revient en arrière, gonflerait le chiffre. Un compteur de
+    // lectures qu'on peut faire monter en appuyant sur F5 n'informe personne.
+    if (natureDuChemin(opts.path) === "article") {
+      const dejaVu = await prisma.pageView.findFirst({
+        where: { visitorHash, path: opts.path, createdAt: { gte: depuis } },
+        select: { id: true },
+      });
+      if (!dejaVu) {
+        const slug = opts.path.split("/").filter(Boolean).pop();
+        if (slug) {
+          // `updateMany` et non `update` : le chemin peut ne correspondre à
+          // aucun article publié (aperçu, page inconnue), et cela ne doit pas
+          // lever. Le filtre sur le statut évite de compter les lectures d'un
+          // brouillon prévisualisé par la rédaction.
+          await prisma.article.updateMany({
+            where: { slug, status: "published" },
+            data: { views: { increment: 1 } },
+          });
+        }
+      }
+    }
+
     await prisma.pageView.create({
       data: {
         path: opts.path.slice(0, 300),

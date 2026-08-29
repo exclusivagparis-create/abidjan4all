@@ -233,6 +233,16 @@ export default async function ArticlePage({ params }: Props) {
             <span className="rounded-pill border border-line bg-surface-2 px-3 py-1 text-[11.5px] font-semibold text-ink-2">
               ⏱ {article.readingTime} min de lecture
             </span>
+            {/* « Lu N fois » — la mention que portait l'ancien site, et à
+                laquelle le lectorat est habitué. Masquée tant qu'un article
+                n'a pas été lu : afficher « Lu 0 fois » sous un article qui
+                vient de paraître le dessert plus qu'autre chose. Le singulier
+                est respecté — « Lu 1 fois » se lit mal. */}
+            {!enApercu && article.views > 0 ? (
+              <span className="text-ink-2">
+                {article.views === 1 ? "Lu 1 fois" : `Lu ${article.views.toLocaleString("fr-FR")} fois`}
+              </span>
+            ) : null}
             <span
               className="rounded-pill px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.08em] text-white"
               style={{ background: article.rubrique.color }}
