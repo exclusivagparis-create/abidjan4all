@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Archivo, Newsreader } from "next/font/google";
 import { ThemeProvider, ThemeScript } from "@a4a/ui";
 import { CookieConsent } from "@/components/cookie-consent";
@@ -89,13 +90,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       className={`${newsreader.variable} ${archivo.variable}`}
     >
       <head>
-        {/* EN PREMIER, avant tout autre script. Next remonte les balises
-            `<script src>` en tête du `<head>` : placé plus bas, ce préambule
-            était émis APRÈS le script de Google, et le réglage de
-            personnalisation devenait une course. Sa position ici n'est donc pas
-            cosmétique — c'est elle qui garantit que le consentement est lu
-            avant que la régie ne décide quoi servir. */}
-        {ADSENSE_CLIENT ? <script dangerouslySetInnerHTML={{ __html: PREAMBULE_ADSENSE }} /> : null}
         <ThemeScript />
         {/* Archivo Expanded n'est pas dans le catalogue next/font : même chargement que la maquette */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -106,13 +100,26 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
 
         {/* Google AdSense — présent sur toutes les pages, comme Google l'exige.
-            Le préambule posé en tête du `<head>` règle la personnalisation. */}
+
+            Les deux balises passent par `next/script` en `beforeInteractive`,
+            et non par des `<script>` bruts : React remonte les scripts EXTERNES
+            au-dessus des scripts en ligne, quel que soit l'ordre écrit ici. Le
+            préambule se retrouvait donc émis après celui de Google, et le
+            réglage de personnalisation devenait une course. `next/script`
+            respecte, lui, l'ordre déclaré — ce qui garantit que le choix du
+            lecteur est connu avant que la régie ne décide quoi servir. */}
         {ADSENSE_CLIENT ? (
-          <script
-            async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-            crossOrigin="anonymous"
-          />
+          <>
+            <Script id="adsense-consentement" strategy="beforeInteractive">
+              {PREAMBULE_ADSENSE}
+            </Script>
+            <Script
+              id="adsense"
+              strategy="beforeInteractive"
+              crossOrigin="anonymous"
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+            />
+          </>
         ) : null}
       </head>
       <body>
