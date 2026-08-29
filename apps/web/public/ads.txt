@@ -1,0 +1,12 @@
+# ads.txt — vendeurs autorisés à commercialiser l'inventaire publicitaire
+# d'abidjan4all.info (norme IAB Authorized Digital Sellers).
+#
+# Sans ce fichier, Google finit par afficher « revenus menacés » dans AdSense,
+# et une partie des acheteurs refuse d'enchérir sur un domaine dont personne ne
+# garantit qui a le droit d'y vendre. Le déclarer coûte une ligne.
+#
+# Lecture de la ligne : le vendeur (google.com), le compte éditeur, la nature
+# de la relation (DIRECT = Abidjan4All contracte directement avec Google, sans
+# intermédiaire), puis l'identifiant Google auprès de l'autorité de
+# certification TAG — une constante publique, identique pour tous les éditeurs.
+google.com, pub-8158267216064242, DIRECT, f08c47fec0942fa0
