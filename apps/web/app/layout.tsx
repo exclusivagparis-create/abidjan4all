@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Archivo, Newsreader } from "next/font/google";
 import { ThemeProvider, ThemeScript } from "@a4a/ui";
 import { CookieConsent } from "@/components/cookie-consent";
@@ -99,25 +98,28 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           rel="stylesheet"
         />
 
-        {/* Google AdSense — présent sur toutes les pages, comme Google l'exige.
+        {/* Google AdSense — balises `<script>` BRUTES, délibérément.
 
-            Les deux balises passent par `next/script` en `beforeInteractive`,
-            et non par des `<script>` bruts : React remonte les scripts EXTERNES
-            au-dessus des scripts en ligne, quel que soit l'ordre écrit ici. Le
-            préambule se retrouvait donc émis après celui de Google, et le
-            réglage de personnalisation devenait une course. `next/script`
-            respecte, lui, l'ordre déclaré — ce qui garantit que le choix du
-            lecteur est connu avant que la régie ne décide quoi servir. */}
+            `next/script` en `beforeInteractive` n'émet pas de balise dans le
+            HTML servi : il pose un `<link rel="preload">` et laisse le runtime
+            de Next injecter le script une fois la page chargée. Le navigateur
+            s'en accommode, mais le robot de validation d'AdSense ne trouve
+            aucune balise et refuse le site — c'est exactement ce qui s'est
+            produit. Le HTML doit contenir la balise elle-même.
+
+            L'ordre reste inversé — React remonte les scripts externes au-dessus
+            des scripts en ligne — et c'est sans conséquence : un script externe
+            asynchrone doit traverser le réseau, quand le préambule est lu par
+            l'analyseur dans la foulée. Mesuré sur une vraie requête
+            publicitaire : `npa=1` sans consentement, absent après acceptation.
+            Ne pas « corriger » cet ordre sans re-mesurer `npa`. */}
         {ADSENSE_CLIENT ? (
           <>
-            <Script id="adsense-consentement" strategy="beforeInteractive">
-              {PREAMBULE_ADSENSE}
-            </Script>
-            <Script
-              id="adsense"
-              strategy="beforeInteractive"
-              crossOrigin="anonymous"
+            <script dangerouslySetInnerHTML={{ __html: PREAMBULE_ADSENSE }} />
+            <script
+              async
               src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+              crossOrigin="anonymous"
             />
           </>
         ) : null}
