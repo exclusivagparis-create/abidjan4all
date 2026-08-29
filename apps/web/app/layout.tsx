@@ -89,6 +89,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       className={`${newsreader.variable} ${archivo.variable}`}
     >
       <head>
+        {/* EN PREMIER, avant tout autre script. Next remonte les balises
+            `<script src>` en tête du `<head>` : placé plus bas, ce préambule
+            était émis APRÈS le script de Google, et le réglage de
+            personnalisation devenait une course. Sa position ici n'est donc pas
+            cosmétique — c'est elle qui garantit que le consentement est lu
+            avant que la régie ne décide quoi servir. */}
+        {ADSENSE_CLIENT ? <script dangerouslySetInnerHTML={{ __html: PREAMBULE_ADSENSE }} /> : null}
         <ThemeScript />
         {/* Archivo Expanded n'est pas dans le catalogue next/font : même chargement que la maquette */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -99,16 +106,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
 
         {/* Google AdSense — présent sur toutes les pages, comme Google l'exige.
-            Le préambule ci-dessus règle la personnalisation selon le consentement. */}
+            Le préambule posé en tête du `<head>` règle la personnalisation. */}
         {ADSENSE_CLIENT ? (
-          <>
-            <script dangerouslySetInnerHTML={{ __html: PREAMBULE_ADSENSE }} />
-            <script
-              async
-              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-              crossOrigin="anonymous"
-            />
-          </>
+          <script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+            crossOrigin="anonymous"
+          />
         ) : null}
       </head>
       <body>
