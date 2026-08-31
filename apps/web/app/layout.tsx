@@ -48,33 +48,30 @@ const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID;
  */
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? "ca-pub-8158267216064242";
 
-/**
- * Publicité personnalisée : subordonnée au consentement.
+/*
+ * NOTE SUR LE CONSENTEMENT PUBLICITAIRE — retiré d'ici volontairement.
  *
- * Google demande de coller sa balise dans le `<head>` de chaque page, sans
- * condition. On le fait — c'est ce qui permet la validation du site et le
- * remplissage des emplacements. Mais la balise, seule, dépose des cookies
- * publicitaires dès la première visite, avant toute question posée au lecteur :
- * cela contredirait la politique de confidentialité du site, qui promet de ne
- * mesurer qu'après accord, et le bandeau qui l'applique déjà pour l'audience.
+ * Un préambule maison forçait les annonces en mode non personnalisé tant que
+ * le lecteur n'avait pas accepté notre propre bandeau. Il avait un sens tant
+ * que rien d'autre ne posait la question.
  *
- * D'où ce préambule, exécuté AVANT le script de Google : tant que le lecteur
- * n'a pas accepté, les annonces sont demandées en mode NON PERSONNALISÉ. Elles
- * s'affichent — donc la régie fonctionne et les revenus rentrent — mais sans
- * profilage. Le consentement accordé, la personnalisation prend effet au
- * chargement suivant.
+ * Ce n'est plus le cas : en activant AdSense, Google a mis en service SON
+ * message de consentement (Privacy & messaging, cadre TCF — `window.__tcfapi`
+ * est présent sur toutes les pages). Deux dispositifs se sont alors superposés,
+ * et le message de Google, plein écran, masquait le site entier : la bande
+ * Diaspora, le menu, tout ce qui se trouvait derrière.
  *
- * Écrit en JavaScript nu et non via un composant React : il doit s'exécuter
- * avant le script asynchrone de Google, donc pendant l'analyse du `<head>`.
- * En cas d'erreur — navigation privée, stockage refusé — on retombe sur le
- * mode non personnalisé, jamais l'inverse.
+ * Deux mécanismes de consentement ne sont pas seulement laids : le lecteur
+ * répond deux fois, et ses deux réponses peuvent se contredire. Un seul doit
+ * faire autorité. C'est celui de Google, parce qu'il est enregistré au cadre
+ * TCF — condition pour que les annonces se vendent normalement auprès du
+ * lectorat européen, une part réelle de la diaspora — et parce que c'est lui
+ * que la régie consulte pour décider de la personnalisation.
+ *
+ * Si vous préférez reprendre la main, la manœuvre n'est pas ici : elle est dans
+ * le compte AdSense, rubrique Confidentialité et messagerie, où le message
+ * européen se désactive. Ce fichier suivrait alors le chemin inverse.
  */
-const PREAMBULE_ADSENSE = `(function(){
-  window.adsbygoogle = window.adsbygoogle || [];
-  var accord = false;
-  try { accord = localStorage.getItem('a4a-consent') === 'granted'; } catch (e) { accord = false; }
-  if (!accord) window.adsbygoogle.requestNonPersonalizedAds = 1;
-})();`;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Habillage publicitaire : quand une campagne « habillage » est active, le
@@ -114,14 +111,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             publicitaire : `npa=1` sans consentement, absent après acceptation.
             Ne pas « corriger » cet ordre sans re-mesurer `npa`. */}
         {ADSENSE_CLIENT ? (
-          <>
-            <script dangerouslySetInnerHTML={{ __html: PREAMBULE_ADSENSE }} />
-            <script
-              async
-              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-              crossOrigin="anonymous"
-            />
-          </>
+          <script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+            crossOrigin="anonymous"
+          />
         ) : null}
       </head>
       <body>
@@ -149,7 +143,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             children
           )}
         </ThemeProvider>
-        <CookieConsent ga4Id={GA4_ID} adsense={Boolean(ADSENSE_CLIENT)} />
+        {/* Notre bandeau ne concerne plus que la mesure d'audience : la
+            publicité relève du message de Google (cf. note ci-dessus). */}
+        <CookieConsent ga4Id={GA4_ID} />
       </body>
     </html>
   );
