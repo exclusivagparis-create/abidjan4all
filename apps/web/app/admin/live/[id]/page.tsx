@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { LiveComposer } from "@/components/admin/live-composer";
+import { LiveEntete } from "@/components/admin/live-entete";
+import { LiveFil, type LigneFil } from "@/components/admin/live-fil";
 import { setLiveBlogStatus } from "@/lib/actions/live-actions";
+import { auth, PUBLISH_ROLES } from "@/auth";
 
 export const metadata: Metadata = { title: "Direct · Studio" };
 export const dynamic = "force-dynamic";
@@ -15,6 +18,12 @@ export default async function AdminLiveDetail({ params }: { params: Promise<{ id
     include: { rubrique: { select: { name: true, color: true } } },
   });
   if (!blog) notFound();
+
+  const [session, rubriques] = await Promise.all([
+    auth(),
+    prisma.rubrique.findMany({ orderBy: { order: "asc" }, select: { id: true, name: true } }),
+  ]);
+  const peutSupprimer = PUBLISH_ROLES.includes(session?.user?.role as (typeof PUBLISH_ROLES)[number]);
 
   const updates = await prisma.liveUpdate.findMany({
     where: { liveBlogId: id },
@@ -66,25 +75,34 @@ export default async function AdminLiveDetail({ params }: { params: Promise<{ id
         </form>
       </div>
 
+      <LiveEntete
+        id={blog.id}
+        titre={blog.title}
+        chapeau={blog.dek ?? ""}
+        rubriqueId={blog.rubriqueId}
+        rubriques={rubriques}
+        peutSupprimer={peutSupprimer}
+        nombreDeMisesAJour={blog.updatesCount}
+      />
+
       <LiveComposer liveBlogId={blog.id} disabled={!isLive} />
 
-      <div className="mt-6 rounded-[14px] border border-line bg-surface px-6 py-[22px] shadow-[var(--shadow-sm)]">
-        <div className="mb-3 text-sm font-bold">Fil ({updates.length} dernières)</div>
-        {updates.map((u) => (
-          <div key={u.id} className="border-b border-line-2 py-3 last:border-b-0">
-            <div className="mb-1 flex items-center gap-2 text-[11px] text-ink-3">
-              <span className="font-extrabold">
-                {u.time.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} GMT
-              </span>
-              <span className="rounded-pill bg-surface-2 px-2 py-0.5 font-bold uppercase">{u.type}</span>
-              {u.pinned ? <span>📌</span> : null}
-            </div>
-            {u.title ? <div className="font-serif text-[15px] font-semibold">{u.title}</div> : null}
-            <div className="font-serif text-[14px] text-ink-2">{u.body}</div>
-          </div>
-        ))}
-        {updates.length === 0 ? <p className="py-3 text-[13px] text-ink-3">Aucune mise à jour.</p> : null}
-      </div>
+      {/* Mise en forme côté serveur : le composant du fil ne s'occupe que de
+          l'affichage et des actions, pas du fuseau ni du format d'heure. */}
+      <LiveFil
+        lignes={updates.map<LigneFil>((u) => ({
+          id: u.id,
+          heure: `${u.time.toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "UTC",
+          })} GMT`,
+          type: u.type,
+          titre: u.title,
+          corps: u.body,
+          epinglee: u.pinned,
+        }))}
+      />
     </div>
   );
 }

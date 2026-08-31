@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma, type LiveBlogStatus } from "@a4a/db";
-import { auth, STUDIO_ROLES } from "@/auth";
+import { auth, PUBLISH_ROLES, STUDIO_ROLES } from "@/auth";
 
 export type LiveResult = { ok: true; id: string } | { ok: false; error: string };
 
@@ -91,4 +91,138 @@ export async function setLiveBlogStatus(id: string, status: LiveBlogStatus): Pro
   revalidatePath("/en-direct");
   revalidatePath(`/en-direct/${id}`);
   return { ok: true, id };
+}
+
+/**
+ * Corriger une mise à jour déjà publiée.
+ *
+ * Un direct s'écrit dans l'urgence : un chiffre erroné, une déclaration mal
+ * attribuée, une information qui se dément dans la minute. Jusqu'ici rien ne
+ * pouvait être repris — la mise à jour partait dans le fil public et y restait,
+ * faute exacte comprise. Pour un journal, c'est le défaut le plus coûteux : on
+ * ne peut pas corriger ce qu'on vient d'affirmer.
+ *
+ * La correction reste ouverte même après clôture du direct. La règle qui
+ * interdit d'AJOUTER dans un direct clos protège la chronologie ; elle n'a
+ * aucune raison d'empêcher de rectifier une erreur qu'on découvre le lendemain.
+ */
+export async function modifierLiveUpdate(
+  id: string,
+  _prev: LiveResult | undefined,
+  formData: FormData
+): Promise<LiveResult> {
+  const user = await requireStudio();
+  if (!user) return { ok: false, error: "Accès refusé." };
+
+  const update = await prisma.liveUpdate.findUnique({ where: { id }, select: { liveBlogId: true } });
+  if (!update) return { ok: false, error: "Mise à jour introuvable." };
+
+  const parsed = UpdateInput.safeParse({
+    type: formData.get("type"),
+    title: formData.get("title") || undefined,
+    body: formData.get("body"),
+    pinned: formData.get("pinned") === "on",
+  });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Saisie invalide." };
+
+  await prisma.liveUpdate.update({
+    where: { id },
+    // `time` n'est PAS retouché : l'heure affichée est celle de l'événement
+    // rapporté, pas celle de la correction. La déplacer réécrirait la
+    // chronologie du direct et ferait mentir le fil.
+    data: { ...parsed.data, title: parsed.data.title ?? null },
+  });
+
+  revaliderDirect(update.liveBlogId);
+  return { ok: true, id };
+}
+
+/** Retirer une mise à jour du fil. */
+export async function supprimerLiveUpdate(id: string): Promise<LiveResult> {
+  const user = await requireStudio();
+  if (!user) return { ok: false, error: "Accès refusé." };
+
+  const update = await prisma.liveUpdate.findUnique({ where: { id }, select: { liveBlogId: true } });
+  if (!update) return { ok: false, error: "Mise à jour introuvable." };
+
+  // Le compteur suit, dans la même transaction : affiché sur la liste des
+  // directs et sur le fil public, il indiquerait sinon plus de mises à jour
+  // qu'il n'en existe.
+  await prisma.$transaction([
+    prisma.liveUpdate.delete({ where: { id } }),
+    prisma.liveBlog.update({
+      where: { id: update.liveBlogId },
+      data: { updatesCount: { decrement: 1 } },
+    }),
+  ]);
+
+  revaliderDirect(update.liveBlogId);
+  return { ok: true, id };
+}
+
+/** Modifier l'en-tête d'un direct : titre, chapeau, rubrique. */
+export async function modifierLiveBlog(
+  id: string,
+  _prev: LiveResult | undefined,
+  formData: FormData
+): Promise<LiveResult> {
+  const user = await requireStudio();
+  if (!user) return { ok: false, error: "Accès refusé." };
+
+  const parsed = LiveBlogInput.safeParse({
+    title: formData.get("title"),
+    dek: formData.get("dek") || undefined,
+    rubriqueId: formData.get("rubriqueId"),
+  });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Saisie invalide." };
+
+  await prisma.liveBlog.update({
+    where: { id },
+    data: { ...parsed.data, dek: parsed.data.dek ?? null },
+  });
+
+  revaliderDirect(id);
+  return { ok: true, id };
+}
+
+/**
+ * Supprimer un direct et tout son fil.
+ *
+ * Réservé à la rédaction en chef et à l'administration, à la différence des
+ * mises à jour : effacer un direct fait disparaître le récit entier d'un
+ * événement, souvent écrit à plusieurs mains. C'est la même règle que pour la
+ * suppression d'articles — ce qui engage la mémoire du journal ne se décide pas
+ * au niveau du reporter.
+ */
+export async function supprimerLiveBlog(id: string): Promise<LiveResult> {
+  const session = await auth();
+  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) {
+    return { ok: false, error: "Réservé à la rédaction en chef et à l'administration." };
+  }
+
+  const blog = await prisma.liveBlog.findUnique({ where: { id }, select: { articleId: true } });
+  if (!blog) return { ok: false, error: "Direct introuvable." };
+
+  // Les mises à jour d'abord : elles référencent le direct, la base refuserait
+  // l'ordre inverse. L'article éventuellement rattaché n'est PAS touché — il
+  // vit sa propre vie, et le supprimer ici serait un effet de bord que personne
+  // n'a demandé.
+  await prisma.$transaction([
+    prisma.liveUpdate.deleteMany({ where: { liveBlogId: id } }),
+    prisma.liveBlog.delete({ where: { id } }),
+  ]);
+
+  revalidatePath("/admin/live");
+  revalidatePath("/en-direct");
+  revalidatePath("/");
+  return { ok: true, id };
+}
+
+/** Rafraîchit les pages où un direct se donne à voir. */
+function revaliderDirect(liveBlogId: string) {
+  revalidatePath("/admin/live");
+  revalidatePath(`/admin/live/${liveBlogId}`);
+  revalidatePath("/en-direct");
+  revalidatePath(`/en-direct/${liveBlogId}`);
+  revalidatePath("/"); // ticker de l'accueil
 }
