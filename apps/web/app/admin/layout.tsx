@@ -70,6 +70,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Statistiques", href: isAdmin ? "/admin/stats" : undefined, icon: "▲" },
     { label: "KPI Business Model", href: isAdmin ? "/admin/kpi" : undefined, icon: "◎" },
     { label: "Redirections", href: canPublish ? "/admin/redirections" : undefined, icon: "↪" },
+    // Seule voie de retour après un effacement : doit se trouver sans le
+    // chercher, le jour où l'on en a besoin.
+    { label: "Journal des suppressions", href: canPublish ? "/admin/journal" : undefined, icon: "♺" },
     { label: "Accès API", href: isAdmin ? "/admin/api" : undefined, icon: "⚿" },
   ];
   // Mode d'emploi : accessible à tous les rôles du Studio, Gestionnaire Régie compris.

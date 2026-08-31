@@ -267,6 +267,42 @@ model ArticleDeletion {
   @@index([slug])
 }
 
+enum LiveDeletionKind {
+  update // une mise à jour retirée du fil
+  blog // un direct entier, fil compris
+}
+
+/// Journal des suppressions de direct — même filet que pour les articles.
+///
+/// Une seule table pour les deux natures d'objet : les séparer aurait donné
+/// deux tables au schéma identique et deux écrans à lire, pour une distinction
+/// que `kind` exprime mieux.
+model LiveDeletion {
+  id String @id @default(cuid())
+
+  kind LiveDeletionKind
+
+  /// L'objet entier au moment de sa suppression ; pour un direct, ses mises à
+  /// jour sont incluses — c'est la seule voie de retour.
+  snapshot Json
+
+  /// Recopiés hors du snapshot pour être cherchables sans le déplier.
+  liveBlogId    String
+  liveBlogTitle String
+  /// Extrait de la mise à jour retirée ; le titre du direct pour un direct.
+  extrait String
+  /// Mises à jour emportées : 1 pour une ligne, le fil entier pour un direct.
+  updatesCount Int @default(1)
+
+  deletedById   String
+  deletedByName String
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([liveBlogId])
+}
+
 /// Compte tiers (Google, Facebook, Apple) rattaché à un compte Abidjan4All.
 ///
 /// L'identité que nous conservons est `providerAccountId` — l'identifiant

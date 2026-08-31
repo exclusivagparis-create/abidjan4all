@@ -137,26 +137,54 @@ export async function modifierLiveUpdate(
   return { ok: true, id };
 }
 
-/** Retirer une mise à jour du fil. */
+/** Un extrait lisible dans le journal, sans avoir à déplier l'instantané. */
+function extraitDe(titre: string | null, corps: string): string {
+  const t = [titre, corps].filter(Boolean).join(" — ");
+  return t.length > 160 ? `${t.slice(0, 159)}…` : t;
+}
+
+/**
+ * Retirer une mise à jour du fil.
+ *
+ * Journalisé comme les articles : la mise à jour a été lue par le public, son
+ * retrait ne doit pas être silencieux. L'instantané est écrit AVANT
+ * l'effacement et dans la même transaction — sans lui, un clic malheureux
+ * serait sans retour.
+ */
 export async function supprimerLiveUpdate(id: string): Promise<LiveResult> {
   const user = await requireStudio();
   if (!user) return { ok: false, error: "Accès refusé." };
 
-  const update = await prisma.liveUpdate.findUnique({ where: { id }, select: { liveBlogId: true } });
+  const update = await prisma.liveUpdate.findUnique({
+    where: { id },
+    include: { liveBlog: { select: { id: true, title: true } } },
+  });
   if (!update) return { ok: false, error: "Mise à jour introuvable." };
 
-  // Le compteur suit, dans la même transaction : affiché sur la liste des
+  // Le compteur suit dans la même transaction : affiché sur la liste des
   // directs et sur le fil public, il indiquerait sinon plus de mises à jour
   // qu'il n'en existe.
   await prisma.$transaction([
+    prisma.liveDeletion.create({
+      data: {
+        kind: "update",
+        snapshot: update as unknown as object,
+        liveBlogId: update.liveBlog.id,
+        liveBlogTitle: update.liveBlog.title,
+        extrait: extraitDe(update.title, update.body),
+        updatesCount: 1,
+        deletedById: user.id,
+        deletedByName: user.name ?? "—",
+      },
+    }),
     prisma.liveUpdate.delete({ where: { id } }),
     prisma.liveBlog.update({
-      where: { id: update.liveBlogId },
+      where: { id: update.liveBlog.id },
       data: { updatesCount: { decrement: 1 } },
     }),
   ]);
 
-  revaliderDirect(update.liveBlogId);
+  revaliderDirect(update.liveBlog.id);
   return { ok: true, id };
 }
 
@@ -200,7 +228,13 @@ export async function supprimerLiveBlog(id: string): Promise<LiveResult> {
     return { ok: false, error: "Réservé à la rédaction en chef et à l'administration." };
   }
 
-  const blog = await prisma.liveBlog.findUnique({ where: { id }, select: { articleId: true } });
+  // Le direct AVEC son fil : c'est l'ensemble qui part, c'est donc l'ensemble
+  // que l'instantané doit conserver. Un journal qui garderait l'en-tête sans
+  // les mises à jour ne permettrait de rien rétablir.
+  const blog = await prisma.liveBlog.findUnique({
+    where: { id },
+    include: { updates: { orderBy: { time: "asc" } } },
+  });
   if (!blog) return { ok: false, error: "Direct introuvable." };
 
   // Les mises à jour d'abord : elles référencent le direct, la base refuserait
@@ -208,6 +242,18 @@ export async function supprimerLiveBlog(id: string): Promise<LiveResult> {
   // vit sa propre vie, et le supprimer ici serait un effet de bord que personne
   // n'a demandé.
   await prisma.$transaction([
+    prisma.liveDeletion.create({
+      data: {
+        kind: "blog",
+        snapshot: blog as unknown as object,
+        liveBlogId: blog.id,
+        liveBlogTitle: blog.title,
+        extrait: blog.dek ?? blog.title,
+        updatesCount: blog.updates.length,
+        deletedById: session.user.id,
+        deletedByName: session.user.name ?? "—",
+      },
+    }),
     prisma.liveUpdate.deleteMany({ where: { liveBlogId: id } }),
     prisma.liveBlog.delete({ where: { id } }),
   ]);
