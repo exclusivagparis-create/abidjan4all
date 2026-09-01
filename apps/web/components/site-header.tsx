@@ -93,14 +93,19 @@ export async function SiteHeader() {
             d'entrées se règle depuis le Studio, une de plus rognerait de
             nouveau la barre — mieux vaut un en-tête un peu plus haut qu'une
             rubrique invisible. */}
-        <nav className="hidden min-w-0 flex-wrap gap-x-4 gap-y-1.5 text-[13.5px] font-semibold text-ink-2 lg:flex 2xl:gap-x-5">
+        <nav className="hidden min-w-0 flex-wrap gap-x-4 gap-y-1.5 text-[13.5px] font-semibold text-ink-2 lg:flex lg:flex-1 2xl:gap-x-5">
           {NAV.map((item) => (
             <Link key={item.href} href={item.href} className="whitespace-nowrap hover:text-ink first:text-ink">
               {item.label}
             </Link>
           ))}
         </nav>
-        <span className="flex-1" />
+        {/* Espaceur pour les petites largeurs seulement. À partir de `lg`, c'est
+            le menu qui prend la place restante et repousse ce qui suit : ces
+            deux-là se partageaient sinon l'espace libre à parts égales, et le
+            menu, privé de quelques pixels, se repliait sur deux lignes alors
+            que la barre n'était pas pleine. */}
+        <span className="flex-1 lg:hidden" />
         {/* Recherche et « Mon compte » à partir de `xl` : entre 1024 et 1280,
             la place doit aller aux 7 entrées du menu. Ils restent joignables
             depuis le panneau et le pied de page. */}
