@@ -83,12 +83,17 @@ export async function SiteHeader() {
             nécessaires pour 1 136 utiles — quatorze pixels manquants, et
             « Diaspora » passait à la trappe.
 
-            Deux corrections. L'espacement descend à 16 px jusqu'à `xl`, ce qui
-            rend 24 px et remet tout sur une ligne. Et le menu REVIENT À LA
-            LIGNE au lieu de se couper : le nombre d'entrées se règle depuis le
-            Studio, une de plus rognerait de nouveau la barre — mieux vaut un
-            en-tête un peu plus haut qu'une rubrique invisible. */}
-        <nav className="hidden min-w-0 flex-wrap gap-x-4 gap-y-1.5 text-[13.5px] font-semibold text-ink-2 lg:flex xl:gap-x-5">
+            Deux corrections. L'espacement reste à 16 px jusqu'à `2xl`, ce qui
+            rend 24 px et remet tout sur une ligne. Le palier retenu n'est pas
+            `xl` : il COMMENCE à 1280, donc l'espacement large se serait
+            réactivé exactement à la largeur qui pose problème. Il faut attendre
+            1536 px, où la place est franchement suffisante.
+
+            Et le menu REVIENT À LA LIGNE au lieu de se couper : le nombre
+            d'entrées se règle depuis le Studio, une de plus rognerait de
+            nouveau la barre — mieux vaut un en-tête un peu plus haut qu'une
+            rubrique invisible. */}
+        <nav className="hidden min-w-0 flex-wrap gap-x-4 gap-y-1.5 text-[13.5px] font-semibold text-ink-2 lg:flex 2xl:gap-x-5">
           {NAV.map((item) => (
             <Link key={item.href} href={item.href} className="whitespace-nowrap hover:text-ink first:text-ink">
               {item.label}
