@@ -11,6 +11,7 @@ import {
   useGardeModifications,
   type BrouillonLocal,
 } from "./garde-modifications";
+import { ImportHtml } from "./import-html";
 import { RichTextEditor } from "./rich-text-editor";
 import { SelecteurImage } from "./selecteur-image";
 import { STATUS_META } from "./status-chip";
@@ -276,6 +277,28 @@ export function ArticleEditor({
               ＋ {BLOCK_LABEL[type]}
             </button>
           ))}
+
+          <span className="mx-1 h-5 w-px bg-line" aria-hidden />
+          {/* Reprendre un texte déjà mis en forme ailleurs, sans le ressaisir.
+              Placé avec les blocs parce que c'est bien de contenu qu'il s'agit :
+              l'import en produit, il ne fait pas autre chose. */}
+          <ImportHtml
+            corpsVide={article.blocks.every((b) => !(b.text ?? b.html ?? "").trim())}
+            onInserer={(importes, remplacer) =>
+              setArticle((a) => {
+                // Les blocs importés portent les mêmes types que ceux de
+                // l'éditeur : ils entrent tels quels, aucune traduction n'est
+                // nécessaire au passage.
+                const arrivants = importes as Block[];
+                // « Ajouter à la suite » sur un corps vide laisserait un
+                // paragraphe vide en tête, celui qu'on crée à l'ouverture.
+                const existants = remplacer
+                  ? []
+                  : a.blocks.filter((b) => (b.text ?? b.html ?? b.url ?? "").trim().length > 0);
+                return { ...a, blocks: [...existants, ...arrivants] };
+              })
+            }
+          />
         </div>
 
         {/* zone d'écriture */}

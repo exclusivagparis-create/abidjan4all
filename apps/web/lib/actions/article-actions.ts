@@ -48,9 +48,32 @@ function slugify(title: string): string {
     .slice(0, 80);
 }
 
-/** Nettoie les blocs « Texte enrichi » (liste blanche HTML) avant stockage. */
+/**
+ * Adresses d'image acceptées dans un bloc : http(s), chemin interne, ou le
+ * `placeholder://` du sélecteur. Le reste est écarté.
+ *
+ * Ce contrôle est devenu nécessaire avec l'import de HTML : les blocs image ne
+ * venaient jusque-là que du sélecteur de médiathèque, donc d'adresses que nous
+ * avions écrites nous-mêmes. Ils peuvent maintenant provenir d'une page
+ * quelconque. Un `javascript:` serait inerte dans une balise `img`, mais une
+ * `data:` recopierait le visuel entier dans le corps de l'article — plusieurs
+ * mégaoctets dans la base à chaque enregistrement, hors de la médiathèque.
+ */
+function urlImageAcceptable(url: string | undefined): boolean {
+  const v = (url ?? "").trim();
+  if (!v) return false;
+  if (v.startsWith("placeholder://")) return true;
+  if (v.startsWith("/")) return !v.startsWith("//");
+  return /^https?:\/\//i.test(v);
+}
+
+/** Nettoie les blocs avant stockage : HTML enrichi et adresses d'image. */
 function sanitizeBlocks(blocks: ArticleInput["blocks"]): ArticleInput["blocks"] {
-  return blocks.map((b) => (b.type === "richtext" ? { ...b, html: sanitizeArticleHtml(b.html ?? "") } : b));
+  return blocks.map((b) => {
+    if (b.type === "richtext") return { ...b, html: sanitizeArticleHtml(b.html ?? "") };
+    if (b.type === "image" && !urlImageAcceptable(b.url)) return { ...b, url: undefined };
+    return b;
+  });
 }
 
 /** ~200 mots/min, minimum 1 min. Le HTML enrichi est compté texte nu. */
