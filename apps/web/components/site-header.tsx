@@ -74,10 +74,21 @@ export async function SiteHeader() {
           <img src="/logo-mark-light.png" alt="" aria-hidden className="hidden h-[26px] sm:[display:var(--show-light)]" />
           <img src="/logo-mark-dark.png" alt="" aria-hidden className="hidden h-[26px] sm:[display:var(--show-dark)]" />
         </Link>
-        {/* Barre horizontale à partir de `lg` seulement. En tablette, elle
-            n'obtenait que 231 px pour 506 nécessaires : le menu était tronqué
-            en une bande défilante. Sous 1024 px, c'est le panneau qui sert. */}
-        <nav className="hidden min-w-0 gap-5 overflow-x-auto text-[13.5px] font-semibold text-ink-2 [scrollbar-width:none] lg:flex [&::-webkit-scrollbar]:hidden">
+        {/* Barre horizontale à partir de `lg` seulement. Sous 1024 px, c'est le
+            panneau qui sert.
+
+            Elle défilait horizontalement, barre de défilement masquée : au-delà
+            de la largeur disponible, les dernières entrées disparaissaient sans
+            rien pour le signaler. Mesuré sur un portable 1280 : 1 150 px
+            nécessaires pour 1 136 utiles — quatorze pixels manquants, et
+            « Diaspora » passait à la trappe.
+
+            Deux corrections. L'espacement descend à 16 px jusqu'à `xl`, ce qui
+            rend 24 px et remet tout sur une ligne. Et le menu REVIENT À LA
+            LIGNE au lieu de se couper : le nombre d'entrées se règle depuis le
+            Studio, une de plus rognerait de nouveau la barre — mieux vaut un
+            en-tête un peu plus haut qu'une rubrique invisible. */}
+        <nav className="hidden min-w-0 flex-wrap gap-x-4 gap-y-1.5 text-[13.5px] font-semibold text-ink-2 lg:flex xl:gap-x-5">
           {NAV.map((item) => (
             <Link key={item.href} href={item.href} className="whitespace-nowrap hover:text-ink first:text-ink">
               {item.label}
