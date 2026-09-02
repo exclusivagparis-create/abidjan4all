@@ -92,8 +92,8 @@ export async function SiteHeader() {
           />
           {/* Ecran large : le mot-symbole, fond transparent, encre bleu nuit
               sur theme clair et blanche sur theme sombre. */}
-          <img src="/logo-web-light.png" alt="" aria-hidden className="hidden h-[34px] sm:[display:var(--show-light)]" />
-          <img src="/logo-web-dark.png" alt="" aria-hidden className="hidden h-[34px] sm:[display:var(--show-dark)]" />
+          <img src="/logo-web-light.png" alt="" aria-hidden className="hidden h-[38px] sm:[display:var(--show-light)]" />
+          <img src="/logo-web-dark.png" alt="" aria-hidden className="hidden h-[38px] sm:[display:var(--show-dark)]" />
         </Link>
         {/* Barre horizontale à partir de `lg` seulement. Sous 1024 px, c'est le
             panneau qui sert.
@@ -104,17 +104,17 @@ export async function SiteHeader() {
             nécessaires pour 1 136 utiles — quatorze pixels manquants, et
             « Diaspora » passait à la trappe.
 
-            Deux corrections. L'espacement reste à 16 px jusqu'à `2xl`, ce qui
-            rend 24 px et remet tout sur une ligne. Le palier retenu n'est pas
-            `xl` : il COMMENCE à 1280, donc l'espacement large se serait
-            réactivé exactement à la largeur qui pose problème. Il faut attendre
-            1536 px, où la place est franchement suffisante.
+            Deux corrections. L'espacement descend à 16 px, à TOUTES les
+            largeurs. Il repassait à 20 px au-delà de 1536 px ; mais la barre y
+            est aussi étroite qu'ailleurs — son conteneur est plafonné à
+            1200 px — si bien que ces quatre pixels par intervalle reprenaient
+            la place rendue au logo, agrandi depuis.
 
             Et le menu REVIENT À LA LIGNE au lieu de se couper : le nombre
             d'entrées se règle depuis le Studio, une de plus rognerait de
             nouveau la barre — mieux vaut un en-tête un peu plus haut qu'une
             rubrique invisible. */}
-        <nav className="hidden min-w-0 flex-wrap gap-x-4 gap-y-1.5 text-[13.5px] font-semibold text-ink-2 lg:flex lg:flex-1 2xl:gap-x-5">
+        <nav className="hidden min-w-0 flex-wrap gap-x-4 gap-y-1.5 text-[13.5px] font-semibold text-ink-2 lg:flex lg:flex-1">
           {NAV.map((item) => (
             <Link key={item.href} href={item.href} className="whitespace-nowrap hover:text-ink first:text-ink">
               {item.label}
