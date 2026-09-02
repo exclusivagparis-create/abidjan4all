@@ -64,29 +64,36 @@ export async function SiteHeader() {
           dépassent sinon la largeur utile sur un portable 1280. */}
       <div className="mx-auto flex max-w-[1200px] items-center gap-2 px-3 py-3.5 sm:gap-3 sm:px-6 md:gap-4 lg:px-8">
         <MobileMenu entries={NAV} secondaires={secondaires} connecte={connecte} />
-        {/* Sur téléphone : le badge carré, 32 px de large, au lieu du
-            mot-symbole complet (109 px). La largeur gagnée rend sa place au
-            libellé « Se connecter », qu'une icône devait remplacer faute de
-            place. Le mot-symbole revient dès `sm`. */}
+        {/* Sur telephone : le badge carre, 40 px, au lieu du mot-symbole
+            complet. La largeur gagnee rend sa place au libelle « Se
+            connecter », qu une icone devait remplacer faute de place. Le
+            mot-symbole revient des `sm`. */}
         <Link href="/" className="flex flex-none items-center" aria-label="Abidjan4All — accueil">
-          {/* Téléphone : le nouveau badge carré.
-              Une seule image pour les deux thèmes, là où le mot-symbole en
-              demandait deux : le badge porte son propre fond bleu nuit, il ne
-              dépend donc pas de celui de la page.
-              Il est fourni en JPEG, donc opaque, avec une marge blanche autour
-              du carré arrondi. Sur le thème sombre (#0E141F) elle se verrait
-              comme un liseré clair.
+          {/* Quatre fichiers, deux formats et deux themes, tous derives des
+              deux JPEG fournis par la direction (cf. packages/db/scripts/
+              fabriquer-logos.mjs). Les originaux sont opaques : le mot-symbole
+              disparaitrait sur fond sombre, et le badge trainerait la marge
+              blanche de son JPEG. Le bleu employe est celui de la charte.
 
-              D'où le recadrage. Le badge occupe les pixels 18 à 449 sur 474 de
-              large et 18 à 439 sur 454 de haut — mesuré, la marge n'étant ni
-              uniforme ni centrée. Un agrandissement de 14 % repousse ces bords
-              hors du cadre, et le découpage aux coins arrondis retire le blanc
-              qui subsiste dans les angles du carré. */}
-          <span className="block h-[32px] w-[32px] overflow-hidden rounded-[9px] sm:hidden">
-            <img src="/logo-mobile.jpg" alt="" aria-hidden className="h-full w-full scale-[1.14] object-cover" />
-          </span>
-          <img src="/logo-mark-light.png" alt="" aria-hidden className="hidden h-[26px] sm:[display:var(--show-light)]" />
-          <img src="/logo-mark-dark.png" alt="" aria-hidden className="hidden h-[26px] sm:[display:var(--show-dark)]" />
+              Telephone : le badge carre. Sur le theme sombre il garde ses
+              couleurs — fond bleu, texte blanc ; sur le clair, fond et texte
+              permutent, le « 4 » et le drapeau restant intacts. */}
+          <img
+            src="/logo-mobile-light.png"
+            alt=""
+            aria-hidden
+            className="h-[40px] w-[40px] rounded-[11px] [display:var(--show-light)] sm:hidden"
+          />
+          <img
+            src="/logo-mobile-dark.png"
+            alt=""
+            aria-hidden
+            className="h-[40px] w-[40px] rounded-[11px] [display:var(--show-dark)] sm:hidden"
+          />
+          {/* Ecran large : le mot-symbole, fond transparent, encre bleu nuit
+              sur theme clair et blanche sur theme sombre. */}
+          <img src="/logo-web-light.png" alt="" aria-hidden className="hidden h-[34px] sm:[display:var(--show-light)]" />
+          <img src="/logo-web-dark.png" alt="" aria-hidden className="hidden h-[34px] sm:[display:var(--show-dark)]" />
         </Link>
         {/* Barre horizontale à partir de `lg` seulement. Sous 1024 px, c'est le
             panneau qui sert.
