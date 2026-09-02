@@ -37,6 +37,13 @@ const SOURCES = path.join(racine, "assets/logos");
 const NAVY = [0x1a, 0x2a, 0x4a];
 const BLANC = [255, 255, 255];
 
+/**
+ * Fond du site (`--bg`), par thème. Le bandeau reprend cette couleur à 82 %
+ * d'opacité par-dessus la page : au repos, l'un et l'autre se confondent.
+ */
+const FOND_CLAIR = [0xfb, 0xfa, 0xf7];
+const FOND_SOMBRE = [0x0e, 0x14, 0x1f];
+
 const lum = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
 /** L'orange de la marque : rouge dominant, bleu très en retrait. */
@@ -86,7 +93,37 @@ async function fabriquer(o) {
     if (l < lmin) lmin = l;
     if (l > lmax) lmax = l;
   }
-  const etendue = Math.max(1, lmax - lmin);
+  let etendue = Math.max(1, lmax - lmin);
+
+  // Pour le badge, les extrêmes ne sont pas les bons repères : son fond bleu
+  // n'est pas le point le plus sombre de l'image (il porte un léger dégradé, et
+  // le dessin contient des ombres plus foncées encore). Normaliser sur les
+  // extrêmes plaçait donc ce fond à un cinquième de l'axe, et la couleur visée
+  // n'était jamais atteinte — mesuré : rgb(224,225,226) au lieu du rgb(251,
+  // 250,247) demandé.
+  //
+  // On prend plutôt les deux tons DOMINANTS, celui du fond et celui de l'encre :
+  // ce sont eux qui doivent tomber exactement sur les couleurs voulues.
+  if (o.mode === "fondSite") {
+    const hist = new Float64Array(256);
+    for (let i = 0; i < data.length; i += 4) {
+      const [r, g, b] = px(i);
+      if (estOrange(r, g, b) || estVert(r, g, b)) continue;
+      hist[Math.round(lum(r, g, b))]++;
+    }
+    const dominant = (de, a) => {
+      let meilleur = de;
+      for (let v = de; v <= a; v++) if (hist[v] > hist[meilleur]) meilleur = v;
+      return meilleur;
+    };
+    const milieu = Math.round((lmin + lmax) / 2);
+    const lFond = dominant(Math.round(lmin), milieu);
+    const lEncre = dominant(milieu, Math.round(lmax));
+    if (lEncre > lFond) {
+      lmin = lFond;
+      etendue = lEncre - lFond;
+    }
+  }
 
   // Drapeau : repéré par sa bande verte, puis élargi vers la gauche pour
   // englober le blanc et l'orange qui la précèdent. Sans cela sa bande blanche
@@ -125,7 +162,7 @@ async function fabriquer(o) {
   // pourtour, à travers les pixels clairs, les atteint tous sans jamais entrer
   // dans une lettre, qui est entourée de bleu.
   const dehors = new Uint8Array(L * H);
-  if (o.encreClaire) {
+  if (o.encreClaire || o.mode === "fondSite") {
     const clair = (q) => {
       const i = q * 4;
       return (lum(data[i], data[i + 1], data[i + 2]) - lmin) / etendue > 0.55;
@@ -176,7 +213,15 @@ async function fabriquer(o) {
       }
     }
 
-    if (o.mode === "transparent") {
+    if (o.mode === "fondSite") {
+      // Le carré est conservé, mais son fond prend la couleur de la page : au
+      // lieu de disparaître, il se confond. `t` situe le pixel entre le fond
+      // d'origine (0) et l'encre d'origine (1) ; on le replace entre les deux
+      // couleurs voulues, ce qui emporte l'anti-crénelage avec lui.
+      data[i] = Math.round(o.fond[0] + (o.encre[0] - o.fond[0]) * t);
+      data[i + 1] = Math.round(o.fond[1] + (o.encre[1] - o.fond[1]) * t);
+      data[i + 2] = Math.round(o.fond[2] + (o.encre[2] - o.fond[2]) * t);
+    } else if (o.mode === "transparent") {
       // `t` situe le pixel entre le ton sombre (0) et le ton clair (1).
       // L'opacité suit le ton qui DESSINE, l'autre disparaît.
       const opacite = o.encreClaire ? t : 1 - t;
@@ -225,22 +270,22 @@ await fabriquer({
   encre: BLANC,
 });
 
-// Badge : fond retiré lui aussi, pour qu'il prenne celui de la page. Le carré
-// bleu se voyait comme une vignette rapportée — blanc pur sur le blanc chaud du
-// thème clair, bleu de charte sur le fond presque noir du thème sombre. Restent
-// le dessin et le drapeau, posés à même le bandeau.
+// Badge : le carré est CONSERVÉ, mais son fond prend la couleur de la page. Il
+// se confond alors avec le bandeau au lieu d'y former une vignette rapportée —
+// c'était le cas avec son bleu d'origine sur le thème sombre, et avec du blanc
+// pur sur le blanc chaud du thème clair.
 //
-// C'est le BLANC qui dessine dans le badge, à l'inverse du mot-symbole : d'où
-// `encreClaire`.
+// Les quatre coins, eux, restent transparents : ils sont hors du carré arrondi,
+// et une couleur pleine y dessinerait des équerres.
 await fabriquer({
   source: path.join(SOURCES, "logo-mobile.jpg"),
   sortie: path.join(PUBLIC, "logo-mobile-light.png"),
   recadrage: BADGE,
   largeur: 120,
   hauteur: 120,
-  mode: "transparent",
+  mode: "fondSite",
+  fond: FOND_CLAIR,
   encre: NAVY,
-  encreClaire: true,
   protegerDrapeau: true,
 });
 await fabriquer({
@@ -249,8 +294,8 @@ await fabriquer({
   recadrage: BADGE,
   largeur: 120,
   hauteur: 120,
-  mode: "transparent",
+  mode: "fondSite",
+  fond: FOND_SOMBRE,
   encre: BLANC,
-  encreClaire: true,
   protegerDrapeau: true,
 });
