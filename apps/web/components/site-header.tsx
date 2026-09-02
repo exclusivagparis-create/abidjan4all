@@ -75,20 +75,22 @@ export async function SiteHeader() {
               disparaitrait sur fond sombre, et le badge trainerait la marge
               blanche de son JPEG. Le bleu employe est celui de la charte.
 
-              Telephone : le badge carre. Sur le theme sombre il garde ses
-              couleurs — fond bleu, texte blanc ; sur le clair, fond et texte
-              permutent, le « 4 » et le drapeau restant intacts. */}
+              Telephone : le dessin du badge, sans son fond. Le carre bleu se
+              voyait comme une vignette rapportee — blanc pur sur le blanc chaud
+              du theme clair, bleu de charte sur le fond presque noir du sombre.
+              Il prend desormais le fond de la page, quel qu il soit. L encre
+              suit le theme, le « 4 » et le drapeau gardent leurs couleurs. */}
           <img
             src="/logo-mobile-light.png"
             alt=""
             aria-hidden
-            className="h-[40px] w-[40px] rounded-[11px] [display:var(--show-light)] sm:hidden"
+            className="h-[40px] w-[40px] [display:var(--show-light)] sm:hidden"
           />
           <img
             src="/logo-mobile-dark.png"
             alt=""
             aria-hidden
-            className="h-[40px] w-[40px] rounded-[11px] [display:var(--show-dark)] sm:hidden"
+            className="h-[40px] w-[40px] [display:var(--show-dark)] sm:hidden"
           />
           {/* Ecran large : le mot-symbole, fond transparent, encre bleu nuit
               sur theme clair et blanche sur theme sombre. */}

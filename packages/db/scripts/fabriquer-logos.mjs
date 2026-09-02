@@ -52,10 +52,15 @@ const estVert = (r, g, b) => g > 90 && g - r > 25 && g - b > 25;
  * @param {number} o.largeur
  * @param {number} o.hauteur
  * @param {"transparent"|"echange"|"teinte"} o.mode
- *   - `transparent` : le blanc devient transparent, l'encre prend `o.encre`
+ *   - `transparent` : un des deux tons devient transparent, l'autre prend `o.encre`
  *   - `echange`     : le bleu et le blanc permutent (fond opaque conservé)
  *   - `teinte`      : le bleu d'origine est remplacé par celui de la charte
  * @param {number[]} [o.encre]
+ * @param {boolean} [o.encreClaire]
+ *   Quel ton porte le dessin. Pour le mot-symbole c'est le BLEU qui dessine sur
+ *   un fond blanc ; pour le badge c'est l'inverse, le blanc dessine sur un fond
+ *   bleu. Sans cette bascule, le badge rendrait son fond opaque et ses lettres
+ *   transparentes — exactement le contraire de ce qu'on cherche.
  * @param {boolean} [o.protegerDrapeau]
  */
 async function fabriquer(o) {
@@ -84,8 +89,8 @@ async function fabriquer(o) {
   const etendue = Math.max(1, lmax - lmin);
 
   // Drapeau : repéré par sa bande verte, puis élargi vers la gauche pour
-  // englober le blanc et l'orange qui la précèdent. Sans cela l'échange
-  // teindrait en bleu la bande blanche du drapeau.
+  // englober le blanc et l'orange qui la précèdent. Sans cela sa bande blanche
+  // serait traitée comme du texte — teinte en bleu, ou rendue transparente.
   let dx0 = Infinity;
   let dy0 = Infinity;
   let dx1 = -1;
@@ -111,25 +116,74 @@ async function fabriquer(o) {
     }
   }
 
+  // Blanc EXTÉRIEUR au dessin, à distinguer du blanc qui dessine.
+  //
+  // Le badge est un carré aux angles arrondis : une fois recadré, ses quatre
+  // coins restent blancs, comme le sont ses lettres. Traités de la même façon,
+  // ils devenaient des équerres opaques autour du logo. On les reconnaît à ce
+  // qu'ils touchent le bord et se rejoignent : une propagation depuis le
+  // pourtour, à travers les pixels clairs, les atteint tous sans jamais entrer
+  // dans une lettre, qui est entourée de bleu.
+  const dehors = new Uint8Array(L * H);
+  if (o.encreClaire) {
+    const clair = (q) => {
+      const i = q * 4;
+      return (lum(data[i], data[i + 1], data[i + 2]) - lmin) / etendue > 0.55;
+    };
+    const pile = [];
+    for (let X = 0; X < L; X++) pile.push(X, (H - 1) * L + X);
+    for (let Y = 0; Y < H; Y++) pile.push(Y * L, Y * L + L - 1);
+    while (pile.length) {
+      const q = pile.pop();
+      if (dehors[q] || !clair(q)) continue;
+      dehors[q] = 1;
+      const X = q % L;
+      const Y = (q / L) | 0;
+      if (X > 0) pile.push(q - 1);
+      if (X < L - 1) pile.push(q + 1);
+      if (Y > 0) pile.push(q - L);
+      if (Y < H - 1) pile.push(q + L);
+    }
+  }
+
   for (let i = 0; i < data.length; i += 4) {
     const [r, g, b] = px(i);
     if (estOrange(r, g, b) || estVert(r, g, b)) continue;
+
+    if (dehors[i / 4]) {
+      data[i + 3] = 0;
+      continue;
+    }
+
+    const t = Math.max(0, Math.min(1, (lum(r, g, b) - lmin) / etendue));
 
     if (o.protegerDrapeau && dx1 > 0) {
       const q = i / 4;
       const X = q % L;
       const Y = (q / L) | 0;
-      if (X >= dx0 && X <= dx1 && Y >= dy0 && Y <= dy1) continue;
+      if (X >= dx0 && X <= dx1 && Y >= dy0 && Y <= dy1) {
+        // Dans le drapeau, la bande claire est du BLANC et doit le rester,
+        // opaque : ce n'est ni du texte à recolorer, ni du fond à effacer.
+        // Le reste de la zone suit la règle commune — sans quoi un rectangle
+        // opaque subsisterait autour du drapeau.
+        if (t > 0.6) {
+          data[i] = 255;
+          data[i + 1] = 255;
+          data[i + 2] = 255;
+          data[i + 3] = 255;
+          continue;
+        }
+      }
     }
 
-    const t = Math.max(0, Math.min(1, (lum(r, g, b) - lmin) / etendue));
-
     if (o.mode === "transparent") {
-      // t=1 (blanc du fond) → invisible ; t=0 (encre) → opaque.
+      // `t` situe le pixel entre le ton sombre (0) et le ton clair (1).
+      // L'opacité suit le ton qui DESSINE, l'autre disparaît.
+      const opacite = o.encreClaire ? t : 1 - t;
       data[i] = o.encre[0];
       data[i + 1] = o.encre[1];
       data[i + 2] = o.encre[2];
-      data[i + 3] = Math.round(255 * (1 - t));
+      data[i + 3] = Math.round(255 * opacite);
     } else {
       const u = o.mode === "echange" ? 1 - t : t;
       data[i] = Math.round(NAVY[0] + (BLANC[0] - NAVY[0]) * u);
@@ -171,21 +225,32 @@ await fabriquer({
   encre: BLANC,
 });
 
-// Badge : bleu de charte sur le thème sombre, couleurs permutées sur le clair.
-await fabriquer({
-  source: path.join(SOURCES, "logo-mobile.jpg"),
-  sortie: path.join(PUBLIC, "logo-mobile-dark.png"),
-  recadrage: BADGE,
-  largeur: 120,
-  hauteur: 120,
-  mode: "teinte",
-});
+// Badge : fond retiré lui aussi, pour qu'il prenne celui de la page. Le carré
+// bleu se voyait comme une vignette rapportée — blanc pur sur le blanc chaud du
+// thème clair, bleu de charte sur le fond presque noir du thème sombre. Restent
+// le dessin et le drapeau, posés à même le bandeau.
+//
+// C'est le BLANC qui dessine dans le badge, à l'inverse du mot-symbole : d'où
+// `encreClaire`.
 await fabriquer({
   source: path.join(SOURCES, "logo-mobile.jpg"),
   sortie: path.join(PUBLIC, "logo-mobile-light.png"),
   recadrage: BADGE,
   largeur: 120,
   hauteur: 120,
-  mode: "echange",
+  mode: "transparent",
+  encre: NAVY,
+  encreClaire: true,
+  protegerDrapeau: true,
+});
+await fabriquer({
+  source: path.join(SOURCES, "logo-mobile.jpg"),
+  sortie: path.join(PUBLIC, "logo-mobile-dark.png"),
+  recadrage: BADGE,
+  largeur: 120,
+  hauteur: 120,
+  mode: "transparent",
+  encre: BLANC,
+  encreClaire: true,
   protegerDrapeau: true,
 });
