@@ -109,7 +109,11 @@ export function htmlVersBlocs(html: string): BlocImporte[] {
         const t = texte(noeud);
         if (!t) continue;
         const enrichi = balise !== "P" || noeud.querySelector(MISE_EN_FORME) !== null;
-        blocs.push(enrichi ? { type: "richtext", html: noeud.outerHTML } : { type: "paragraph", text: t });
+        // Tout arrive en paragraphe, mis en forme ou non : le bloc « texte
+        // enrichi » n'est plus proposé à la création depuis que le paragraphe
+        // porte la mise en forme. Le texte nu accompagne le HTML — c'est lui
+        // que lit l'index de recherche.
+        blocs.push(enrichi ? { type: "paragraph", html: noeud.outerHTML, text: t } : { type: "paragraph", text: t });
         continue;
       }
 

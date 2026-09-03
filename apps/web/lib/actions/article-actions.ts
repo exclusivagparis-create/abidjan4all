@@ -67,19 +67,33 @@ function urlImageAcceptable(url: string | undefined): boolean {
   return /^https?:\/\//i.test(v);
 }
 
-/** Nettoie les blocs avant stockage : HTML enrichi et adresses d'image. */
+/**
+ * Nettoie les blocs avant stockage : HTML et adresses d'image.
+ *
+ * Le nettoyage porte sur TOUT bloc qui contient du HTML, et non plus sur le
+ * seul « texte enrichi » : le paragraphe en porte désormais lui aussi, depuis
+ * qu'il a sa barre de mise en forme. Cibler un type plutôt qu'un champ, c'était
+ * laisser passer le suivant.
+ */
 function sanitizeBlocks(blocks: ArticleInput["blocks"]): ArticleInput["blocks"] {
   return blocks.map((b) => {
-    if (b.type === "richtext") return { ...b, html: sanitizeArticleHtml(b.html ?? "") };
     if (b.type === "image" && !urlImageAcceptable(b.url)) return { ...b, url: undefined };
+    if (typeof b.html === "string") return { ...b, html: sanitizeArticleHtml(b.html) };
     return b;
   });
 }
 
-/** ~200 mots/min, minimum 1 min. Le HTML enrichi est compté texte nu. */
+/**
+ * ~200 mots/min, minimum 1 min.
+ *
+ * Le texte nu est privilégié : chaque bloc en porte un, y compris ceux qui
+ * portent aussi du HTML. On ne retombe sur le HTML débarrassé de ses balises
+ * que pour les blocs anciens qui n'ont pas de `text` — sinon un « <strong> »
+ * compterait pour un mot.
+ */
 function computeReadingTime(blocks: ArticleInput["blocks"]): number {
   const words = blocks
-    .map((b) => (b.type === "richtext" ? (b.html ?? "").replace(/<[^>]+>/g, " ") : (b.text ?? "")))
+    .map((b) => b.text ?? (b.html ?? "").replace(/<[^>]+>/g, " "))
     .join(" ")
     .split(/\s+/)
     .filter(Boolean).length;

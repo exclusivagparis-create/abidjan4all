@@ -53,9 +53,21 @@ export type RubriqueOption = { id: string; slug: string; name: string; color: st
 export type AuteurOption = { id: string; name: string; role: string };
 export type MediaOption = { id: string; url: string; alt: string | null };
 
-const BLOCK_LABEL: Record<BlockType, string> = {
-  richtext: "Texte enrichi",
-  paragraph: "Paragraphe simple",
+/**
+ * Blocs proposés à la création.
+ *
+ * « Texte enrichi » n'y figure plus. Il n'avait qu'une raison d'être : porter
+ * une mise en forme que le paragraphe ne savait pas porter. Le paragraphe la
+ * porte désormais, avec la même barre d'outils et le même stockage — les deux
+ * faisaient double emploi, et proposer deux blocs pour un même travail oblige
+ * le rédacteur à trancher une question qui n'a pas de réponse.
+ *
+ * Le TYPE, lui, reste pris en charge : sept articles en contiennent, ils
+ * s'affichent et se modifient comme avant. On retire le bloc du catalogue, on
+ * n'efface pas ce qui existe.
+ */
+const BLOCK_LABEL: Record<Exclude<BlockType, "richtext">, string> = {
+  paragraph: "Paragraphe",
   h2: "Intertitre",
   quote: "Citation",
   callout: "Encadré",
@@ -267,7 +279,7 @@ export function ArticleEditor({
 
         {/* toolbar : ajout de blocs */}
         <div className="flex flex-wrap items-center gap-1 border-b border-line-2 px-5 py-2.5">
-          {(Object.keys(BLOCK_LABEL) as BlockType[]).map((type) => (
+          {(Object.keys(BLOCK_LABEL) as Exclude<BlockType, "richtext">[]).map((type) => (
             <button
               key={type}
               type="button"
@@ -336,11 +348,20 @@ export function ArticleEditor({
               {block.type === "richtext" ? (
                 <RichTextEditor value={block.html ?? ""} onChange={(html) => setBlock(i, { html })} />
               ) : block.type === "paragraph" ? (
-                <AutoTextarea
-                  value={block.text ?? ""}
-                  onChange={(v) => setBlock(i, { text: v })}
+                <RichTextEditor
+                  compact
                   placeholder="Paragraphe…"
-                  className="w-full resize-none bg-transparent font-serif text-lg leading-[1.72] text-ink outline-none placeholder:text-ink-3"
+                  // Un paragraphe d'avant la mise en forme ne porte que du
+                  // texte : on l'échappe pour l'ouvrir en HTML, sinon un
+                  // chevron ou une esperluette du texte d'origine serait pris
+                  // pour du balisage. Les archives en contiennent.
+                  value={block.html ?? echapperHtml(block.text ?? "")}
+                  // Le texte nu est conservé À CÔTÉ du HTML, et ce n'est pas
+                  // une redondance : l'index de recherche du site lit le champ
+                  // `text` des blocs. Un paragraphe qui ne porterait que du
+                  // HTML sortirait des résultats de recherche.
+                  onChange={(html, texte) => setBlock(i, { html, text: texte })}
+                  className="prose-editor w-full bg-transparent font-serif text-lg leading-[1.72] text-ink outline-none [&_a]:text-blue [&_a]:underline [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6"
                 />
               ) : block.type === "h2" ? (
                 <input
@@ -867,4 +888,19 @@ function AutoTextarea({
       className={className}
     />
   );
+}
+
+/**
+ * Échappe un texte nu pour l'ouvrir dans un éditeur HTML.
+ *
+ * Les paragraphes écrits avant la mise en forme ne portent que du texte. Sans
+ * cet échappement, un chevron ou une esperluette y serait relu comme du
+ * balisage — les archives d'abidjan4all.net en contiennent.
+ */
+function echapperHtml(texte: string): string {
+  return texte
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br />");
 }

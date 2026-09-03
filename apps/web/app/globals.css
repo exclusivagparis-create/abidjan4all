@@ -79,3 +79,14 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+/* Texte d'invite d'une zone `contentEditable`.
+   Un champ ordinaire affiche son `placeholder` tout seul ; une zone éditable,
+   non — elle n'en connaît pas la notion. Sans cette règle, un paragraphe vide
+   de l'éditeur n'est qu'un blanc, sans rien pour dire qu'on peut y écrire.
+   `:empty` suffit : dès qu'un caractère est saisi, l'invite disparaît. */
+[contenteditable][data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--ink-3);
+  pointer-events: none;
+}

@@ -52,15 +52,30 @@ export function ArticleBody({ blocks, dropCap = true }: { blocks: unknown; dropC
           case "paragraph": {
             const text = block.text ?? "";
             // premier paragraphe = « lead » du modèle : plus grand, semi-gras
-            if (dropCap && i === 0 && text.length > 1) {
+            const lead = dropCap && i === 0 && text.length > 1;
+            const classe = lead
+              ? "mb-[22px] font-serif text-[19.5px] font-semibold leading-[1.62] text-ink"
+              : "mb-[22px] font-serif text-[17.5px] leading-[1.78] text-ink";
+
+            // Un paragraphe mis en forme porte du `html` ; les autres — tous
+            // ceux écrits avant que l'éditeur ne sache le faire, dont les
+            // 4 315 articles repris — n'ont que du `text`, et restent rendus
+            // comme du texte. Le champ départage : rien à migrer, et pas de
+            // risque qu'un chevron d'archive soit relu comme du balisage.
+            if (block.html) {
               return (
-                <p key={i} className="mb-[22px] font-serif text-[19.5px] font-semibold leading-[1.62] text-ink">
-                  {text}
-                </p>
+                <div
+                  key={i}
+                  className={`${classe} [&_a]:text-blue [&_a]:underline [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6`}
+                  // Nettoyé au save par la liste blanche du serveur, comme le
+                  // texte enrichi (cf. sanitizeBlocks).
+                  dangerouslySetInnerHTML={{ __html: block.html }}
+                />
               );
             }
+
             return (
-              <p key={i} className="mb-[22px] font-serif text-[17.5px] leading-[1.78] text-ink">
+              <p key={i} className={classe}>
                 {text}
               </p>
             );
