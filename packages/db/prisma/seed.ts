@@ -226,6 +226,16 @@ async function main() {
 
   // ---- Articles (titres des maquettes)
   const j = (d: string) => new Date(d);
+  /**
+   * `views` reste à zéro partout.
+   *
+   * Ce jeu d'amorçage donnait à ses articles de démonstration des compteurs
+   * inventés — jusqu'à 15 320 lectures. Comme il a servi à installer le site,
+   * ces chiffres se sont retrouvés en production : ils occupaient à eux seuls
+   * le classement « Les plus lus » de l'accueil et faussaient les
+   * statistiques du Studio. Un article d'exemple n'a jamais été lu ; son
+   * compteur doit le dire.
+   */
   type Art = {
     slug: string; title: string; kicker?: string; dek: string; rubrique: string;
     author: string; premium?: boolean; readingTime: number; views: number;
@@ -237,7 +247,7 @@ async function main() {
       title: "Abidjan mise sur la transformation locale de la fève",
       kicker: "Enquête",
       dek: "La Côte d'Ivoire veut broyer davantage sur son sol pour capter la valeur ajoutée — un tournant que scrutent de près les investisseurs de la diaspora.",
-      rubrique: "cacao-marches", author: awa.id, premium: true, readingTime: 6, views: 12840,
+      rubrique: "cacao-marches", author: awa.id, premium: true, readingTime: 6, views: 0,
       publishedAt: "2026-06-30T06:00:00Z", coverAssetId: covPort.id,
       tags: ["cacao", "transformation", "industrie"],
       body: [
@@ -255,7 +265,7 @@ async function main() {
       title: "Qui contrôle vraiment la chaîne mondiale du chocolat ?",
       kicker: "Enquête",
       dek: "Des cabosses de Daloa aux rayons européens, la carte du pouvoir et de la valeur.",
-      rubrique: "cacao-marches", author: awa.id, premium: true, readingTime: 9, views: 9310,
+      rubrique: "cacao-marches", author: awa.id, premium: true, readingTime: 9, views: 0,
       publishedAt: "2026-06-27T06:00:00Z", coverAssetId: covSechage.id,
       tags: ["cacao", "négoce"], body: corps("La chaîne mondiale du chocolat"),
     },
@@ -263,14 +273,14 @@ async function main() {
       slug: "demande-asiatique-cacao",
       title: "La demande asiatique redessine la carte du cacao",
       dek: "Broyeurs indonésiens, chocolatiers japonais : les flux se déplacent vers l'Est.",
-      rubrique: "cacao-marches", author: awa.id, readingTime: 5, views: 4120,
+      rubrique: "cacao-marches", author: awa.id, readingTime: 5, views: 0,
       publishedAt: "2026-06-25T06:00:00Z", tags: ["cacao", "asie"], body: corps("La demande asiatique de cacao"),
     },
     {
       slug: "ivoiriens-montreal-investir",
       title: "Ces Ivoiriens de Montréal qui reviennent investir au pays",
       dek: "Portraits d'une génération qui fait le chemin inverse, capitaux en poche.",
-      rubrique: "diaspora", author: koffi.id, readingTime: 3, views: 7204,
+      rubrique: "diaspora", author: koffi.id, readingTime: 3, views: 0,
       publishedAt: "2026-06-29T10:00:00Z", coverAssetId: covMontreal.id,
       tags: ["diaspora", "investissement", "canada"], body: corps("Le retour des investisseurs de Montréal"),
     },
@@ -278,7 +288,7 @@ async function main() {
       slug: "brvm-nouvelle-vague-pme",
       title: "La BRVM attire une nouvelle vague de PME ivoiriennes",
       dek: "Le troisième compartiment de la bourse régionale séduit les entreprises familiales.",
-      rubrique: "business", author: awa.id, premium: true, readingTime: 4, views: 5987,
+      rubrique: "business", author: awa.id, premium: true, readingTime: 4, views: 0,
       publishedAt: "2026-06-28T08:00:00Z", coverAssetId: covBrvm.id,
       tags: ["brvm", "pme", "bourse"], body: corps("La cote des PME à la BRVM"),
     },
@@ -286,21 +296,21 @@ async function main() {
       slug: "franc-cfa-coeur-debat",
       title: "Le franc CFA de nouveau au cœur du débat",
       dek: "Entre l'eco annoncé et les réalités monétaires, où en est vraiment la réforme ?",
-      rubrique: "economie", author: awa.id, readingTime: 7, views: 15320,
+      rubrique: "economie", author: awa.id, readingTime: 7, views: 0,
       publishedAt: "2026-06-26T06:00:00Z", tags: ["cfa", "eco", "uemoa"], body: corps("La réforme du franc CFA"),
     },
     {
       slug: "elephants-liste-26-can",
       title: "Éléphants : la liste des 26 pour la CAN",
       dek: "Le sélectionneur a tranché — surprises en attaque, retours en défense.",
-      rubrique: "sport", author: koffi.id, readingTime: 2, views: 14005,
+      rubrique: "sport", author: koffi.id, readingTime: 2, views: 0,
       publishedAt: "2026-07-01T18:00:00Z", tags: ["can", "elephants", "football"], body: corps("La liste des Éléphants"),
     },
     {
       slug: "attieke-femmes-filiere",
       title: "Attiéké : ces femmes qui réinventent la filière",
       dek: "De Dabou aux rayons parisiens, une IGP qui change l'échelle du métier.",
-      rubrique: "femmes", author: koffi.id, readingTime: 5, views: 8114,
+      rubrique: "femmes", author: koffi.id, readingTime: 5, views: 0,
       publishedAt: "2026-06-24T06:00:00Z", tags: ["attieke", "igp", "agroalimentaire"], body: corps("La filière attiéké"),
     },
   ];
@@ -339,7 +349,7 @@ async function main() {
       authorId: koffi.id,
       tags: ["cocoa", "industry", "english"],
       readingTime: 4,
-      views: 2310,
+      views: 0,
       seo: { metaTitle: "Ivory Coast bets big on grinding its own cocoa", metaDescription: "Processing half the harvest at home by 2028." } as Prisma.InputJsonValue,
     },
   });

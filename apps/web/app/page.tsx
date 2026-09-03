@@ -59,8 +59,13 @@ export default async function HomePage() {
       take: 4,
       select: { title: true, body: true, liveBlog: { select: { title: true } } },
     }),
+    // « Les plus lus » : seulement des articles réellement lus. Sans ce
+    // filtre, quand personne n'a encore rien lu, le classement se remplit
+    // d'articles à zéro lecture pris dans l'ordre où la base les rend — il
+    // affiche alors trois titres au hasard sous un titre qui promet le
+    // contraire.
     prisma.article.findMany({
-      where: PUBLIC_ARTICLE,
+      where: { ...PUBLIC_ARTICLE, views: { gt: 0 } },
       select: { slug: true, title: true, rubrique: { select: { slug: true } } },
       orderBy: { views: "desc" },
       take: 3,
@@ -203,6 +208,9 @@ export default async function HomePage() {
               ))}
               <VideoWindow videos={videos} />
 
+              {/* Le bloc disparaît tant que rien n'a été lu, plutôt que
+                  d'afficher un cadre vide sous son titre. */}
+              {plusLus.length > 0 ? (
               <div className="mt-auto rounded-md border border-line bg-surface-2 px-5 py-4">
                 <div className="mb-1 border-b border-line pb-2.5 text-[11px] font-bold uppercase tracking-[0.1em]">
                   Les plus lus
@@ -221,6 +229,7 @@ export default async function HomePage() {
                   </div>
                 ))}
               </div>
+              ) : null}
 
               {/* Emplacement pub — pavé 300×250 en colonne. */}
               <AdSlot placementId="home_mpu" />
