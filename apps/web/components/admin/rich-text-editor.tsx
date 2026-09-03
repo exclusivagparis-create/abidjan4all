@@ -25,6 +25,30 @@ import { useEffect, useRef, useState } from "react";
  * HTML sortirait purement et simplement des résultats de recherche.
  */
 const COLORS = ["#1a1a1a", "#F47920", "#006633", "#a01520", "#1a3a5c", "#7C3A8C", "#8B6914", "#ffffff"];
+
+/**
+ * Fonds de surlignage.
+ *
+ * Une liste à part, et non la palette éditoriale ci-dessus : celle-ci est
+ * faite pour de l'encre, ses teintes sont franches. Employées en fond
+ * derrière un texte noir, elles le rendent illisible — un vert bouteille ou
+ * un bordeaux ne se lisent pas. Ici, des teintes claires, qui restent
+ * lisibles dans les deux thèmes.
+ *
+ * `transparent` retire le surlignage. Il manquait : la palette proposait bien
+ * un blanc, mais un blanc n'est pas une absence — il reste visible en thème
+ * sombre, où il découpe une bande claire derrière le texte.
+ */
+const FONDS: Array<[string, string]> = [
+  ["transparent", "Aucun fond"],
+  ["#FDE68A", "Jaune"],
+  ["#FED7AA", "Orange"],
+  ["#BBF7D0", "Vert"],
+  ["#BFDBFE", "Bleu"],
+  ["#FBCFE8", "Rose"],
+  ["#DDD6FE", "Violet"],
+  ["#E5E7EB", "Gris"],
+];
 const FONT_SIZES: Array<[string, string]> = [
   ["2", "Petit"],
   ["3", "Normal"],
@@ -140,11 +164,16 @@ export function RichTextEditor({
       <Tb onClick={() => exec('underline')} title='Souligné'><u>S</u></Tb>
       <Tb onClick={() => exec('strikeThrough')} title='Barré'><s>B</s></Tb>
       <Sep />
+      {/* Les deux commandes de couleur se ressemblaient trait pour trait —
+          un « A » chacune — et rien ne disait qu'elles ouvrent un choix. Le
+          chevron l'annonce, et le fond porte désormais sa pastille. */}
       <Tb onClick={() => setShowColors(showColors === 'fore' ? false : 'fore')} title='Couleur du texte'>
         <span style={{ color: '#F47920' }}>A</span>
+        <span className='ml-0.5 text-[9px] text-ink-3'>▾</span>
       </Tb>
       <Tb onClick={() => setShowColors(showColors === 'back' ? false : 'back')} title='Couleur de fond'>
-        <span className='rounded-sm px-0.5' style={{ background: '#F5C24B' }}>A</span>
+        <span className='rounded-sm px-0.5' style={{ background: '#FDE68A', color: '#1a1a1a' }}>A</span>
+        <span className='ml-0.5 text-[9px] text-ink-3'>▾</span>
       </Tb>
       <Sep />
       <Tb onClick={() => exec('insertUnorderedList')} title='Puces'>•≡</Tb>
@@ -182,17 +211,34 @@ export function RichTextEditor({
 
   const palette = showColors ? (
     <div className='flex flex-wrap gap-1.5 border-b border-line-2 bg-surface-2 px-2.5 py-2'>
-      {COLORS.map((c) => (
-        <button
-          key={c}
-          type='button'
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => { exec(showColors === 'fore' ? 'foreColor' : 'hiliteColor', c); setShowColors(false); }}
-          className='h-5 w-5 rounded border border-line'
-          style={{ background: c }}
-          title={c}
-        />
-      ))}
+      {showColors === 'fore'
+        ? COLORS.map((c) => (
+            <button
+              key={c}
+              type='button'
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { exec('foreColor', c); setShowColors(false); }}
+              className='h-5 w-5 rounded border border-line'
+              style={{ background: c }}
+              title={c}
+            />
+          ))
+        : FONDS.map(([c, nom]) => (
+            <button
+              key={c}
+              type='button'
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { exec('hiliteColor', c); setShowColors(false); }}
+              className='h-5 w-5 rounded border border-line'
+              style={
+                c === 'transparent'
+                  ? // barré en diagonale : c'est le retrait du surlignage, pas une couleur
+                    { background: 'linear-gradient(to top right, transparent 44%, var(--ink-3) 44%, var(--ink-3) 56%, transparent 56%)' }
+                  : { background: c }
+              }
+              title={nom}
+            />
+          ))}
     </div>
   ) : null;
 

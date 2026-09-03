@@ -9,18 +9,59 @@ export function PlaceholderMedia({
   alt,
   className,
   style,
+  ajuste = false,
 }: {
   url?: string | null;
   alt?: string | null;
   className?: string;
   style?: React.CSSProperties;
+  /**
+   * Ajuste le cadre à la photo au lieu de la rogner.
+   *
+   * Par défaut, l'image remplit un cadre de hauteur fixe et déborde des deux
+   * côtés : c'est ce qu'il faut dans une grille de vignettes, où l'alignement
+   * prime. Mais dans le corps d'un article, la photo est le document — la
+   * rogner en coupe le sens : sur un article publié, la photo de une perdait
+   * 45 % de sa surface, un portrait jusqu'à 69 %, têtes tranchées comprises.
+   *
+   * Ici, la largeur reste celle de la colonne et la hauteur suit le rapport
+   * de l'image : rien n'est coupé, rien n'est déformé. La hauteur du cadre
+   * passée en classe ne sert plus que de plafond, pour qu'une photo en
+   * portrait ne tienne pas trois écrans à elle seule.
+   */
+  ajuste?: boolean;
 }) {
   const caption = url?.startsWith("placeholder://") ? url.slice("placeholder://".length) : alt;
   const isReal = url && !url.startsWith("placeholder://");
 
   if (isReal) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt={alt ?? ""} className={className} style={{ objectFit: "cover", ...style }} />;
+    return (
+      <img
+        src={url}
+        alt={alt ?? ""}
+        className={className}
+        style={
+          ajuste
+            ? // Le cadre épouse la photo au lieu de l'inverse : largeur jusqu'à
+              // la colonne, hauteur jusqu'au plafond, rapport toujours
+              // respecté. Aucune bande vide n'apparaît puisque la boîte a
+              // exactement la taille de l'image, et une photo plus petite que
+              // la colonne s'affiche à sa taille vraie plutôt qu'agrandie et
+              // floue — un dixième des 571 photos mesurées en production font
+              // moins de 400 px de large.
+              {
+                width: "auto",
+                height: "auto",
+                maxWidth: "100%",
+                display: "block",
+                marginInline: "auto",
+                ...style,
+              }
+            : { objectFit: "cover", ...style }
+        }
+      />
+    );
   }
 
   return (

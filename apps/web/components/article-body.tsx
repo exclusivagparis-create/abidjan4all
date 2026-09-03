@@ -164,7 +164,16 @@ export function ArticleBody({ blocks, dropCap = true }: { blocks: unknown; dropC
             );
           case "image":
             return (
-              <PlaceholderMedia key={i} url={block.url} alt={block.alt} className="my-7 h-[320px] w-full rounded-[3px]" />
+              // `h-[320px]` ne vaut plus que pour l'aplat d'attente, qui n'a
+              // aucune dimension propre ; une vraie photo prend la largeur de
+              // la colonne et sa hauteur naturelle, plafonnée à 70 % de l'écran.
+              <PlaceholderMedia
+                key={i}
+                ajuste
+                url={block.url}
+                alt={block.alt}
+                className="my-7 h-[320px] max-h-[70vh] w-full rounded-[3px]"
+              />
             );
           default:
             return null;

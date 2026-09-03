@@ -257,7 +257,16 @@ export default async function ArticlePage({ params }: Props) {
 
         {article.coverAsset ? (
           <div className="mx-auto max-w-[980px] px-4 sm:px-6 lg:px-8">
-            <PlaceholderMedia url={article.coverAsset.url} alt={article.coverAsset.alt} className="h-[440px] w-full rounded-[3px]" />
+            {/* La photo de une est ajustée elle aussi : sur ce cadre de 440 px,
+                elle perdait près de la moitié de sa surface. `h-[440px]` ne
+                sert plus qu'à l'aplat d'attente ; le plafond retient les
+                portraits, qui sinon repousseraient le texte hors de l'écran. */}
+            <PlaceholderMedia
+              ajuste
+              url={article.coverAsset.url}
+              alt={article.coverAsset.alt}
+              className="h-[440px] max-h-[75vh] w-full rounded-[3px]"
+            />
             {/* Légende du modèle : « 📷 Illustration : … © crédit » */}
             {article.coverAsset.alt || article.coverAsset.credit ? (
               <div className="mt-2 px-0.5 text-[11.5px] leading-normal text-ink-3">
