@@ -57,8 +57,27 @@ export function RichTextEditor({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const boite = useRef<HTMLDivElement>(null);
   const [showColors, setShowColors] = useState<false | "fore" | "back">(false);
   const [actif, setActif] = useState(false);
+
+  /**
+   * Dernière sélection connue dans la zone d'écriture.
+   *
+   * Les boutons de la barre retiennent le focus (leur `mousedown` est annulé),
+   * mais un `select` ne le peut pas : l'annuler l'empêcherait de s'ouvrir. Le
+   * focus passe donc au sélecteur, et avec lui la sélection du texte. On la
+   * garde de côté pour la rendre à la zone avant d'exécuter la commande, sans
+   * quoi la taille s'appliquerait au vide.
+   */
+  const selection = useRef<Range | null>(null);
+
+  const memoriser = () => {
+    const s = window.getSelection();
+    if (s && s.rangeCount > 0 && ref.current?.contains(s.anchorNode)) {
+      selection.current = s.getRangeAt(0).cloneRange();
+    }
+  };
 
   // n'écrit dans le DOM que si la valeur externe diffère (évite de casser le curseur)
   useEffect(() => {
@@ -69,8 +88,14 @@ export function RichTextEditor({
 
   const exec = (command: string, arg?: string) => {
     ref.current?.focus();
+    const s = window.getSelection();
+    if (selection.current && (!s || s.rangeCount === 0 || !ref.current?.contains(s.anchorNode))) {
+      s?.removeAllRanges();
+      s?.addRange(selection.current);
+    }
     document.execCommand("styleWithCSS", false, "true");
     document.execCommand(command, false, arg);
+    memoriser();
     sync();
   };
 
@@ -94,6 +119,14 @@ export function RichTextEditor({
       <select
         onChange={(e) => { exec('fontSize', e.target.value); e.target.selectedIndex = 0; }}
         onMouseDown={(e) => e.stopPropagation()}
+        // Le sélecteur prend le focus ; c'est donc à lui de refermer la barre
+        // quand on la quitte pour de bon, la zone d'écriture l'ayant laissée
+        // ouverte en le voyant recevoir le focus.
+        onBlur={(e) => {
+          if (boite.current?.contains(e.relatedTarget as Node | null)) return;
+          setActif(false);
+          setShowColors(false);
+        }}
         title='Taille du texte'
         className='mx-0.5 h-7 rounded border border-line bg-surface px-1 text-[12px]'
         defaultValue=''
@@ -168,7 +201,7 @@ export function RichTextEditor({
   // donc pas disparaître sous le doigt.
   if (compact) {
     return (
-      <div className='relative'>
+      <div className='relative' ref={boite}>
         {actif ? (
           <div className={`mb-1.5 rounded-[8px] border border-line bg-surface-2 py-1 pl-2 ${reserveDroite ? 'pr-[76px]' : 'pr-2'}`}>
             <div className='flex flex-wrap items-center gap-0.5'>{outilsTexte}</div>
@@ -181,8 +214,20 @@ export function RichTextEditor({
           suppressContentEditableWarning
           data-placeholder={placeholder}
           onInput={sync}
+          onKeyUp={memoriser}
+          onMouseUp={memoriser}
           onFocus={() => setActif(true)}
-          onBlur={() => { setActif(false); setShowColors(false); sync(); }}
+          onBlur={(e) => {
+            memoriser();
+            // Le focus qui part vers la barre elle-même — le sélecteur de
+            // taille est le seul élément qui le prenne — ne doit pas la
+            // refermer : elle disparaîtrait sous le doigt avant que le clic
+            // n'aboutisse, et le sélecteur resterait inatteignable.
+            if (boite.current?.contains(e.relatedTarget as Node | null)) return;
+            setActif(false);
+            setShowColors(false);
+            sync();
+          }}
           className={className}
         />
       </div>
@@ -190,7 +235,7 @@ export function RichTextEditor({
   }
 
   return (
-    <div className='rounded-md border border-line bg-surface'>
+    <div className='rounded-md border border-line bg-surface' ref={boite}>
       <div
         className={`flex flex-wrap items-center gap-0.5 border-b border-line-2 bg-surface-2 py-1.5 pl-2 ${reserveDroite ? 'pr-[76px]' : 'pr-2'}`}
       >
@@ -202,7 +247,9 @@ export function RichTextEditor({
         contentEditable
         suppressContentEditableWarning
         onInput={sync}
-        onBlur={sync}
+        onKeyUp={memoriser}
+        onMouseUp={memoriser}
+        onBlur={() => { memoriser(); sync(); }}
         className='prose-editor min-h-[120px] px-4 py-3 font-serif text-[16px] leading-relaxed text-ink outline-none [&_a]:text-blue [&_a]:underline [&_table]:my-2 [&_td]:border [&_td]:border-line [&_td]:px-2.5 [&_td]:py-1.5 [&_th]:border [&_th]:border-line [&_th]:bg-surface-2 [&_th]:px-2.5 [&_th]:py-1.5'
       />
     </div>
