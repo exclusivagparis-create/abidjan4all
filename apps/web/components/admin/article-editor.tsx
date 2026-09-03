@@ -339,17 +339,23 @@ export function ArticleEditor({
 
           {article.blocks.map((block, i) => (
             <div key={i} className="group relative mb-4">
-              <div className="absolute -right-2 top-0 hidden gap-1 group-hover:flex">
+              {/* Les commandes du bloc passent devant tout le reste : la barre
+                  de mise en forme se déploie au même endroit et les couvrait,
+                  faute de couche. La barre, elle, se garde libre le coin
+                  haut-droit (`reserveDroite`) pour qu'aucun de ses boutons ne
+                  finisse dessous. */}
+              <div className="absolute -right-2 top-0 z-20 hidden gap-1 group-hover:flex">
                 <BlockBtn onClick={() => moveBlock(i, -1)} label="↑" />
                 <BlockBtn onClick={() => moveBlock(i, 1)} label="↓" />
                 <BlockBtn onClick={() => removeBlock(i)} label="✕" />
               </div>
 
               {block.type === "richtext" ? (
-                <RichTextEditor value={block.html ?? ""} onChange={(html) => setBlock(i, { html })} />
+                <RichTextEditor reserveDroite value={block.html ?? ""} onChange={(html) => setBlock(i, { html })} />
               ) : block.type === "paragraph" ? (
                 <RichTextEditor
                   compact
+                  reserveDroite
                   placeholder="Paragraphe…"
                   // Un paragraphe d'avant la mise en forme ne porte que du
                   // texte : on l'échappe pour l'ouvrir en HTML, sinon un

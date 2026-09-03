@@ -36,6 +36,7 @@ export function RichTextEditor({
   value,
   onChange,
   compact = false,
+  reserveDroite = false,
   placeholder,
   className,
 }: {
@@ -43,6 +44,14 @@ export function RichTextEditor({
   onChange: (html: string, texte: string) => void;
   /** Tenue paragraphe : sans cadre, barre à la demande, boutons réduits. */
   compact?: boolean;
+  /**
+   * Laisse le coin haut-droit libre. Dans l'éditeur d'article, les commandes
+   * du bloc — monter, descendre, fermer — sont ancrées à cet endroit précis :
+   * sans cette réserve, la barre de mise en forme se déploie dessous et les
+   * masque. Ailleurs (éditeur de page), il n'y a rien à cet endroit et cette
+   * réserve ne serait qu'un blanc inutile.
+   */
+  reserveDroite?: boolean;
   placeholder?: string;
   /** Typographie de la zone d'écriture, en tenue compacte. */
   className?: string;
@@ -161,7 +170,7 @@ export function RichTextEditor({
     return (
       <div className='relative'>
         {actif ? (
-          <div className='mb-1.5 rounded-[8px] border border-line bg-surface-2 px-2 py-1'>
+          <div className={`mb-1.5 rounded-[8px] border border-line bg-surface-2 py-1 pl-2 ${reserveDroite ? 'pr-[76px]' : 'pr-2'}`}>
             <div className='flex flex-wrap items-center gap-0.5'>{outilsTexte}</div>
             {palette}
           </div>
@@ -182,7 +191,11 @@ export function RichTextEditor({
 
   return (
     <div className='rounded-md border border-line bg-surface'>
-      <div className='flex flex-wrap items-center gap-0.5 border-b border-line-2 bg-surface-2 px-2 py-1.5'>{outilsBloc}</div>
+      <div
+        className={`flex flex-wrap items-center gap-0.5 border-b border-line-2 bg-surface-2 py-1.5 pl-2 ${reserveDroite ? 'pr-[76px]' : 'pr-2'}`}
+      >
+        {outilsBloc}
+      </div>
       {palette}
       <div
         ref={ref}
