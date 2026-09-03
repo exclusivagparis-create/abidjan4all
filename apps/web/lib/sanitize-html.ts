@@ -11,12 +11,19 @@ const OPTIONS: sanitizeHtml.IOptions = {
     "p", "br", "span", "strong", "b", "em", "i", "u", "s", "sub", "sup",
     "a", "ul", "ol", "li", "blockquote",
     "h3", "h4",
+    // `div` : c'est la balise que produit la commande d'alignement du
+    // navigateur — `<div style="text-align: center">`. Sans elle dans la liste,
+    // l'alignement était retiré à l'enregistrement, comme l'était le gras. Elle
+    // n'apporte aucune capacité : ses styles passent par le même filtre que les
+    // autres, et aucun attribut hors `style` n'est admis.
+    "div",
     "table", "thead", "tbody", "tr", "th", "td",
   ],
   allowedAttributes: {
     a: ["href", "target", "rel"],
     span: ["style"],
     p: ["style"],
+    div: ["style"],
     td: ["style", "colspan", "rowspan"],
     th: ["style", "colspan", "rowspan"],
     "*": ["style"],

@@ -82,6 +82,17 @@ export function RichTextEditor({
 
   const outilsTexte = (
     <>
+      <select
+        onChange={(e) => { exec('fontSize', e.target.value); e.target.selectedIndex = 0; }}
+        onMouseDown={(e) => e.stopPropagation()}
+        title='Taille du texte'
+        className='mx-0.5 h-7 rounded border border-line bg-surface px-1 text-[12px]'
+        defaultValue=''
+      >
+        <option value='' disabled>Taille</option>
+        {FONT_SIZES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+      <Sep />
       <Tb onClick={() => exec('bold')} title='Gras'><b>G</b></Tb>
       <Tb onClick={() => exec('italic')} title='Italique'><i>I</i></Tb>
       <Tb onClick={() => exec('underline')} title='Souligné'><u>S</u></Tb>
@@ -97,6 +108,11 @@ export function RichTextEditor({
       <Tb onClick={() => exec('insertUnorderedList')} title='Puces'>•≡</Tb>
       <Tb onClick={() => exec('insertOrderedList')} title='Numérotation'>1.</Tb>
       <Sep />
+      <Tb onClick={() => exec('justifyLeft')} title='Aligner à gauche'>⇤≡</Tb>
+      <Tb onClick={() => exec('justifyCenter')} title='Centrer'>≡</Tb>
+      <Tb onClick={() => exec('justifyRight')} title='Aligner à droite'>≡⇥</Tb>
+      <Tb onClick={() => exec('justifyFull')} title='Justifier'>☰</Tb>
+      <Sep />
       <Tb onClick={addLink} title='Insérer un lien'>🔗</Tb>
       <Tb onClick={() => exec('unlink')} title='Supprimer le lien'>⛓✕</Tb>
       <Sep />
@@ -104,32 +120,19 @@ export function RichTextEditor({
     </>
   );
 
-  // Les outils que seul un bloc à part entière justifie : on ne compose pas un
-  // tableau ni un alignement au fil d'un paragraphe.
+  // Ce qui reste propre au bloc : l'historique, les retraits et le tableau. La
+  // taille et l'alignement sont passés dans le jeu commun — un paragraphe en a
+  // l'usage autant qu'un bloc, et les dupliquer ici les aurait affichés deux
+  // fois dans la barre pleine.
   const outilsBloc = (
     <>
       <Tb onClick={() => exec('undo')} title='Annuler'>↶</Tb>
       <Tb onClick={() => exec('redo')} title='Rétablir'>↷</Tb>
       <Sep />
-      <select
-        onChange={(e) => { exec('fontSize', e.target.value); e.target.selectedIndex = 0; }}
-        title='Taille du texte'
-        className='mx-0.5 h-7 rounded border border-line bg-surface px-1 text-[12px]'
-        defaultValue=''
-      >
-        <option value='' disabled>Taille</option>
-        {FONT_SIZES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-      </select>
-      <Sep />
       {outilsTexte}
       <Sep />
       <Tb onClick={() => exec('outdent')} title='Diminuer le retrait'>⇤</Tb>
       <Tb onClick={() => exec('indent')} title='Augmenter le retrait'>⇥</Tb>
-      <Sep />
-      <Tb onClick={() => exec('justifyLeft')} title='Aligner à gauche'>⇤≡</Tb>
-      <Tb onClick={() => exec('justifyCenter')} title='Centrer'>≡</Tb>
-      <Tb onClick={() => exec('justifyRight')} title='Aligner à droite'>≡⇥</Tb>
-      <Tb onClick={() => exec('justifyFull')} title='Justifier'>☰</Tb>
       <Sep />
       <Tb onClick={insertTable} title='Insérer un tableau'>▦</Tb>
     </>
