@@ -29,23 +29,33 @@
  * s'entretient… » sont le même événement. Il ne VERIFIE pas : c'est AP-03. Il
  * n'ECRIT pas : c'est AP-04. Et il ne publie rien, jamais.
  *
+ * DEUX MODES ET UN REPLI
+ *
+ * - `lot` (par défaut) : passe par l'API des lots, moitié prix. La sélection
+ *   quotidienne n'a aucune urgence de latence — attendre quelques minutes ne
+ *   change rien à un journal qui paraît dans la journée —, et cette patience
+ *   vaut 50 % de remise.
+ * - `direct` : un appel synchrone, réponse en une à deux minutes, plein tarif.
+ *   Pour mettre au point, ou le jour où il faut un résultat tout de suite.
+ * - `repli` : quand le modèle est hors d'atteinte — clé absente, API en panne,
+ *   crédit épuisé, lot trop lent —, la sélection se fait sur le score technique
+ *   d'AP-01. La chaîne continue au lieu de s'arrêter, et la sortie DIT qu'elle
+ *   est dégradée. C'est le point important : une sélection de repli qui se
+ *   ferait passer pour une sélection relue serait pire que pas de sélection.
+ *
  * Trois partis pris.
  *
  * 1. UN SEUL appel à Claude, et non un par candidat. Choisir sept sujets parmi
  *    cent cinquante suppose de les comparer entre eux : un modèle qui ne voit
  *    qu'un article à la fois ne peut ni arbitrer, ni repérer que trois d'entre
- *    eux racontent la même chose. Cent cinquante appels coûteraient cent
- *    cinquante fois plus cher pour un résultat plus faible.
+ *    eux racontent la même chose.
  *
  * 2. SORTIE STRUCTUREE (`output_config.format`). Demander du JSON dans la
- *    consigne et espérer, c'est accepter qu'un jour la réponse arrive
- *    entourée de « Voici la sélection : » et casse l'étape suivante. Le schéma
- *    est imposé par l'API.
+ *    consigne et espérer, c'est accepter qu'un jour la réponse arrive entourée
+ *    de « Voici la sélection : » et casse l'étape suivante.
  *
  * 3. VALIDATION, puis UNE reprise. Le schéma garantit la forme, pas le fond :
- *    rien n'empêche un identifiant inventé ou un quota mal respecté. On
- *    vérifie, et si quelque chose cloche on renvoie l'erreur précise au modèle
- *    une fois. Au-delà, on échoue franchement plutôt que de boucler.
+ *    rien n'empêche un identifiant inventé ou un quota mal respecté.
  */
 
 const MODELE = 'claude-opus-5';
@@ -55,6 +65,22 @@ const REGLAGES = {
   /** Longueur du résumé transmis au modèle. Au-delà, on paie sans mieux choisir. */
   longueurDescription: 320,
   maxTokens: 8000,
+  /** `lot` (moitié prix, asynchrone) ou `direct` (plein tarif, immédiat). */
+  mode: 'lot',
+  /**
+   * Patience accordée à un lot. La documentation annonce la plupart des lots
+   * sous une heure ; au-delà de cette attente on bascule sur le repli, en
+   * gardant l'identifiant du lot pour ne rien perdre.
+   *
+   * ATTENTION : le flow Activepieces doit pouvoir durer aussi longtemps.
+   * `AP_FLOW_TIMEOUT_SECONDS` vaut 600 par défaut — il faut le porter à 3600
+   * pour ce mode, sinon Activepieces coupe le flow avant la fin de l'attente.
+   */
+  attenteLotMs: 45 * 60 * 1000,
+  sondageInitialMs: 10000,
+  sondageMaxMs: 60000,
+  /** Repli sur le score technique quand le modèle est hors d'atteinte. */
+  repliAutorise: true,
 };
 
 // ---------------------------------------------------------------------------
@@ -129,9 +155,9 @@ const SCHEMA = {
 /**
  * Ne transmet que ce qui sert à choisir.
  *
- * Le jeu d'AP-01 pèse 147 ko ; l'empreinte SHA-256, la méthode de collecte ou
+ * Le jeu d'AP-01 pèse 146 ko ; l'empreinte SHA-256, la méthode de collecte ou
  * l'URL canonique n'aident en rien à arbitrer entre deux sujets. Les retirer
- * réduit le coût d'environ un tiers sans rien enlever à la décision.
+ * réduit le chargement de moitié sans rien enlever à la décision.
  */
 function preparerCandidats(candidats, reglages = REGLAGES) {
   return candidats.map((c) => ({
@@ -145,6 +171,26 @@ function preparerCandidats(candidats, reglages = REGLAGES) {
     score: c.technical_score,
     reprises: (c.also_covered_by || []).length,
   }));
+}
+
+function construireMessages(jeu, compacts) {
+  return [{
+    role: 'user',
+    content: `Date de collecte : ${jeu.collection_date}\nExécution : ${jeu.workflow_id}\n\nVoici les ${compacts.length} sujets candidats :\n\n${JSON.stringify(compacts, null, 1)}`,
+  }];
+}
+
+function parametresModele(messages, maxTokens) {
+  return {
+    model: MODELE,
+    max_tokens: maxTokens,
+    // Réflexion adaptative : le modèle règle lui-même son effort. `budget_tokens`
+    // est refusé par Opus 5 — une requête qui le porte reçoit une erreur 400.
+    thinking: { type: 'adaptive' },
+    system: CONSIGNE,
+    messages,
+    output_config: { format: { type: 'json_schema', schema: SCHEMA } },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -202,44 +248,179 @@ function validerSelection(reponse, candidats, reglages = REGLAGES) {
 }
 
 // ---------------------------------------------------------------------------
-// Appel du modèle
+// Repli : sélection sans modèle
 // ---------------------------------------------------------------------------
 
 /**
- * Appelle Claude. Isolé dans sa propre fonction pour que tout le reste du
- * pipeline soit éprouvable sans clé API ni appel réseau — c'est ce qui a permis
- * de tester la validation et la reprise avant même qu'une clé existe.
+ * Sélection de secours, sur le seul score technique d'AP-01.
+ *
+ * Ce n'est PAS une sélection éditoriale, et la sortie le dit : ni angle, ni
+ * justification, ni rapprochement sémantique, ni feuille de route de
+ * vérification. Un score technique mesure la qualité de la SOURCE et la
+ * fraîcheur, pas l'intérêt du sujet pour un lecteur ivoirien.
+ *
+ * Son seul mérite est de ne pas arrêter la chaîne. Le champ `verification_requise`
+ * porte donc un avertissement explicite plutôt qu'une liste inventée : AP-03 et
+ * la rédaction doivent savoir que rien n'a été relu.
  */
-async function appelerClaude({ cle, messages, maxTokens }) {
-  const { default: Anthropic } = await import('@anthropic-ai/sdk');
-  const client = new Anthropic({ apiKey: cle });
+function selectionParScore(candidats, reglages = REGLAGES) {
+  const retenus = [];
+  for (const [region, quota] of Object.entries(reglages.quotas)) {
+    retenus.push(
+      ...candidats
+        .filter((c) => c.region === region)
+        .sort((a, b) => b.technical_score - a.technical_score)
+        .slice(0, quota),
+    );
+  }
+  return retenus
+    .sort((a, b) => b.technical_score - a.technical_score)
+    .map((c, i) => ({
+      candidate_id: c.candidate_id,
+      region: c.region,
+      priorite: i + 1,
+      angle: null,
+      justification: null,
+      interet_diaspora: null,
+      reprises: (c.also_covered_by || []).map((x) => x.candidate_id).filter(Boolean),
+      verification_requise: [
+        'Sélection de repli : aucun modèle ne l\'a relue. Vérifier le sujet dans son ensemble avant d\'écrire, y compris sa pertinence éditoriale.',
+      ],
+    }));
+}
 
-  // Diffusion en flux : la requête porte environ quarante mille jetons et la
+// ---------------------------------------------------------------------------
+// Appels du modèle
+// ---------------------------------------------------------------------------
+
+async function client(cle) {
+  const { default: Anthropic } = await import('@anthropic-ai/sdk');
+  return new Anthropic({ apiKey: cle });
+}
+
+/** Appel synchrone, plein tarif. */
+async function appelDirect({ cle, messages, maxTokens }) {
+  const c = await client(cle);
+  // Diffusion en flux : la requête porte environ vingt mille jetons et la
   // réflexion adaptative peut prendre du temps. Sans flux, une requête longue
   // se heurte au délai maximal côté HTTP.
-  const message = await client.messages.stream({
-    model: MODELE,
-    max_tokens: maxTokens,
-    // Réflexion adaptative : le modèle règle lui-même son effort. `budget_tokens`
-    // est refusé par Opus 5 — une requête qui le porte reçoit une erreur 400.
-    thinking: { type: 'adaptive' },
-    system: CONSIGNE,
-    messages,
-    output_config: { format: { type: 'json_schema', schema: SCHEMA } },
-  }).finalMessage();
-
+  const message = await c.messages.stream(parametresModele(messages, maxTokens)).finalMessage();
   const texte = message.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
   return { texte, usage: message.usage };
+}
+
+/**
+ * Appel par lot, moitié prix.
+ *
+ * Un lot d'UNE requête peut sembler absurde — c'est pourtant exactement ce que
+ * la remise récompense : on renonce à l'immédiateté, pas au volume. La
+ * documentation annonce la plupart des lots terminés en moins d'une heure,
+ * l'expiration à vingt-quatre heures.
+ *
+ * Le sondage s'espace progressivement (10 s, puis jusqu'à 60 s) : interroger
+ * toutes les dix secondes pendant trois quarts d'heure ferait deux cent
+ * soixante-dix requêtes pour rien.
+ */
+async function appelParLot({ cle, messages, maxTokens, reglages, journal }) {
+  const c = await client(cle);
+  const lot = await c.messages.batches.create({
+    requests: [{ custom_id: 'ap02-selection', params: parametresModele(messages, maxTokens) }],
+  });
+  journal?.(`lot ${lot.id} soumis`);
+
+  const echeance = Date.now() + reglages.attenteLotMs;
+  let attente = reglages.sondageInitialMs;
+  let etat = lot;
+
+  while (etat.processing_status !== 'ended') {
+    if (Date.now() > echeance) {
+      const e = new Error(`le lot ${lot.id} n'a pas abouti dans le délai accordé (${Math.round(reglages.attenteLotMs / 60000)} min)`);
+      e.batchId = lot.id;
+      e.lotEnCours = true;
+      throw e;
+    }
+    await new Promise((ok) => setTimeout(ok, attente));
+    attente = Math.min(attente * 1.5, reglages.sondageMaxMs);
+    etat = await c.messages.batches.retrieve(lot.id);
+  }
+
+  for await (const r of await c.messages.batches.results(lot.id)) {
+    if (r.custom_id !== 'ap02-selection') continue;
+    if (r.result.type !== 'succeeded') {
+      const e = new Error(`le lot ${lot.id} s'est terminé en « ${r.result.type} »`);
+      e.batchId = lot.id;
+      throw e;
+    }
+    const message = r.result.message;
+    const texte = message.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
+    return { texte, usage: message.usage, batchId: lot.id };
+  }
+
+  const e = new Error(`le lot ${lot.id} n'a rendu aucun résultat`);
+  e.batchId = lot.id;
+  throw e;
 }
 
 // ---------------------------------------------------------------------------
 // Pipeline
 // ---------------------------------------------------------------------------
 
+/** Sortie commune aux deux chemins, pour que AP-03 n'ait qu'une forme à lire. */
+function assembler({ jeu, selection, reponse, reglages, mode, degrade, motif, extra, debut }) {
+  const parId = new Map(jeu.candidates.map((c) => [c.candidate_id, c]));
+  const enrichie = selection
+    .sort((a, b) => a.priorite - b.priorite)
+    .map((s) => {
+      const c = parId.get(s.candidate_id);
+      return {
+        ...s,
+        title: c?.title,
+        url: c?.url,
+        source: c?.source,
+        published_at: c?.published_at,
+        technical_score: c?.technical_score,
+        reprises_detail: (s.reprises || []).map((r) => {
+          const rc = parId.get(r);
+          return { candidate_id: r, title: rc?.title, source: rc?.source?.name, url: rc?.url };
+        }),
+      };
+    });
+
+  const fin = new Date();
+  return {
+    workflow_id: jeu.workflow_id,
+    source: 'AP-02',
+    version: '2.0.0',
+    generated_at: fin.toISOString(),
+    collection_date: jeu.collection_date,
+    status: degrade ? 'DEGRADED' : 'SUCCESS',
+    mode,
+    // Sur une sortie dégradée, ces deux champs sont ce qu'AP-03 et la rédaction
+    // doivent voir en premier : la sélection n'a pas été relue.
+    relue_par_un_modele: !degrade,
+    motif_repli: motif ?? null,
+    model: degrade ? null : MODELE,
+    statistics: {
+      candidates_received: jeu.candidates.length,
+      selected: enrichie.length,
+      by_region: {
+        Cote_Ivoire: enrichie.filter((s) => s.region === 'Cote_Ivoire').length,
+        Afrique: enrichie.filter((s) => s.region === 'Afrique').length,
+        International: enrichie.filter((s) => s.region === 'International').length,
+      },
+      grouped_duplicates: enrichie.reduce((n, s) => n + (s.reprises?.length || 0), 0),
+      duration_seconds: Math.round((fin - debut) / 1000),
+      ...extra,
+    },
+    reserves: reponse?.reserves ?? null,
+    selection: enrichie,
+  };
+}
+
 async function executer(entree, options = {}) {
   const reglages = { ...REGLAGES, ...options.reglages };
-  const appeler = options.appelerClaude || appelerClaude;
   const debut = new Date();
+  const journal = options.journal || (() => {});
 
   const jeu = entree?.candidates ? entree : entree?.body;
   if (!jeu?.candidates?.length) {
@@ -252,47 +433,48 @@ async function executer(entree, options = {}) {
     };
   }
 
+  const replier = (motif, extra = {}) => {
+    if (!reglages.repliAutorise) {
+      return {
+        workflow_id: jeu.workflow_id, source: 'AP-02', status: 'FAILED',
+        error: motif, selection: [],
+      };
+    }
+    journal(`repli : ${motif}`);
+    return assembler({
+      jeu, selection: selectionParScore(jeu.candidates, reglages), reponse: null,
+      reglages, mode: 'repli', degrade: true, motif, extra, debut,
+    });
+  };
+
   const cle = options.cle || process.env.ANTHROPIC_API_KEY;
-  if (!cle) {
-    return {
-      workflow_id: jeu.workflow_id,
-      source: 'AP-02',
-      status: 'FAILED',
-      error: 'Clé API Anthropic absente. La renseigner dans les entrées de l\'étape, ou en variable ANTHROPIC_API_KEY.',
-      selection: [],
-    };
-  }
+  if (!cle) return replier("Clé API Anthropic absente. La renseigner dans les entrées de l'étape, ou en variable ANTHROPIC_API_KEY.");
 
   const compacts = preparerCandidats(jeu.candidates, reglages);
-  const messages = [{
-    role: 'user',
-    content: `Date de collecte : ${jeu.collection_date}\nExécution : ${jeu.workflow_id}\n\nVoici les ${compacts.length} sujets candidats :\n\n${JSON.stringify(compacts, null, 1)}`,
-  }];
+  const messages = construireMessages(jeu, compacts);
+  const mode = reglages.mode === 'direct' ? 'direct' : 'lot';
+  const appeler = options.appelerClaude || (mode === 'lot' ? appelParLot : appelDirect);
 
   let reponse = null;
   let griefs = [];
   let usage = null;
+  let batchId = null;
   let reprise = false;
 
   for (let essai = 0; essai < 2; essai++) {
     let brut;
     try {
-      brut = await appeler({ cle, messages, maxTokens: reglages.maxTokens });
+      brut = await appeler({ cle, messages, maxTokens: reglages.maxTokens, reglages, journal });
     } catch (e) {
-      return {
-        workflow_id: jeu.workflow_id,
-        source: 'AP-02',
-        status: 'FAILED',
-        error: `Appel au modèle en échec : ${e.message}`,
-        selection: [],
-      };
+      return replier(`Appel au modèle en échec : ${e.message}`, e.batchId ? { batch_id: e.batchId } : {});
     }
     usage = brut.usage;
+    batchId = brut.batchId ?? batchId;
 
     try {
       reponse = JSON.parse(brut.texte);
     } catch {
-      griefs = ['La réponse n\'est pas du JSON exploitable.'];
+      griefs = ["La réponse n'est pas du JSON exploitable."];
       reponse = null;
     }
 
@@ -303,6 +485,7 @@ async function executer(entree, options = {}) {
       // UNE reprise, avec le reproche exact. Renvoyer « recommence » sans dire
       // ce qui cloche produit souvent la même erreur.
       reprise = true;
+      journal(`reprise demandée : ${griefs.join(' ')}`);
       messages.push({ role: 'assistant', content: brut.texte });
       messages.push({
         role: 'user',
@@ -312,63 +495,18 @@ async function executer(entree, options = {}) {
   }
 
   if (griefs.length > 0) {
-    return {
-      workflow_id: jeu.workflow_id,
-      source: 'AP-02',
-      status: 'FAILED',
-      error: 'La sélection reste invalide après une reprise.',
-      griefs,
-      selection: [],
-    };
+    return replier(`La sélection du modèle reste invalide après une reprise : ${griefs[0]}`, { griefs, batch_id: batchId });
   }
 
-  // Ré-attachement du dossier complet : AP-03 a besoin de l'URL et de la source
-  // pour vérifier, et le modèle n'a reçu qu'un extrait.
-  const parId = new Map(jeu.candidates.map((c) => [c.candidate_id, c]));
-  const selection = reponse.selection
-    .sort((a, b) => a.priorite - b.priorite)
-    .map((s) => {
-      const c = parId.get(s.candidate_id);
-      return {
-        ...s,
-        title: c.title,
-        url: c.url,
-        source: c.source,
-        published_at: c.published_at,
-        technical_score: c.technical_score,
-        reprises_detail: (s.reprises || []).map((r) => {
-          const rc = parId.get(r);
-          return { candidate_id: r, title: rc?.title, source: rc?.source?.name, url: rc?.url };
-        }),
-      };
-    });
-
-  const fin = new Date();
-  return {
-    workflow_id: jeu.workflow_id,
-    source: 'AP-02',
-    version: '1.0.0',
-    generated_at: fin.toISOString(),
-    collection_date: jeu.collection_date,
-    status: 'SUCCESS',
-    model: MODELE,
-    statistics: {
-      candidates_received: jeu.candidates.length,
-      selected: selection.length,
-      by_region: {
-        Cote_Ivoire: selection.filter((s) => s.region === 'Cote_Ivoire').length,
-        Afrique: selection.filter((s) => s.region === 'Afrique').length,
-        International: selection.filter((s) => s.region === 'International').length,
-      },
-      grouped_duplicates: selection.reduce((n, s) => n + (s.reprises?.length || 0), 0),
+  return assembler({
+    jeu, selection: reponse.selection, reponse, reglages, mode, degrade: false, debut,
+    extra: {
       repaired: reprise,
+      batch_id: batchId,
       input_tokens: usage?.input_tokens ?? null,
       output_tokens: usage?.output_tokens ?? null,
-      duration_seconds: Math.round((fin - debut) / 1000),
     },
-    reserves: reponse.reserves,
-    selection,
-  };
+  });
 }
 
 
