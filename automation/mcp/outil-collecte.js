@@ -773,6 +773,19 @@ async function executer(options = {}) {
 export const code = async (inputs) => {
   const jeu = await executer({ reglages: inputs?.reglages || undefined });
 
+  // Ce que l'etape a REELLEMENT recu, rendu dans la sortie.
+  //
+  // Ajoute apres un aller-retour perdu : le parametre « limite » arrivait
+  // bien au declencheur MCP mais se resolvait en vide dans l'etape Code, et
+  // rien ne le disait — l'outil se rabattait silencieusement sur sa valeur
+  // par defaut. Il a fallu decompresser un journal d'execution pour s'en
+  // apercevoir. Desormais un branchement casse se voit dans la reponse meme.
+  const recus = {
+    limite: inputs?.limite ?? null,
+    format: inputs?.format ?? null,
+    branchement_ok: (inputs?.limite ?? '') !== '' || (inputs?.format ?? '') !== '',
+  };
+
   // Répartition égale entre les trois régions plutôt qu'un simple « les N
   // meilleurs » : sans cela, une région bavarde prendrait toute la place et il
   // ne resterait rien à choisir pour les autres.
@@ -786,6 +799,7 @@ export const code = async (inputs) => {
 
   const jeuReduit = {
     ...jeu,
+    parametres_recus: recus,
     candidates: retenus,
     statistics: { ...jeu.statistics, candidates_rendus: retenus.length, candidates_disponibles: jeu.candidates.length },
   };
