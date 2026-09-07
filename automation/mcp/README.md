@@ -55,6 +55,7 @@ classées par région et notées. »
 | `format` | texte, facultatif | `compact` (défaut) ou `complet` |
 
 Code : `outil-collecte.js`. **packageJson vide.**
+Entrées : `limite` = `{{trigger['output'].limite}}`, `format` = `{{trigger['output'].format}}`.
 
 #### Outil 2 — `lire_les_articles`
 
@@ -67,6 +68,30 @@ protégé. Sert à recouper plusieurs sources sur un même événement. »
 | `urls` | texte long, obligatoire | les adresses, une par ligne (10 au plus) |
 
 Code : `outil-lecture.js`. **packageJson vide.**
+Entrée : `urls` = `{{trigger['output'].urls}}`.
+
+### La syntaxe des références — le piège qui a coûté quatre allers-retours
+
+**La sortie d'une étape est imbriquée sous `['output']`.** Une référence
+`{{trigger.limite}}` ne résout donc rien : elle cherche `limite` sur l'objet de
+l'étape, où il n'existe pas. Il faut écrire :
+
+| Où | Valeur correcte |
+|---|---|
+| Entrée `limite` de l'étape Code | `{{trigger['output'].limite}}` |
+| Entrée `urls` de l'étape Code | `{{trigger['output'].urls}}` |
+| Valeur de la réponse MCP | `{{step_1['output']}}` |
+
+Le symptôme d'une référence fautive est traître : **elle ne lève aucune erreur**.
+Le paramètre arrive vide, le code se rabat sur sa valeur par défaut, et le flow
+réussit. C'est pourquoi l'outil de collecte rend désormais `parametres_recus`,
+avec un `branchement_ok` qui dit d'un coup d'œil si le câblage tient.
+
+Deuxième piège, plus discret : dans l'étape de réponse, le champ **Response** en
+mode *Simple* est un éditeur **clé / valeur**. Y saisir `{{step_1['output']}}`
+dans la colonne *clé* produit un corps `{"{{step_1['output']}}": ""}` — un 200
+parfaitement vide. La référence va dans la colonne **valeur**, avec une clé
+ordinaire à côté (`resultat`).
 
 ### 3. Un Projet Claude avec la procédure
 
