@@ -101,7 +101,17 @@ const REGISTRE = [
   { id: 'aljazeera', name: 'Al Jazeera', type: 'MEDIA_INTL', region: 'International', country: null, lang: 'en', priority: 75, enabled: true, url: 'https://www.aljazeera.com/xml/rss/all.xml' },
 
   // --- Institutionnel ------------------------------------------------------
-  { id: 'un-news-fr', name: 'ONU Info', type: 'INSTITUTION', region: 'International', country: null, lang: 'fr', priority: 100, enabled: true, url: 'https://news.un.org/feed/subscribe/fr/news/all/rss.xml' },
+  // ONU Info est passee de 100 a 85, au niveau des grandes redactions.
+  //
+  // A 100 — la note la plus haute du registre — elle occupait a elle seule les
+  // trois premieres places du classement general, et la Cote d'Ivoire ne
+  // remontait qu'en quatrieme position. Une depeche institutionnelle est
+  // fiable, ce qui justifiait la note ; elle n'est pas pour autant le sujet du
+  // jour pour un lecteur ivoirien, et c'est ce que le score doit refleter.
+  //
+  // Le quota par region d'AP-02 corrigeait deja le tir en aval ; ce reglage
+  // corrige la cause plutot que l'effet.
+  { id: 'un-news-fr', name: 'ONU Info', type: 'INSTITUTION', region: 'International', country: null, lang: 'fr', priority: 85, enabled: true, url: 'https://news.un.org/feed/subscribe/fr/news/all/rss.xml' },
 
   // --- Agregateurs ---------------------------------------------------------
   // Couche de DECOUVERTE, jamais source primaire (regle 2 du plan) : priorite

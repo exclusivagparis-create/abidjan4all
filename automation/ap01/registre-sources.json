@@ -193,7 +193,7 @@
     "region": "International",
     "country": null,
     "lang": "fr",
-    "priority": 100,
+    "priority": 85,
     "enabled": true,
     "url": "https://news.un.org/feed/subscribe/fr/news/all/rss.xml"
   },
