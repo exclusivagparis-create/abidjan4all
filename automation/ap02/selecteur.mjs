@@ -361,10 +361,26 @@ function assembler({ jeu, selection, reponse, reglages, mode, degrade, motif, ex
         source: c?.source,
         published_at: c?.published_at,
         technical_score: c?.technical_score,
-        reprises_detail: (s.reprises || []).map((r) => {
-          const rc = parId.get(r);
-          return { candidate_id: r, title: rc?.title, source: rc?.source?.name, url: rc?.url };
-        }),
+        // Les reprises du modèle d'abord ; à défaut, celles qu'AP-01 avait
+        // rapprochées par recouvrement de titres.
+        //
+        // Ce repli n'est pas cosmétique : AP-03 ne peut RECOUPER que s'il a
+        // plusieurs sources sur un même événement. Sans lui, une sélection de
+        // repli ne portait aucune reprise — `also_covered_by` d'AP-01 ne
+        // contient que `{source, url}`, jamais d'identifiant de candidat — et
+        // AP-03 se retrouvait avec une source unique par sujet, donc rien à
+        // comparer. L'origine est notée : un rapprochement par mots-clés n'a
+        // pas la valeur d'un rapprochement compris.
+        reprises_detail: (() => {
+          const duModele = (s.reprises || []).map((r) => {
+            const rc = parId.get(r);
+            return { candidate_id: r, title: rc?.title, source: rc?.source?.name, url: rc?.url, origine: 'modele' };
+          });
+          if (duModele.length > 0) return duModele;
+          return (c?.also_covered_by || []).map((r) => ({
+            candidate_id: null, title: null, source: r.source, url: r.url, origine: 'ap01',
+          }));
+        })(),
       };
     });
 
