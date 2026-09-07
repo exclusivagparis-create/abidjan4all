@@ -7,7 +7,13 @@
  * À coller dans une étape Code. Aucune dépendance npm : le champ packageJson
  * reste vide.
  */
-import { createHash } from 'node:crypto';
+// IMPORTANT : « crypto », et NON « node:crypto ».
+// Le bac a sable d'Activepieces rejette tout specificateur portant un schema —
+// sa regle est /^[a-z][a-z0-9+.-]*:/ et « node: » en est un. La forme nue
+// passe, esbuild y compilant avec platform node, qui traite les modules
+// internes comme externes. Verifie dans le compilateur de l'instance apres
+// l'echec des deux premieres executions du flow.
+import { createHash } from 'crypto';
 
 /**
  * AP-01 — News Collector
@@ -407,6 +413,12 @@ function classerRegion(article, source) {
 // Empreinte et rapprochement
 // ---------------------------------------------------------------------------
 
+// IMPORTANT : « crypto », et NON « node:crypto ».
+// Le bac a sable d'Activepieces rejette tout specificateur portant un schema —
+// sa regle est /^[a-z][a-z0-9+.-]*:/ et « node: » en est un. La forme nue
+// passe, esbuild y compilant avec platform node, qui traite les modules
+// internes comme externes. Verifie dans le compilateur de l'instance apres
+// l'echec des deux premieres executions du flow.
 
 /** Titre reduit a sa substance : minuscules, sans accents ni ponctuation. */
 function titreNormalise(titre) {

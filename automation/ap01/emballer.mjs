@@ -5,9 +5,12 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 const src = readFileSync('./collecteur.mjs', 'utf8');
 
-// L'import de node:crypto remonte en tete : dans un module, les imports ne
-// peuvent pas rester au milieu du fichier.
-let corps = src.replace(/^import \{ createHash \} from 'node:crypto';\n/m, '');
+// L'import de crypto remonte en tete : dans un module, les imports ne peuvent
+// pas rester au milieu du fichier. La regle vise TOUTE forme de cet import —
+// avec ou sans prefixe, guillemets simples ou doubles. Une regle trop precise
+// a deja laisse passer un doublon apres un changement de prefixe, et le module
+// engendre ne se chargeait plus : « createHash has already been declared ».
+let corps = src.replace(/^import \{ createHash \} from ['"](?:node:)?crypto['"];\n/m, '');
 corps = corps.replace(/^export (const|function|async function) /gm, '$1 ');
 
 const entete = `/**
@@ -19,7 +22,13 @@ const entete = `/**
  * À coller dans une étape Code. Aucune dépendance npm : le champ packageJson
  * reste vide.
  */
-import { createHash } from 'node:crypto';
+// IMPORTANT : « crypto », et NON « node:crypto ».
+// Le bac a sable d'Activepieces rejette tout specificateur portant un schema —
+// sa regle est /^[a-z][a-z0-9+.-]*:/ et « node: » en est un. La forme nue
+// passe, esbuild y compilant avec platform node, qui traite les modules
+// internes comme externes. Verifie dans le compilateur de l'instance apres
+// l'echec des deux premieres executions du flow.
+import { createHash } from 'crypto';
 
 `;
 

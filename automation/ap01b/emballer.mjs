@@ -36,7 +36,13 @@ const entete = `/**
  * Se place ENTRE AP-01 et AP-02, et rend le jeu enrichi.
  */
 
-import { createHash } from 'node:crypto';
+// IMPORTANT : « crypto », et NON « node:crypto ».
+// Le bac a sable d'Activepieces rejette tout specificateur portant un schema —
+// sa regle est /^[a-z][a-z0-9+.-]*:/ et « node: » en est un. La forme nue
+// passe, esbuild y compilant avec platform node, qui traite les modules
+// internes comme externes. Verifie dans le compilateur de l'instance apres
+// l'echec des deux premieres executions du flow.
+import { createHash } from 'crypto';
 
 // --- Outils repris d'AP-01, a l'identique -----------------------------------
 // Canoniser une URL et rapprocher deux titres doivent se faire EXACTEMENT de
