@@ -108,8 +108,17 @@ CE QUE TU ÉCARTES
 REGROUPEMENT
 Plusieurs candidats peuvent raconter le MÊME événement sous des titres différents. Regroupe-les : retiens l'identifiant de la meilleure source comme sujet, et cite les autres identifiants comme reprises. La priorité technique t'aide, mais c'est le contenu qui tranche.
 
-SOURCES
-Un candidat marqué "agregateur": true n'est PAS une source primaire — c'est une couche de découverte. S'il révèle un bon sujet, retiens-le, mais signale dans "verification_requise" qu'il faut remonter au média d'origine avant d'écrire.
+SOURCES : PRIMAIRES ET NON PRIMAIRES
+Un candidat marqué "primaire": false n'est PAS une source de premier rang. Cela couvre les agrégateurs (Google News), les blogs et magazines d'analyse, les chaînes vidéo et les réseaux sociaux. Ils font DÉCOUVRIR un sujet ; le fait, lui, doit venir d'ailleurs.
+
+Tu peux retenir un tel sujet s'il est bon — mais alors tu inscris obligatoirement dans "verification_requise" qu'il faut remonter à une source primaire avant d'écrire, et laquelle chercher.
+
+Ne bâtis JAMAIS les sept sujets sur des sources non primaires. S'il n'y a que cela pour une région, dis-le dans "reserves".
+
+PISTES À VÉRIFIER
+Un candidat marqué "piste": true vient de la réserve de découverte : c'est un signalement, pas une information. Les fils de réseaux sociaux en particulier relaient ce qui CIRCULE — y compris des rumeurs, parfois graves ("prétendue arrestation de…", "prétendu projet d'assassinat de…").
+
+Une rumeur qui circule largement peut mériter un article — mais un article qui la VÉRIFIE ou la DÉMENT, jamais un article qui la reprend. Si tu retiens une piste de ce genre, dis-le explicitement dans l'angle : le travail demandé à la rédaction est une vérification, pas un compte rendu.
 
 VÉRIFICATION
 Pour chaque sujet, indique ce qui devra être vérifié avant publication : chiffres, citations, dates, attributions. Sois précis. AP-03 s'en servira comme feuille de route. Si tu ne vois rien à vérifier, dis-le franchement plutôt que d'inventer une exigence.
@@ -166,6 +175,8 @@ function preparerCandidats(candidats, reglages = REGLAGES) {
     resume: (c.description || '').slice(0, reglages.longueurDescription),
     source: c.source?.name ?? 'inconnue',
     agregateur: c.source?.is_aggregator ?? false,
+    primaire: c.source?.is_primary !== false,
+    piste: c.piste_a_verifier === true,
     region: c.region,
     publie: c.published_at,
     score: c.technical_score,

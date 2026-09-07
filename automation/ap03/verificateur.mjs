@@ -197,7 +197,13 @@ Pour chaque point à vérifier, un verdict et un seul :
 - "divergent"     : les sources se contredisent. C'est le verdict le plus précieux : dis exactement qui dit quoi.
 - "inverifiable"  : rien dans les textes fournis ne permet de trancher.
 
-Attention aux fausses corroborations : deux médias qui reprennent la même dépêche d'agence ne sont pas deux sources indépendantes. Si tu le repères, dis-le et classe en "source_unique".
+Attention aux fausses corroborations. Ne comptent pas comme deux sources indépendantes :
+- deux médias qui reprennent la même dépêche d'agence ;
+- un blog, un agrégateur ou un message de réseau social qui renvoie à un article déjà compté — un relais n'est pas un témoin ;
+- deux articles du même média, ou de deux titres du même groupe.
+Si tu le repères, dis-le et classe en "source_unique".
+
+Si le sujet vient d'un réseau social ou d'une piste non vérifiée, sois particulièrement strict : une rumeur relayée cent fois reste une rumeur relayée, pas un fait corroboré.
 
 Pour chaque sujet, indique aussi :
 - les faits saillants réellement établis par les textes, qui serviront de socle à la rédaction ;

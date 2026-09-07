@@ -71,43 +71,94 @@ cycles de vie, si bien qu'AP-01 échoue quand AP-02 est en cours d'édition.
 Exécution réelle du 7 septembre 2026, 03 h 55 :
 
 ```
-sources_attempted    24
-sources_success      24
-articles_collected  696
-rejected_too_old    416
-articles_after_filter 279
-duplicates_url       11
-duplicates_semantic  11
-unique_topics       257
+sources_attempted    39
+sources_success      39
+articles_collected  943
+unique_topics       438
 candidates          150   (50 Côte d'Ivoire · 50 Afrique · 50 International)
-duration            2,9 s      poids du JSON : 147 ko
+dont pistes          13   (blogs, vidéos, réseaux sociaux)
+duration            7 s
 ```
+
+### La réserve de découverte
+
+Sans elle, l'élargissement n'aurait rien changé : mesuré, les fils sociaux
+rendaient **zéro candidat sur cent cinquante**, les rédactions mieux notées
+prenant toutes les places. Cinq places par région sont donc tenues pour les
+sources non primaires, dont deux réservées aux réseaux sociaux en Côte d'Ivoire.
+
+Ces candidats portent `piste_a_verifier: true`. Ce qu'un fil social apporte
+n'est pas de l'information, c'est **ce qui circule** — le fil ivoirien suivi
+relaie des rumeurs (« prétendue arrestation du chef d'état-major », « prétendu
+projet d'assassinat »). Une rédaction qui ignore la rumeur ne peut pas la
+démentir. AP-02 reçoit la consigne expresse : une telle piste peut mériter un
+article qui la **vérifie**, jamais un article qui la reprend.
+
+**Trois défauts trouvés en exécutant, et corrigés** — sans eux, l'élargissement
+serait resté lettre morte :
+
+1. Les billets Mastodon **n'ont pas de titre** : tout est dans la description.
+   Le filtre les rejetait tous pour « titre absent ». Le début du message en
+   tient désormais lieu.
+2. La fenêtre de 24 h excluait des fils qui publient quelques messages par
+   semaine. Les sources de découverte ont une fenêtre élargie (96 h pour le
+   social, 72 h pour les blogs) : une rumeur vieille de deux jours circule
+   toujours.
+3. Les titres sociaux arrivent en **Unicode stylisé** (« 𝗦𝗼𝘂𝗽𝗰̧𝗼𝗻𝘀 » plutôt que
+   « Soupçons ») — invisible à l'œil, mais ni le classement géographique ni le
+   rapprochement des titres ne les reconnaissaient. Normalisation NFKC ajoutée.
 
 ---
 
 ## Les sources, et ce que la réalité en dit
 
-**Le plan supposait disponibles des sources qui ne le sont pas.** Dix-neuf
-adresses ont été sondées pour les seuls médias ivoiriens. Résultat :
+**41 sources inscrites, 39 actives.** Le registre a été élargi aux blogs, aux
+chaînes de télévision par leur flux YouTube, et aux réseaux sociaux ouverts.
 
-| Média | État |
-|---|---|
-| Koaci | HTTP 404 sur `/rss`, `/feed`, `/rss.xml`, `?feed=rss2` |
-| Fraternité Matin | répond, mais le flux ne contient aucun article |
-| Abidjan.net | flux vide |
-| RTI | **certificat TLS expiré** — à ne pas contourner |
-| 7info, Sikafinance, gouv.ci | 404 |
-| Présidence de Côte d'Ivoire | chaîne de certificats incomplète |
-| APA News, Agence Ecofin, Afrique-sur7 | HTTP 403, y compris avec un agent de navigateur |
+| Famille | Actives | Primaires ? |
+|---|---|---|
+| Médias Côte d'Ivoire | 6 | oui |
+| Médias Afrique | 5 | oui |
+| Médias International | 6 | oui |
+| Institution (ONU) | 1 | oui |
+| Google News | 6 | **non** |
+| Blogs et magazines | 10 | **non** |
+| Chaînes YouTube | 3 | **non** |
+| Réseaux sociaux | 2 | **non** |
 
-Ces sources restent **inscrites au registre, désactivées, avec le motif** : le
-jour où l'une d'elles ouvre un flux, il suffit de repasser `enabled` à `true`.
-Sans cela, on redécouvre le problème dans six mois.
+### La notion qui compte : `primaire`
 
-Six médias ivoiriens fonctionnent et forment la base réelle : **AIP** (l'agence
-de presse, la plus proche de l'institution), **L'Infodrome**, **Afriksoir**,
-**Le Point Sur**, **Yeclo**, **Connectionivoirienne**. À quoi s'ajoutent quatre
-requêtes Google News ciblées sur la Côte d'Ivoire.
+Une rédaction qui envoie un journaliste, recueille une déclaration et engage sa
+signature est une source **primaire**. Un agrégateur, un blog qui commente, un
+fil social qui relaie ne le sont pas — même excellents, même rapides. Ils font
+**découvrir** un sujet ; le fait, lui, doit venir d'ailleurs.
+
+AP-02 le lit pour ne jamais fonder sa sélection sur ces sources sans le
+signaler ; AP-03 pour ne pas compter deux relais du même article comme deux
+corroborations.
+
+### Ce qui n'existe pas, vérifié plutôt que supposé
+
+**Médias ivoiriens** — dix-neuf adresses sondées : Koaci répond 404 sur quatre
+chemins, Fraternité Matin et Abidjan.net servent un flux sans articles, **RTI a
+un certificat TLS expiré**, la Présidence une chaîne de certificats incomplète.
+Six médias fonctionnent : **AIP**, **L'Infodrome**, **Afriksoir**, **Le Point
+Sur**, **Yeclo**, **Connectionivoirienne**.
+
+**7info et NCI**, sans flux RSS sur leur site, sont récupérables **par leur
+chaîne YouTube** — c'est le seul moyen de les suivre.
+
+**Réseaux sociaux fermés.** X/Twitter n'expose plus aucun flux public et son API
+coûte plus de 100 $/mois ; Nitter est mort (HTTP 410) ; Facebook a supprimé les
+flux de pages (404) ; Instagram et TikTok interdisent l'extraction. **Aucune de
+ces portes ne s'ouvrira par astuce** — elles sont inscrites au registre,
+désactivées, avec leur motif.
+
+**Reddit** répond HTTP 429 à toute requête venue d'une adresse de centre de
+données, agent navigateur compris. Désactivé pour ne pas encombrer chaque jour
+le rapport d'erreurs ; ces flux fonctionnent depuis une connexion ordinaire.
+
+Restent ouverts : **Mastodon** (fils par mot-dièse) et Bluesky.
 
 ---
 

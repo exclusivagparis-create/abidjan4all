@@ -39,6 +39,17 @@
  * `priority` est le score technique du plan. Il ne dit PAS qu'un article est
  * vrai : il dit de quelle distance editoriale il vient. Un agregateur a 50
  * parce qu'il fait decouvrir un sujet, pas parce qu'il le garantit.
+ *
+ * `primaire` est la distinction qui compte vraiment, et elle vaut mieux que le
+ * seul drapeau « agregateur » : une redaction qui envoie un journaliste,
+ * recueille une declaration et engage sa signature est une source PRIMAIRE. Un
+ * agregateur, un blog qui commente, un fil de reseau social qui relaie ne le
+ * sont pas — meme excellents, meme rapides. Ils font DECOUVRIR un sujet ; le
+ * fait, lui, doit venir d'ailleurs.
+ *
+ * AP-02 le lit pour ne jamais fonder une selection sur une source non primaire
+ * sans le signaler ; AP-03 pour ne pas compter deux relais du meme article
+ * comme deux corroborations.
  */
 export const REGISTRE = [
   // --- Cote d'Ivoire -------------------------------------------------------
@@ -86,6 +97,49 @@ export const REGISTRE = [
   { id: 'gnews-afrique', name: 'Google News — Afrique', type: 'GOOGLE_NEWS', region: 'Afrique', country: null, lang: 'fr', priority: 50, enabled: true, url: 'https://news.google.com/rss/search?q=Afrique&hl=fr&gl=FR&ceid=FR:fr' },
   { id: 'gnews-cedeao', name: 'Google News — CEDEAO', type: 'GOOGLE_NEWS', region: 'Afrique', country: null, lang: 'fr', priority: 50, enabled: true, url: 'https://news.google.com/rss/search?q=CEDEAO&hl=fr&gl=CI&ceid=CI:fr' },
 
+  // --- Blogs, magazines et laboratoires d'idees ----------------------------
+  // NON PRIMAIRES : ils analysent, commentent, recoupent — c'est leur valeur,
+  // et c'est aussi leur limite. Un blog qui rapporte une declaration l'a le
+  // plus souvent lue ailleurs. Priorite basse en consequence, et `primaire`
+  // a false pour qu'AP-02 et AP-03 le sachent.
+  { id: 'theafricareport', name: 'The Africa Report', type: 'BLOG', region: 'Afrique', country: null, lang: 'fr', priority: 60, primaire: false, enabled: true, url: 'https://www.theafricareport.com/feed/' },
+  { id: 'financialafrik', name: 'Financial Afrik', type: 'BLOG', region: 'Afrique', country: null, lang: 'fr', priority: 60, primaire: false, enabled: true, url: 'https://www.financialafrik.com/feed/' },
+  { id: 'mondafrique', name: 'Mondafrique', type: 'BLOG', region: 'Afrique', country: null, lang: 'fr', priority: 50, primaire: false, enabled: true, url: 'https://mondafrique.com/feed/' },
+  { id: 'afrik-com', name: 'Afrik.com', type: 'BLOG', region: 'Afrique', country: null, lang: 'fr', priority: 50, primaire: false, enabled: true, url: 'https://www.afrik.com/feed' },
+  { id: 'senego', name: 'Senego', type: 'BLOG', region: 'Afrique', country: null, lang: 'fr', priority: 45, primaire: false, enabled: true, url: 'https://www.senego.com/feed' },
+  { id: 'legrigri', name: 'Le Grigri International', type: 'BLOG', region: 'Afrique', country: null, lang: 'fr', priority: 45, primaire: false, enabled: true, url: 'https://legrigriinternational.com/feed/' },
+  { id: 'afriqueeconomie', name: 'Afrique Économie', type: 'BLOG', region: 'Afrique', country: null, lang: 'fr', priority: 45, primaire: false, enabled: true, url: 'https://afriqueeconomie.net/feed/' },
+  { id: 'wathi', name: 'WATHI', type: 'BLOG', region: 'Afrique', country: null, lang: 'fr', priority: 60, primaire: false, enabled: true, url: 'https://www.wathi.org/feed/' },
+  { id: 'afrobarometer', name: 'Afrobarometer', type: 'BLOG', region: 'Afrique', country: null, lang: 'fr', priority: 70, primaire: false, enabled: true, url: 'https://www.afrobarometer.org/feed/' },
+  { id: 'bi-africa', name: 'Business Insider Africa', type: 'BLOG', region: 'Afrique', country: null, lang: 'en', priority: 45, primaire: false, enabled: true, url: 'https://africa.businessinsider.com/rss' },
+
+  // --- Chaines de television, par leur flux YouTube public ------------------
+  // 7info et NCI n'exposent AUCUN flux RSS sur leur site — leur chaine YouTube
+  // est le seul moyen de les suivre. La video n'est pas un article : `primaire`
+  // reste a false, mais une televisions qui filme un evenement est plus proche
+  // du fait qu'un blog qui le commente, d'ou une priorite superieure.
+  { id: 'yt-7info', name: '7info (YouTube)', type: 'VIDEO', region: 'Cote_Ivoire', country: 'CI', lang: 'fr', priority: 60, primaire: false, enabled: true, url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCqA1FRAWs2VIiXf2cUYSQBQ' },
+  { id: 'yt-nci', name: 'NCI (YouTube)', type: 'VIDEO', region: 'Cote_Ivoire', country: 'CI', lang: 'fr', priority: 60, primaire: false, enabled: true, url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCZpllpP0dBf9o3iiXk2vu6w' },
+  { id: 'yt-africanews', name: 'Africanews (YouTube)', type: 'VIDEO', region: 'Afrique', country: null, lang: 'fr', priority: 55, primaire: false, enabled: true, url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UC1_E8NeF5QHY2dtdLRBCCLA' },
+
+  // --- Reseaux sociaux ouverts ---------------------------------------------
+  // COUCHE DE DECOUVERTE, rien de plus. Un message de reseau social n'est
+  // jamais une source : au mieux il signale un sujet, au pire il propage une
+  // rumeur. Priorite la plus basse du registre, `primaire` a false, et AP-02
+  // recoit la consigne de ne jamais s'en contenter.
+  //
+  // Ce qui est ouvert, et ce qui ne l'est pas : X/Twitter ne sert plus de flux
+  // public, Nitter est mort (HTTP 410), Facebook a ferme les siens (404).
+  // Reddit, Mastodon et Bluesky restent accessibles sans compte ni cle.
+  // Reddit repond HTTP 429 a toute requete venue d'une adresse de centre de
+  // donnees, agent navigateur compris — verifie le 2026-09-07. Desactive pour
+  // ne pas encombrer chaque jour le rapport d'erreurs. Depuis une connexion
+  // ordinaire, ces flux fonctionnent.
+  { id: 'reddit-ci', name: 'Reddit r/CotedIvoire', type: 'SOCIAL', region: 'Cote_Ivoire', country: 'CI', lang: 'fr', priority: 25, primaire: false, enabled: false, url: 'https://www.reddit.com/r/CotedIvoire/.rss' },
+  { id: 'reddit-africa', name: 'Reddit r/Africa', type: 'SOCIAL', region: 'Afrique', country: null, lang: 'en', priority: 25, primaire: false, agentNavigateur: true, enabled: false, url: 'https://www.reddit.com/r/Africa/.rss' },
+  { id: 'mastodon-ci', name: 'Mastodon #CotedIvoire', type: 'SOCIAL', region: 'Cote_Ivoire', country: 'CI', lang: 'fr', priority: 25, primaire: false, enabled: true, url: 'https://mastodon.social/tags/CotedIvoire.rss' },
+  { id: 'mastodon-afrique', name: 'Mastodon #Afrique', type: 'SOCIAL', region: 'Afrique', country: null, lang: 'fr', priority: 25, primaire: false, enabled: true, url: 'https://mastodon.social/tags/Afrique.rss' },
+
   // --- Ecartees, conservees pour memoire -----------------------------------
   // Sondees le 2026-09-07 : aucune n'expose de flux exploitable. Elles restent
   // ici pour qu'on n'ait pas a redecouvrir le probleme dans six mois, et pour
@@ -97,6 +151,14 @@ export const REGISTRE = [
   { id: 'presidence-ci', name: 'Présidence de Côte d\'Ivoire', type: 'INSTITUTION', region: 'Cote_Ivoire', country: 'CI', lang: 'fr', priority: 100, enabled: false, url: 'https://www.presidence.ci/feed/', motif: 'chaîne de certificats incomplète' },
   { id: 'apanews', name: 'APA News', type: 'MEDIA_AFRICA', region: 'Afrique', country: null, lang: 'fr', priority: 80, enabled: false, url: 'https://apanews.net/feed/', motif: 'HTTP 403 — refuse les robots' },
   { id: 'agenceecofin', name: 'Agence Ecofin', type: 'MEDIA_AFRICA', region: 'Afrique', country: null, lang: 'fr', priority: 80, enabled: false, url: 'https://www.agenceecofin.com/component/obrss/rss-accueil', motif: 'HTTP 403 — refuse les robots' },
+  // Reseaux sociaux fermes, verifies le 2026-09-07. Inscrits pour qu'on cesse
+  // de se demander s'il existe un moyen : il n'y en a pas de gratuit ni de
+  // licite. X demande un abonnement API a plus de cent dollars par mois ;
+  // Facebook, Instagram et TikTok exigent une revue d'application et
+  // interdisent l'extraction. Aucune de ces portes ne s'ouvrira par astuce.
+  { id: 'x-twitter', name: 'X / Twitter', type: 'SOCIAL', region: 'International', country: null, lang: 'fr', priority: 20, primaire: false, enabled: false, url: 'https://twitter.com', motif: 'plus aucun flux public ; API payante (>100 $/mois). Nitter est mort (HTTP 410)' },
+  { id: 'facebook', name: 'Facebook', type: 'SOCIAL', region: 'International', country: null, lang: 'fr', priority: 20, primaire: false, enabled: false, url: 'https://www.facebook.com', motif: 'flux RSS des pages supprimes (404) ; API soumise a revue, extraction interdite par les conditions' },
+  { id: 'instagram', name: 'Instagram / TikTok', type: 'SOCIAL', region: 'International', country: null, lang: 'fr', priority: 20, primaire: false, enabled: false, url: 'https://www.instagram.com', motif: 'aucun acces public ; extraction interdite par les conditions d\'utilisation' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -105,10 +167,52 @@ export const REGISTRE = [
 
 export const REGLAGES = {
   fenetreHeures: 24,          // articles publies depuis N heures
+  /**
+   * Fenetre elargie pour les sources de DECOUVERTE.
+   *
+   * Trouve en executant : les fils sociaux ne rendaient AUCUN candidat, meme
+   * avec une reserve qui leur etait tenue. La cause n'etait pas le classement
+   * mais la fenetre — un fil qui publie quelques messages par semaine n'a
+   * presque jamais moins de vingt-quatre heures. Une rumeur qui circule depuis
+   * deux jours reste une rumeur qui circule ; un article de vingt-quatre heures
+   * et un billet de trois jours ne se jugent pas a la meme aune.
+   *
+   * Les redactions gardent la fenetre courte : leur actualite se perime vite,
+   * et c'est ce qu'on veut d'elles.
+   */
+  fenetreHeuresParType: { SOCIAL: 96, BLOG: 72, VIDEO: 48 },
   toleranceHeures: 6,         // tolerance pour les sources retardataires
   delaiSourceMs: 15000,
   parallelisme: 6,
   quotas: { Cote_Ivoire: 50, Afrique: 50, International: 50 },
+  /**
+   * Places reservees, dans chaque region, aux sources NON PRIMAIRES : blogs,
+   * videos, reseaux sociaux.
+   *
+   * Sans cette reserve, elles n'apparaissent jamais. Mesure faite : avec la
+   * seule priorite technique, les quatre fils sociaux ont rendu ZERO candidat
+   * sur cent cinquante — les redactions, mieux notees, prennent toutes les
+   * places. Les ajouter au registre n'aurait donc rien change au resultat.
+   *
+   * Or ce qu'ils apportent n'est pas de l'information : c'est le signalement
+   * d'un sujet dont on parle. Cela vaut d'etre vu par la redaction, a condition
+   * d'etre presente pour ce que c'est — d'ou `piste_a_verifier` porte par ces
+   * candidats, et la consigne donnee a AP-02 de ne jamais s'en contenter.
+   */
+  quotaDecouverte: { Cote_Ivoire: 5, Afrique: 5, International: 3 },
+  /**
+   * Part de cette reserve tenue pour les seuls RESEAUX SOCIAUX.
+   *
+   * Sans elle, ils restent invisibles : les blogs, mieux notes, prennent toute
+   * la reserve. Or ce que releve un fil comme #CotedIvoire n'est pas de
+   * l'information, c'est ce qui CIRCULE — « pretendue arrestation du chef
+   * d'etat-major », « pretendu projet d'assassinat ». Une redaction qui ignore
+   * la rumeur ne peut pas la dementir.
+   *
+   * Ces candidats portent `piste_a_verifier` et ne doivent JAMAIS devenir un
+   * article qui les reprend — au mieux un article qui les verifie.
+   */
+  quotaSocial: { Cote_Ivoire: 2, Afrique: 1, International: 0 },
   maxParSource: 40,           // bride un flux bavard qui ecraserait les autres
   similariteDoublon: 0.62,    // seuil de rapprochement des titres
 };
@@ -181,6 +285,12 @@ export function analyserFlux(xml) {
 export function nettoyerTexte(valeur) {
   if (!valeur) return '';
   return decoderEntites(String(valeur))
+    // Unicode stylise ramene a des lettres ordinaires. Les fils sociaux en
+    // sont friands (« 𝗦𝗼𝘂𝗽𝗰̧𝗼𝗻𝘀 » plutot que « Soupcons ») : sans NFKC, ces
+    // caracteres ne sont reconnus ni par le classement geographique, ni par
+    // le rapprochement des titres, et arriveraient tels quels sous les yeux
+    // du redacteur.
+    .normalize('NFKC')
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -337,7 +447,13 @@ async function tenterUneFois(source) {
       signal: ctrl.signal,
       redirect: 'follow',
       headers: {
-        'User-Agent': 'Abidjan4all-NewsCollector/1.0 (+https://abidjan4all.info)',
+        // Quelques sources refusent un agent qui s'annonce comme un robot —
+        // Reddit r/Africa en fait partie. On ne se déguise pas par principe :
+        // seules celles qui l'exigent portent `agentNavigateur`, et le reste
+        // du registre continue de se présenter honnêtement.
+        'User-Agent': source.agentNavigateur
+          ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+          : 'Abidjan4all-NewsCollector/1.0 (+https://abidjan4all.info)',
         Accept: 'application/rss+xml, application/xml, text/xml, */*',
       },
     });
@@ -413,7 +529,8 @@ export async function executer(options = {}) {
   const resultats = await collecterToutes(sources);
 
   // --- Normalisation -------------------------------------------------------
-  const limiteBasse = Date.now() - (reglages.fenetreHeures + reglages.toleranceHeures) * 3600 * 1000;
+  const limiteDe = (type) => Date.now()
+    - ((reglages.fenetreHeuresParType?.[type] ?? reglages.fenetreHeures) + reglages.toleranceHeures) * 3600 * 1000;
   let brutsCollectes = 0;
   let rejetesDate = 0;
   let rejetesFiltre = 0;
@@ -434,7 +551,13 @@ export async function executer(options = {}) {
         region: res.source.region,
         country: res.source.country,
         language: res.source.lang,
-        title: nettoyerTexte(brut.title),
+        // Un billet de reseau social n'a PAS de titre — Mastodon n'en met
+        // aucun, tout est dans la description. Le filtre les rejetait donc
+        // tous les vingt pour « titre absent », et aucune source sociale ne
+        // pouvait remonter, quelle que soit la reserve qu'on leur tenait.
+        // On prend alors le debut du message, ce qui est bien ce qui tient
+        // lieu de titre a un billet.
+        title: nettoyerTexte(brut.title) || nettoyerTexte(brut.description).slice(0, 140).replace(/s+S*$/, ''),
         description: nettoyerTexte(brut.description).slice(0, 600),
         url: canoniserUrl(brut.url),
         published_at: publie,
@@ -442,6 +565,9 @@ export async function executer(options = {}) {
         image_url: brut.image_url,
         collection_method: res.source.type === 'GOOGLE_NEWS' ? 'google_news' : 'rss',
         is_aggregator: res.source.type === 'GOOGLE_NEWS' || res.source.type === 'AGGREGATOR',
+        // Une source est primaire SAUF si le registre dit le contraire : les
+        // redactions le sont, les agregateurs, blogs, videos et reseaux non.
+        is_primary: res.source.primaire !== false && res.source.type !== 'GOOGLE_NEWS' && res.source.type !== 'AGGREGATOR',
         source_priority: res.source.priority,
       };
 
@@ -450,7 +576,7 @@ export async function executer(options = {}) {
       if (!article.published_at) {
         article.published_at = debut.toISOString();
         article.published_estimated = true;
-      } else if (new Date(article.published_at).getTime() < limiteBasse) {
+      } else if (new Date(article.published_at).getTime() < limiteDe(res.source.type)) {
         rejetesDate++;
         continue;
       }
@@ -525,7 +651,7 @@ export async function executer(options = {}) {
       title: a.title,
       description: a.description,
       url: a.url,
-      source: { id: a.source_id, name: a.source_name, type: a.source_type, priority: a.source_priority, is_aggregator: a.is_aggregator },
+      source: { id: a.source_id, name: a.source_name, type: a.source_type, priority: a.source_priority, is_aggregator: a.is_aggregator, is_primary: a.is_primary },
       published_at: a.published_at,
       published_estimated: a.published_estimated || false,
       country: a.country,
@@ -535,6 +661,7 @@ export async function executer(options = {}) {
       fingerprint: a.fingerprint,
       technical_score: Math.round(a.source_priority + fraicheur + reprises),
       also_covered_by: g.aussi.slice(0, 6),
+      piste_a_verifier: false,
       status: 'candidate',
     };
   });
@@ -543,7 +670,32 @@ export async function executer(options = {}) {
   // les trois, sans qu'une region bavarde n'ecrase les autres.
   const retenus = [];
   for (const [region, quota] of Object.entries(reglages.quotas)) {
-    retenus.push(...candidats.filter((c) => c.region === region).sort((a, b) => b.technical_score - a.technical_score).slice(0, quota));
+    const deLaRegion = candidats.filter((c) => c.region === region).sort((a, b) => b.technical_score - a.technical_score);
+    const reserve = reglages.quotaDecouverte?.[region] ?? 0;
+
+    // Le gros du contingent, au merite, toutes sources confondues.
+    const principal = deLaRegion.slice(0, Math.max(0, quota - reserve));
+    retenus.push(...principal);
+
+    // Puis la reserve de decouverte, prise UNIQUEMENT parmi les sources non
+    // primaires qui n'ont pas passe la barre. Si elles ont deja perce au
+    // merite, la reserve n'est pas consommee : on ne force pas du bruit dans
+    // le jeu pour respecter un quota.
+    const dejaPris = new Set(principal.map((c) => c.candidate_id));
+    const marquer = (l) => l.map((c) => ({ ...c, piste_a_verifier: true }));
+
+    // La part sociale d'abord : servie apres les blogs, elle serait toujours
+    // vide, les blogs etant mieux notes.
+    const partSociale = reglages.quotaSocial?.[region] ?? 0;
+    const sociaux = marquer(deLaRegion
+      .filter((c) => !dejaPris.has(c.candidate_id) && c.source.type === 'SOCIAL')
+      .slice(0, partSociale));
+    for (const c of sociaux) dejaPris.add(c.candidate_id);
+
+    const pistes = marquer(deLaRegion
+      .filter((c) => !dejaPris.has(c.candidate_id) && c.source.is_primary === false)
+      .slice(0, Math.max(0, reserve - sociaux.length)));
+    retenus.push(...sociaux, ...pistes);
   }
   retenus.sort((a, b) => b.technical_score - a.technical_score);
   retenus.forEach((c, i) => { c.candidate_id = `A4A-CAND-${String(i + 1).padStart(6, '0')}`; });
