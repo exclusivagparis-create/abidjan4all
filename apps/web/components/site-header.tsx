@@ -61,8 +61,16 @@ export async function SiteHeader() {
         {/* Mesure d'audience — n'affiche rien, écrit après l'envoi de la page. */}
         <AudienceTracker />
       {/* gap-4 (et non 6) : 7 entrées de menu + recherche + compte + S'abonner
-          dépassent sinon la largeur utile sur un portable 1280. */}
-      <div className="mx-auto flex max-w-[1200px] items-center gap-2 px-3 py-3.5 sm:gap-3 sm:px-6 md:gap-4 lg:px-8">
+          dépassent sinon la largeur utile sur un portable 1280.
+
+          Et 12 px à partir de `lg` : c'est ce qui PAIE l'agrandissement du
+          mot-symbole. Au-delà de 1280 px, la barre est plafonnée à 1200 px, si
+          bien que la place ne vient jamais de l'écran — mesuré : le menu
+          disposait de 515 px pour 508 nécessaires, sept pixels de marge, quelle
+          que soit la largeur. Quatre pixels repris sur chacun des cinq
+          intervalles de CETTE ligne — jamais sur ceux du menu, qui restent à
+          16 px — rendent les 20 px qui manquaient. */}
+      <div className="mx-auto flex max-w-[1200px] items-center gap-2 px-3 py-3.5 sm:gap-3 sm:px-6 md:gap-4 lg:gap-3 lg:px-8">
         <MobileMenu entries={NAV} secondaires={secondaires} connecte={connecte} />
         {/* Sur telephone : le badge carre, 40 px, au lieu du mot-symbole
             complet. La largeur gagnee rend sa place au libelle « Se
@@ -93,9 +101,22 @@ export async function SiteHeader() {
             className="h-[40px] w-[40px] [display:var(--show-dark)] sm:hidden"
           />
           {/* Ecran large : le mot-symbole, fond transparent, encre bleu nuit
-              sur theme clair et blanche sur theme sombre. */}
-          <img src="/logo-web-light.png" alt="" aria-hidden className="hidden h-[38px] sm:[display:var(--show-light)]" />
-          <img src="/logo-web-dark.png" alt="" aria-hidden className="hidden h-[38px] sm:[display:var(--show-dark)]" />
+              sur theme clair et blanche sur theme sombre.
+
+              44 px et non 38. La hauteur est la seule cote reglee : la largeur
+              suit, et c est ELLE qui compte, car le mot-symbole est long — le
+              fichier fait 320x81, un rapport de pres de 4 pour 1, si bien que
+              chaque pixel de hauteur en coute pres de quatre en largeur, pris
+              au menu. Six pixels de plus valent donc vingt-quatre de moins pour
+              les rubriques ; ils viennent de l espacement de la ligne, reduit
+              a 12 px des `lg` (cf. plus haut), et des sept pixels de marge que
+              le menu avait deja.
+
+              Pourquoi ne pas rogner le fichier plutot : le dessin occupe deja
+              313 des 320 px de large. Il n y a que 7 px de marge laterale a
+              recuperer, 2 % — invisible. Mesure avant d essayer. */}
+          <img src="/logo-web-light.png" alt="" aria-hidden className="hidden h-[44px] sm:[display:var(--show-light)]" />
+          <img src="/logo-web-dark.png" alt="" aria-hidden className="hidden h-[44px] sm:[display:var(--show-dark)]" />
         </Link>
         {/* Barre horizontale à partir de `lg` seulement. Sous 1024 px, c'est le
             panneau qui sert.
