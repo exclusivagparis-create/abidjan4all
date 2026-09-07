@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { prisma, Prisma } from "@a4a/db";
 import { apiError, articleListSelect, pagination } from "@/lib/api";
-import { auth, PUBLISH_ROLES } from "@/auth";
+import { autorise, identifier } from "@/lib/api-auth";
+import { adresseAppelant, limiter, reponseTropDeRequetes } from "@/lib/limite-debit";
 
 // GET /api/v1/articles?rubrique=&premium=&page=&limit=
 export async function GET(request: Request) {
@@ -40,13 +41,35 @@ const ArticleCreateSchema = z.object({
   readingTime: z.number().int().min(1).default(1),
 });
 
-// POST /api/v1/articles (editor+) — création en brouillon
+/**
+ * POST /api/v1/articles — création en brouillon.
+ *
+ * Accepte désormais un jeton porteur (`Authorization: Bearer a4a_…`) en plus de
+ * la session du Studio. La route n'acceptait que le cookie de navigateur :
+ * aucune machine ne pouvait s'en servir, alors que le système de jetons
+ * existait déjà pour le connecteur. C'est le même mécanisme qui est réemployé
+ * ici, et non un second, parallèle : mêmes portées, mêmes plafonds de rôle,
+ * même révocation depuis Studio ▸ Accès API.
+ *
+ * L'article est TOUJOURS créé en brouillon, quel que soit l'appelant. La portée
+ * `articles:write` est décrite aux porteurs comme « Créer et modifier des
+ * brouillons. Jamais publier. » — une machine ne met rien en ligne toute seule,
+ * un humain relit et publie depuis le Studio.
+ */
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user) return apiError("unauthorized", "Authentification requise.", 401);
-  if (!PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) {
-    return apiError("forbidden", "Rôle editor ou admin requis.", 403);
+  const identite = await identifier(request);
+  if (!identite) return apiError("unauthorized", "Authentification requise.", 401);
+  if (!autorise(identite, "articles:write")) {
+    return apiError("forbidden", "Portée articles:write et rôle rédactionnel requis.", 403);
   }
+
+  // Un jeton peut être appelé en boucle par une automatisation mal réglée. La
+  // limite est posée par porteur, et non par adresse : deux automatisations
+  // derrière la même adresse ne se pénalisent pas l'une l'autre, et changer
+  // d'adresse ne la contourne pas.
+  const cle = identite.via === "token" ? `articles:create:${identite.userId}` : `articles:create:${adresseAppelant(request)}`;
+  const verdict = limiter(cle, 60, 3600);
+  if (!verdict.autorise) return reponseTropDeRequetes(verdict.attendre);
 
   const parsed = ArticleCreateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
@@ -63,7 +86,7 @@ export async function POST(request: Request) {
       ...input,
       body: input.body as Prisma.InputJsonValue,
       status: "draft",
-      authorId: session.user.id,
+      authorId: identite.userId,
       seo: { metaTitle: input.title, metaDescription: input.dek ?? "" } as Prisma.InputJsonValue,
     },
   });

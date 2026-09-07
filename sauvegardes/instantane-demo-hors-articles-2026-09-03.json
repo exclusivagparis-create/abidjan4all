@@ -1,0 +1,171 @@
+{
+ "podcast": [
+  {
+   "id": "cmrh3qzwx002ht91srerwipq9",
+   "slug": "abidjan-decode",
+   "title": "Abidjan Décodé",
+   "category": "Actualité",
+   "cadence": "hebdomadaire",
+   "coverUrl": "placeholder://cover — abidjan décodé"
+  }
+ ],
+ "episodes": [
+  {
+   "id": "cmrh3qzwy002it91sqsz0dj3d",
+   "podcastId": "cmrh3qzwx002ht91srerwipq9",
+   "number": 1,
+   "title": "Le cacao peut-il enrichir la Côte d'Ivoire ?",
+   "description": "Avec Awa Koné, data journaliste.",
+   "audioUrl": "placeholder://audio-ep1",
+   "durationSec": 1860,
+   "publishedAt": "2026-06-20T05:00:00"
+  },
+  {
+   "id": "cmrh3qzwy002jt91s1wz92szq",
+   "podcastId": "cmrh3qzwx002ht91srerwipq9",
+   "number": 2,
+   "title": "Diaspora : le grand retour des capitaux",
+   "description": "Avec Koffi Diallo, depuis Montréal.",
+   "audioUrl": "placeholder://audio-ep2",
+   "durationSec": 2100,
+   "publishedAt": "2026-06-27T05:00:00"
+  }
+ ],
+ "liveBlog": [
+  {
+   "id": "cmrh3qzwc001ut91s0jvwp0k1",
+   "articleId": null,
+   "title": "Cacao : la fève franchit 4 000 $ à Londres",
+   "dek": "Suivez la séance et les réactions de la filière en direct.",
+   "rubriqueId": "cmrh3qztj0006t91s0i1oxggq",
+   "status": "live",
+   "startedAt": "2026-07-02T07:30:00",
+   "updatesCount": 3
+  }
+ ],
+ "liveUpdates": [
+  {
+   "id": "cmrh3qzwe001wt91s7nk750wc",
+   "liveBlogId": "cmrh3qzwc001ut91s0jvwp0k1",
+   "time": "2026-07-02T07:31:00",
+   "type": "text",
+   "title": "Ouverture en fanfare",
+   "body": "La tonne de fève s'échange à 4 015 $ dès l'ouverture, du jamais-vu depuis 2024.",
+   "pinned": false,
+   "mediaAssetId": null
+  },
+  {
+   "id": "cmrh3qzwg001yt91shsxj94b6",
+   "liveBlogId": "cmrh3qzwc001ut91s0jvwp0k1",
+   "time": "2026-07-02T08:05:00",
+   "type": "stat",
+   "title": "BRVM",
+   "body": "Le composite clôture en hausse de 1,8 %.",
+   "pinned": true,
+   "mediaAssetId": null
+  },
+  {
+   "id": "cmrh3qzwh0020t91s38j9e29r",
+   "liveBlogId": "cmrh3qzwc001ut91s0jvwp0k1",
+   "time": "2026-07-02T09:12:00",
+   "type": "quote",
+   "title": null,
+   "body": "« Le marché rémunère enfin l'origine ivoirienne », réagit un négociant d'Abidjan.",
+   "pinned": false,
+   "mediaAssetId": null
+  }
+ ],
+ "utilisateurs": [
+  {
+   "id": "cmrh3qzub000jt91s0h2i6ks1",
+   "email": "awa.kone@abidjan4all.net",
+   "name": "Awa Koné",
+   "role": "journalist",
+   "createdAt": "2026-07-12T01:15:56.531"
+  },
+  {
+   "id": "cmrh3qzua000it91sb8yw4h37",
+   "email": "mariam.toure@abidjan4all.net",
+   "name": "Mariam Touré",
+   "role": "journalist",
+   "createdAt": "2026-07-12T01:15:56.53"
+  },
+  {
+   "id": "cmrh3qzuh000kt91sybaraouu",
+   "email": "koffi.diallo@abidjan4all.net",
+   "name": "Koffi Diallo",
+   "role": "journalist",
+   "createdAt": "2026-07-12T01:15:56.537"
+  }
+ ],
+ "medias": [
+  {
+   "id": "cmrh3qzv10012t91si7vu0143",
+   "type": "image",
+   "url": "/uploads/mrqwpysb-xbpfsa.jpg",
+   "thumbUrl": null,
+   "width": null,
+   "height": null,
+   "durationSec": null,
+   "sizeBytes": 16804,
+   "tags": [
+    "placeholder"
+   ],
+   "alt": "Salle de cotation, brvm",
+   "credit": "eBamako",
+   "uploadedById": "cmrh3qzua000it91sb8yw4h37",
+   "createdAt": "2026-07-12T01:15:56.558"
+  },
+  {
+   "id": "cmrh3qzv00010t91s5h5sk4x5",
+   "type": "image",
+   "url": "/uploads/mrqwtu1v-p2wyk5.jpg",
+   "thumbUrl": null,
+   "width": null,
+   "height": null,
+   "durationSec": null,
+   "sizeBytes": 29256,
+   "tags": [
+    "placeholder"
+   ],
+   "alt": "Quartier Ivoirien, Montréal",
+   "credit": null,
+   "uploadedById": "cmrh3qzua000it91sb8yw4h37",
+   "createdAt": "2026-07-12T01:15:56.557"
+  },
+  {
+   "id": "cmrh3qzuy000wt91seucn4yi5",
+   "type": "image",
+   "url": "/uploads/mrqx1vtp-ausitm.jpg",
+   "thumbUrl": null,
+   "width": null,
+   "height": null,
+   "durationSec": null,
+   "sizeBytes": 884376,
+   "tags": [
+    "placeholder"
+   ],
+   "alt": "Port Autonome d'Abidjan",
+   "credit": "Port Autonome d'Abidjan",
+   "uploadedById": "cmrh3qzua000it91sb8yw4h37",
+   "createdAt": "2026-07-12T01:15:56.554"
+  },
+  {
+   "id": "cmrh3qzuz000yt91sgcgxs8j4",
+   "type": "image",
+   "url": "/uploads/mrqwwauo-1jyj2a.jpg",
+   "thumbUrl": null,
+   "width": null,
+   "height": null,
+   "durationSec": null,
+   "sizeBytes": 59365,
+   "tags": [
+    "placeholder"
+   ],
+   "alt": "Séchage des fèves, San-Pédro",
+   "credit": "Abidjan4all",
+   "uploadedById": "cmrh3qzua000it91sb8yw4h37",
+   "createdAt": "2026-07-12T01:15:56.556"
+  }
+ ]
+}
