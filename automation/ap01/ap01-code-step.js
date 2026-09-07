@@ -303,7 +303,11 @@ function titreNormalise(titre) {
   return String(titre || '')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    // Signes combinants en ECHAPPEMENTS, et non en clair : ce fichier est
+    // destine au copier-coller dans un champ de navigateur, ou des caracteres
+    // combinants — invisibles a l ecran — peuvent etre recomposes au collage.
+    // La classe deviendrait fausse sans que rien ne se voie.
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -472,7 +476,7 @@ async function executer(options = {}) {
 
   // --- Deduplication -------------------------------------------------------
   // Trois niveaux, du plus sur au plus approximatif. A chaque rencontre, on
-  // gagre l'exemplaire de plus forte priorite : entre Reuters et un
+  // garde l'exemplaire de plus forte priorite : entre Reuters et un
   // agregateur qui le recopie, c'est Reuters qu'on transmet.
   const parCle = new Map();
   let doublonsUrl = 0;
