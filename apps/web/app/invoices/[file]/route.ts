@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { prisma } from "@a4a/db";
-import { formatXOF, planById } from "@a4a/payments";
+import { formatXOF } from "@a4a/payments";
 import { auth } from "@/auth";
 import { apiError } from "@/lib/api";
 import { formatDateFull } from "@/lib/format";
@@ -43,7 +43,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
   }
 
   const payment = invoice.payment;
-  const plan = planById(payment.subscription.plan);
+  // L'offre facturée est celle inscrite sur le paiement ; l'abonnement a pu
+  // changer d'offre depuis, la facture doit rester celle d'origine.
+  const plan = await prisma.offer.findUnique({
+    where: { id: payment.offerId ?? payment.subscription.plan },
+  });
 
   const doc = await PDFDocument.create();
   const page = doc.addPage([595.28, 841.89]); // A4 portrait

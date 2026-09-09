@@ -67,12 +67,15 @@ enum CommentStatus {
   flagged
 }
 
-enum Plan {
-  free
-  essentiel
-  diaspora // A4A+ Diaspora (Business Model 2026-2031, pilier 3)
-  pro
-  corporate
+/**
+ * Remise appliquée à une offre. `none` plutôt que `null` : une offre sans
+ * remise et une offre dont la remise a expiré doivent se lire pareil côté
+ * code, sans avoir à distinguer « champ vide » de « pas de remise ».
+ */
+enum DiscountKind {
+  none
+  percent // pourcentage du prix affiché
+  amount // remise en francs CFA
 }
 
 enum SubscriptionStatus {
@@ -728,18 +731,72 @@ model Comment {
 // Abonnements & paiements (A4A+ : Essentiel 2 000 XOF/mois · Pro 4 000 · Corporate sur devis)
 // ---------------------------------------------------------------------------
 
+/**
+ * Offre A4A+ — grille du Business Model 2026-2031 (§4.1 pilier 3).
+ *
+ * Les offres vivaient dans une constante TypeScript et l'enum `Plan` : la
+ * rédaction ne pouvait ni changer un prix ni ouvrir une cinquième offre sans
+ * un déploiement. Elles sont ici pour être administrables.
+ *
+ * L'`id` reprend les anciennes valeurs de l'enum (`free`, `essentiel`,
+ * `diaspora`, `pro`, `corporate`) : la migration convertit la colonne en texte
+ * sans toucher une seule ligne d'abonnement existante.
+ */
+model Offer {
+  /** Slug stable, repris dans Subscription.plan. Jamais renommé après coup. */
+  id String @id
+
+  name      String
+  tagline   String  @default("")
+  /** XOF par mois, hors remise. */
+  price     Int
+  features  String[]
+  highlight Boolean  @default(false)
+  /** Retirée de la page publique sans casser les abonnements en cours. */
+  active    Boolean  @default(true)
+  /** Ordre d'affichage sur la page Abonnement. */
+  ordre     Int      @default(0)
+
+  discountKind  DiscountKind @default(none)
+  /** Pourcentage (1-100) ou montant en francs, selon discountKind. */
+  discountValue Int          @default(0)
+  /** Fenêtre de validité facultative : hors fenêtre, la remise est ignorée. */
+  discountFrom  DateTime?
+  discountTo    DateTime?
+  /** Affiché à côté du prix barré : « Rentrée 2026 », « -25 % jusqu'au 30/09 ». */
+  discountLabel String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
+  payments      Payment[]
+}
+
 model Subscription {
   id String @id @default(cuid())
 
   user   User   @relation(fields: [userId], references: [id])
   userId String @unique
 
-  plan             Plan               @default(free)
+  /** Slug de l'offre (Offer.id). Reste « free » tant qu'aucun paiement n'a abouti. */
+  plan             String             @default("free")
+  offer            Offer              @relation(fields: [plan], references: [id])
   status           SubscriptionStatus @default(active)
   method           PaymentMethod?
   methodMask       String? // ex. "07 •• •• 89", "•••• 4242"
   currentPeriodEnd DateTime?
   since            DateTime           @default(now())
+
+  /**
+   * Échéance pour laquelle la relance avant expiration a déjà été envoyée.
+   *
+   * Un simple horodatage d'envoi ne suffirait pas : le planificateur passe
+   * toutes les 60 secondes et relancerait sans fin. En mémorisant l'échéance
+   * concernée, la relance part une fois par période et une seule, et repart
+   * naturellement à la période suivante puisque l'échéance a changé.
+   */
+  relancePourEcheance DateTime?
 
   payments Payment[]
 }
@@ -750,7 +807,21 @@ model Payment {
   subscription   Subscription @relation(fields: [subscriptionId], references: [id])
   subscriptionId String
 
+  /**
+   * Offre achetée, inscrite au moment du checkout.
+   *
+   * Elle était auparavant déduite du montant encaissé. Dès qu'une remise
+   * existe, ce montant ne correspond plus au prix d'aucune offre : le
+   * paiement était encaissé puis refusé au fulfillment, faute d'offre
+   * reconnue. Le lien est donc explicite. Facultatif pour les paiements
+   * antérieurs à la migration, qui n'ont que leur montant.
+   */
+  offer   Offer?  @relation(fields: [offerId], references: [id])
+  offerId String?
+
   amount      Int
+  /** Prix catalogue avant remise, pour justifier la facture. */
+  listAmount  Int?
   currency    String        @default("XOF")
   provider    String // paydunya | cinetpay | stripe | paypal
   providerRef String

@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type SubscriptionStatus } from "@a4a/db";
-import { formatXOF, planById } from "@a4a/payments";
+import { formatXOF } from "@a4a/payments";
+import { prixDu } from "@/lib/offres";
 import { auth } from "@/auth";
 import { formatDate } from "@/lib/format";
 
@@ -42,8 +43,17 @@ export default async function AdminSubscribers({
     where,
     select: { plan: true, status: true, currentPeriodEnd: true },
   });
+  // Prix lus en base, remise comprise : le MRR doit refléter ce qui est
+  // réellement encaissé, pas le tarif catalogue d'une offre en promotion.
+  const offres = await prisma.offer.findMany();
+  const parId = new Map(offres.map((o) => [o.id, o]));
+  const prixEffectif = (id: string) => {
+    const o = parId.get(id);
+    return o ? prixDu(o, now).prix : 0;
+  };
+
   const actifs = all.filter((s) => s.status === "active");
-  const mrr = actifs.reduce((sum, s) => sum + (planById(s.plan)?.price ?? 0), 0);
+  const mrr = actifs.reduce((sum, s) => sum + prixEffectif(s.plan), 0);
   const impayes = all.filter((s) => s.status === "past_due").length;
   const resiliesEnPeriode = all.filter(
     (s) => s.status === "canceled" && s.currentPeriodEnd && s.currentPeriodEnd > now
@@ -110,7 +120,7 @@ export default async function AdminSubscribers({
           <tbody>
             {subs.map((s) => {
               const meta = STATUS_META[s.status];
-              const plan = planById(s.plan);
+              const plan = parId.get(s.plan);
               const last = s.payments[0];
               return (
                 <tr key={s.id} className="border-b border-line-2 last:border-b-0">

@@ -1,6 +1,7 @@
 import { prisma } from "@a4a/db";
 import { sendArticleAlert } from "@/lib/push";
 import { sendMonthlyAdReports } from "@/lib/ad-reports";
+import { marquerEcheancesDepassees, relancerEcheancesProches } from "@/lib/abonnements-echeances";
 
 /**
  * Bascule scheduled→published quand l'heure programmée est atteinte.
@@ -50,10 +51,42 @@ export function startScheduler() {
   g.a4aScheduler = setInterval(() => {
     publishDueArticles().catch((e) => console.error("[scheduler]", e));
     envoyerRapportsSiDebutDeMois();
+    suivreEcheancesAbonnements();
   }, INTERVAL_MS);
   console.log("[scheduler] publication automatique des programmés — toutes les 60 s");
   publishDueArticles().catch((e) => console.error("[scheduler]", e));
   envoyerRapportsSiDebutDeMois();
+  suivreEcheancesAbonnements();
+}
+
+/**
+ * Échéances d'abonnement : relance avant expiration, puis bascule en
+ * `past_due` une fois la date passée.
+ *
+ * Espacé d'une heure. Les deux passes sont idempotentes, les rejouer ne
+ * casserait rien, mais elles interrogent la base à chaque tour : au rythme de
+ * la minute, cela ferait 1 440 balayages par jour pour un résultat qui ne
+ * change qu'une fois.
+ */
+const UNE_HEURE_MS = 3_600_000;
+const h = globalThis as unknown as { a4aEcheances?: number };
+
+function suivreEcheancesAbonnements() {
+  const maintenant = Date.now();
+  if (h.a4aEcheances && maintenant - h.a4aEcheances < UNE_HEURE_MS) return;
+  h.a4aEcheances = maintenant;
+
+  relancerEcheancesProches()
+    .then((n) => {
+      if (n > 0) console.log(`[scheduler] ${n} relance(s) d'échéance envoyée(s)`);
+    })
+    .catch((e) => console.error("[scheduler:relances]", e));
+
+  marquerEcheancesDepassees()
+    .then((n) => {
+      if (n > 0) console.log(`[scheduler] ${n} abonnement(s) échu(s) passé(s) en impayé`);
+    })
+    .catch((e) => console.error("[scheduler:echeances]", e));
 }
 
 /**

@@ -1,5 +1,4 @@
 import { prisma } from "@a4a/db";
-import { planById } from "@a4a/payments";
 
 /**
  * KPI du Business Model 2026-2031 (§5.3).
@@ -87,9 +86,15 @@ export async function kpiBusinessModel(): Promise<Kpi[]> {
   const arpu = pagesVues30j > 0 ? Math.round((ca12m / 12 / pagesVues30j) * 100) / 100 : null;
 
   // LTV = prix moyen d'une offre × durée de vie moyenne (1 / taux de churn).
-  const plans = ["essentiel", "diaspora", "pro", "corporate"];
-  const prixMoyen =
-    plans.reduce((s, p) => s + (planById(p)?.price ?? 0), 0) / plans.filter((p) => planById(p)?.price).length;
+  // Les offres sont lues en base : une liste écrite ici aurait ignoré toute
+  // offre ouverte depuis, et faussé la LTV sans que rien ne le signale.
+  const offresPayantes = await prisma.offer.findMany({
+    where: { id: { not: "free" }, price: { gt: 0 }, active: true },
+    select: { price: true },
+  });
+  const prixMoyen = offresPayantes.length
+    ? offresPayantes.reduce((s, o) => s + o.price, 0) / offresPayantes.length
+    : 0;
   const ltv = churn && churn > 0 ? Math.round(prixMoyen * 12 * (100 / churn)) : null;
 
   return [

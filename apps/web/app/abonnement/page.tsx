@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { METHODS, PLANS, formatXOF } from "@a4a/payments";
+import { METHODS, formatXOF } from "@a4a/payments";
 import { auth } from "@/auth";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { subscribeAction } from "@/lib/actions/billing-actions";
+import { offresPubliques } from "@/lib/offres";
 
 export const metadata: Metadata = { title: "S'abonner à A4A+" };
 export const dynamic = "force-dynamic";
@@ -13,7 +14,11 @@ export default async function AbonnementPage({
 }: {
   searchParams: Promise<{ echec?: string; indisponible?: string }>;
 }) {
-  const [{ echec, indisponible }, session] = await Promise.all([searchParams, auth()]);
+  const [{ echec, indisponible }, session, offres] = await Promise.all([
+    searchParams,
+    auth(),
+    offresPubliques(),
+  ]);
 
   return (
     <div className="min-h-screen bg-bg text-ink">
@@ -42,10 +47,15 @@ export default async function AbonnementPage({
           ) : null}
         </div>
 
-        {/* 4 offres depuis l'ajout de Diaspora : 2 colonnes en tablette, 4 en
-            grand écran — 3 colonnes laissaient une carte seule sur sa ligne. */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
-          {PLANS.map((plan) => (
+        {/* Le nombre d'offres n'est plus figé : la rédaction peut en ouvrir une
+            cinquième. La grille s'adapte pour qu'aucune carte ne reste seule
+            sur sa ligne, ce que faisaient 3 colonnes avec 4 offres. */}
+        <div
+          className={`grid grid-cols-1 gap-6 sm:grid-cols-2 ${
+            offres.length % 3 === 0 ? "xl:grid-cols-3" : "xl:grid-cols-4"
+          }`}
+        >
+          {offres.map((plan) => (
             <div
               key={plan.id}
               className={`flex flex-col rounded-[16px] border bg-surface p-7 ${
@@ -61,15 +71,25 @@ export default async function AbonnementPage({
               ) : null}
               <h2 className="font-serif text-[26px] font-semibold">{plan.name}</h2>
               <div className="mt-1 text-[28px] font-extrabold tracking-tight">
-                {plan.price ? (
+                {plan.prix ? (
                   <>
-                    {formatXOF(plan.price)}
+                    {plan.remise ? (
+                      <span className="mr-2 align-middle text-[17px] font-semibold text-ink-3 line-through">
+                        {formatXOF(plan.prixCatalogue)}
+                      </span>
+                    ) : null}
+                    {formatXOF(plan.prix)}
                     <span className="text-sm font-semibold text-ink-3"> / mois</span>
                   </>
                 ) : (
                   <span className="text-[22px]">Sur devis</span>
                 )}
               </div>
+              {plan.remise ? (
+                <p className="mt-1.5 inline-flex self-start rounded-pill bg-[rgba(0,102,51,0.1)] px-2.5 py-1 text-[11.5px] font-bold text-green">
+                  {plan.remiseLabel ?? `Économisez ${formatXOF(plan.economie)}`}
+                </p>
+              ) : null}
               <p className="mt-1 font-serif text-[15px] text-ink-2">{plan.tagline}</p>
               <ul className="mb-6 mt-4 flex flex-col gap-2 text-[13.5px] text-ink-2">
                 {plan.features.map((f) => (
@@ -80,7 +100,7 @@ export default async function AbonnementPage({
                 ))}
               </ul>
 
-              {plan.price ? (
+              {plan.prix ? (
                 <form action={subscribeAction} className="mt-auto flex flex-col gap-2.5">
                   <input type="hidden" name="plan" value={plan.id} />
                   <select
