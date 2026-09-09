@@ -6,7 +6,10 @@ type Block = {
   html?: string;
   cite?: string;
   url?: string;
+  /** Texte alternatif : pour les lecteurs d'écran, jamais affiché. */
   alt?: string;
+  /** Légende éditoriale, affichée sous l'image. */
+  caption?: string;
   variant?: string;
 };
 
@@ -162,19 +165,29 @@ export function ArticleBody({ blocks, dropCap = true }: { blocks: unknown; dropC
                 {block.text}
               </div>
             );
-          case "image":
+          case "image": {
+            // `<figure>` plutôt qu'une image nue : la légende doit être liée à
+            // la photo dans la structure du document, pas seulement posée
+            // dessous. Sans légende saisie, aucun `<figcaption>` n'est rendu —
+            // on n'affiche pas un texte de repli faute de mieux.
+            const legende = block.caption?.trim();
             return (
-              // `h-[320px]` ne vaut plus que pour l'aplat d'attente, qui n'a
-              // aucune dimension propre ; une vraie photo prend la largeur de
-              // la colonne et sa hauteur naturelle, plafonnée à 70 % de l'écran.
-              <PlaceholderMedia
-                key={i}
-                ajuste
-                url={block.url}
-                alt={block.alt}
-                className="my-7 h-[320px] max-h-[70vh] w-full rounded-[3px]"
-              />
+              <figure key={i} className="my-7">
+                {/* `h-[320px]` ne vaut plus que pour l'aplat d'attente, qui n'a
+                    aucune dimension propre ; une vraie photo prend la largeur
+                    de la colonne et sa hauteur naturelle, plafonnée à 70 %. */}
+                <PlaceholderMedia
+                  ajuste
+                  url={block.url}
+                  alt={block.alt}
+                  className="h-[320px] max-h-[70vh] w-full rounded-[3px]"
+                />
+                {legende ? (
+                  <figcaption className="mt-2 px-0.5 text-[11.5px] leading-normal text-ink-3">{legende}</figcaption>
+                ) : null}
+              </figure>
             );
+          }
           default:
             return null;
         }

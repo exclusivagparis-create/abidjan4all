@@ -610,6 +610,19 @@ model Article {
   coverAsset   MediaAsset? @relation("ArticleCover", fields: [coverAssetId], references: [id])
   coverAssetId String?
 
+  /**
+   * Légende de l'image de une, propre à cet article.
+   *
+   * La page affichait à la place `coverAsset.alt`, c'est-à-dire le libellé
+   * d'enregistrement du média dans la médiathèque — un nom de classement
+   * (« photo-ministre-2 »), écrit pour retrouver un fichier, pas pour être lu
+   * sous une photo. Une même image servant plusieurs articles, ce libellé ne
+   * pouvait de toute façon pas décrire chaque contexte.
+   *
+   * Vide, aucune légende ne s'affiche : mieux vaut rien qu'un nom de fichier.
+   */
+  coverCaption String?
+
   tags         String[]
   readingTime  Int      @default(0)
   views        Int      @default(0)

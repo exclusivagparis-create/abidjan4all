@@ -267,12 +267,19 @@ export default async function ArticlePage({ params }: Props) {
               alt={article.coverAsset.alt}
               className="h-[440px] max-h-[75vh] w-full rounded-[3px]"
             />
-            {/* Légende du modèle : « 📷 Illustration : … © crédit » */}
-            {article.coverAsset.alt || article.coverAsset.credit ? (
+            {/* Légende « 📷 Illustration : … © crédit ».
+                Elle vient de l'article, plus de `coverAsset.alt` : ce champ est
+                le libellé de classement du média dans la médiathèque, écrit
+                pour retrouver un fichier. Il s'affichait tel quel sous les
+                photos, et une même image servant plusieurs articles, il ne
+                pouvait décrire aucun contexte en particulier.
+                Sans légende saisie, seul le crédit subsiste — rien n'est
+                inventé pour combler le vide. */}
+            {article.coverCaption || article.coverAsset.credit ? (
               <div className="mt-2 px-0.5 text-[11.5px] leading-normal text-ink-3">
-                {article.coverAsset.alt ? (
+                {article.coverCaption ? (
                   <>
-                    <strong className="text-ink-2">📷 Illustration :</strong> {article.coverAsset.alt}
+                    <strong className="text-ink-2">📷 Illustration :</strong> {article.coverCaption}
                   </>
                 ) : null}
                 {article.coverAsset.credit ? <em> © {article.coverAsset.credit}</em> : null}
