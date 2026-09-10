@@ -38,6 +38,50 @@ www.abidjan4all.info {
 #
 # Pour atteindre l'application sans passer par le domaine (débogage), ouvrir un
 # tunnel plutôt qu'un port :
-#   ssh -L 3000:localhost:3000 root@212.227.205.163
+#   ssh -L 3000:localhost:3000 root@31.70.137.228
 # puis http://localhost:3000 sur son poste. Rien ne transite en clair sur le
 # réseau, l'accès reste réservé à qui détient déjà la clé SSH.
+
+# ---------------------------------------------------------------------------
+# Activepieces — automation.abidjan4all.info
+#
+# Le bloc reste EN COMMENTAIRE tant que le sous-domaine ne pointe pas vers ce
+# serveur. Ce n'est pas de la prudence de principe : Caddy demanderait aussitôt
+# un certificat à Let's Encrypt, la validation échouerait puisque le nom résout
+# ailleurs, et Let's Encrypt plafonne les échecs à cinq par heure et par nom.
+# On grillerait le quota avant même que le DNS soit corrigé.
+#
+# Pour activer : retirer les dièses des quatre lignes ci-dessous, puis
+#   cd /root/abidjan4all && docker compose -f infra/docker/docker-compose.prod.yml --env-file .env exec caddy caddy reload --config /etc/caddy/Caddyfile
+#
+# `activepieces-app` est joignable parce que le conteneur Caddy a été rattaché
+# au réseau d'Activepieces. Le port 80 visé est celui de l'application DANS son
+# conteneur ; il reste invisible depuis l'internet, seul Caddy y accède.
+#
+automation.abidjan4all.info {
+	# Inscription libre fermee.
+	#
+	# Cette edition d'Activepieces n'a pas d'interrupteur pour cela : la seule
+	# bride prevue est la restriction par domaine de courriel, inutilisable ici
+	# puisque les comptes proprietaires sont sur gmail.com — autoriser ce
+	# domaine reviendrait a n'autoriser personne, ou tout le monde. On barre
+	# donc la route au niveau du proxy, qui est de toute facon le seul chemin
+	# vers l'application.
+	#
+	# La CONNEXION reste intacte : seule la creation de compte est refusee.
+	#
+	# A savoir : si vous invitez un jour un collaborateur, l'acceptation de son
+	# invitation passe elle aussi par cette route. Il faudra la rouvrir le temps
+	# qu'il cree son compte — commenter les deux lignes ci-dessous, redemarrer
+	# caddy, puis les retablir.
+	@inscription path /api/v1/authentication/sign-up
+	respond @inscription "Inscription fermee sur cette instance." 403
+
+	# La page d'inscription elle-meme renvoie vers la connexion, pour ne pas
+	# presenter un formulaire qui ne peut plus aboutir.
+	@page_inscription path /sign-up
+	redir @page_inscription /sign-in
+
+	reverse_proxy activepieces-app:80
+	encode gzip
+}

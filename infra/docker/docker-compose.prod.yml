@@ -8,6 +8,14 @@ services:
   caddy:
     image: caddy:2
     restart: unless-stopped
+    # Caddy est le SEUL point d entree public. Pour servir Activepieces sur
+    # automation.abidjan4all.info, il doit pouvoir joindre son conteneur : on
+    # le rattache au reseau d Activepieces, en plus du sien. Aucun port
+    # supplementaire n est ouvert — Activepieces reste invisible de l internet,
+    # seul Caddy y accede, par ce reseau.
+    networks:
+      - default
+      - activepieces
     ports:
       - "80:80"
       - "443:443"
@@ -87,3 +95,9 @@ volumes:
   a4a_caddy_config:
   a4a_caddy_logs:
   a4a_uploads:
+
+networks:
+  default:
+  activepieces:
+    external: true
+    name: activepieces_activepieces
