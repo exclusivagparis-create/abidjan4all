@@ -157,37 +157,54 @@ async function main() {
   ]);
 
   // ---- Régie publicitaire (démonstration — encart AdSlot sur les rubriques)
+  //
+  // Le visuel, l'accroche, le lien et les compteurs appartiennent à AdBanner,
+  // pas à la campagne : une campagne porte plusieurs bannières, de formats
+  // différents. Ce seed les posait encore sur AdCampaign — d'où l'échec
+  // `Unknown argument 'format'`, qui laissait la CI rouge.
   await Promise.all([
     prisma.adCampaign.create({
       data: {
         advertiser: "Air Côte d'Ivoire",
-        format: "leaderboard_728x90",
         cpm: 2500,
-        headline: "Abidjan–Paris : vols directs dès 450 000 FCFA",
-        linkUrl: "https://www.aircotedivoire.com",
         targeting: { rubriques: ["cacao-marches", "economie", "business"], geo: ["CI", "FR"] },
         startAt: new Date("2026-07-01T00:00:00Z"),
         endAt: new Date("2026-09-30T00:00:00Z"),
         status: "active",
-        impressions: 12480,
-        clicks: 187,
+        banners: {
+          create: [
+            {
+              format: "leaderboard_728x90",
+              headline: "Abidjan–Paris : vols directs dès 450 000 FCFA",
+              linkUrl: "https://www.aircotedivoire.com",
+              impressions: 12480,
+              clicks: 187,
+            },
+          ],
+        },
       },
     }),
     prisma.adCampaign.create({
       data: {
         advertiser: "SIB — Société Ivoirienne de Banque",
-        format: "native",
         cpm: 1800,
-        headline: "Épargnez en FCFA depuis la diaspora",
         targeting: { rubriques: ["diaspora"], geo: ["FR", "CA", "US"] },
         startAt: new Date("2026-08-01T00:00:00Z"),
         endAt: new Date("2026-10-31T00:00:00Z"),
         status: "draft",
+        banners: {
+          create: [{ format: "native", headline: "Épargnez en FCFA depuis la diaspora" }],
+        },
       },
     }),
   ]);
 
-  // abonné A4A+ Essentiel avec un paiement et sa facture
+  // abonné A4A+ Essentiel avec un paiement et sa facture.
+  //
+  // `plan` référence désormais Offer : les offres sont insérées par la
+  // migration et ce seed ne purge pas cette table, donc « essentiel » existe.
+  // `since` au 28 janvier fait de ce jeu d'essai un cas utile : le 28 est un
+  // jour anniversaire que février sait honorer, contrairement au 31.
   const sub = await prisma.subscription.create({
     data: {
       userId: lecteur.id,
@@ -202,7 +219,11 @@ async function main() {
   const pay = await prisma.payment.create({
     data: {
       subscriptionId: sub.id,
+      // L'offre est inscrite sur le paiement, plus déduite du montant : c'est
+      // ce que fait le checkout depuis que les remises existent.
+      offerId: "essentiel",
       amount: 2000,
+      listAmount: 2000,
       currency: "XOF",
       provider: "paydunya",
       providerRef: "PDY-2026-06-000412",
