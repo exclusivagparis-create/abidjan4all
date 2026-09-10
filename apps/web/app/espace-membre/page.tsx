@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
-import { formatXOF, planById } from "@a4a/payments";
+import { formatXOF } from "@a4a/payments";
 import { auth } from "@/auth";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -83,7 +83,9 @@ export default async function EspaceMembrePage({
   const mesLettres = new Set(mesSouscriptions.map((s) => s.newsletterId));
   const mesSegments = new Set(mesSouscriptions.flatMap((s) => s.segments));
   const sub = user.subscription;
-  const plan = sub ? planById(sub.plan) : undefined;
+  // Lue en base, y compris si l'offre a depuis été désactivée : l'abonné qui
+  // la détient encore doit continuer d'en voir le nom et le prix.
+  const plan = sub ? await prisma.offer.findUnique({ where: { id: sub.plan } }) : null;
   const paying = sub && sub.plan !== "free";
   const status = sub ? SUB_STATUS[sub.status] : undefined;
 

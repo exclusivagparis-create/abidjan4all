@@ -3,9 +3,10 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@a4a/db";
-import { METHODS, PLANS, type PaymentMethodId, type PlanId } from "@a4a/payments";
+import { METHODS, type PaymentMethodId } from "@a4a/payments";
 import { auth, signOut } from "@/auth";
 import { CompteIntrouvableError, failPayment, fulfillPayment, startCheckout } from "@/lib/billing";
+import { offreParId } from "@/lib/offres";
 
 /** Depuis /abonnement : crée le paiement et redirige vers la page du PSP. */
 export async function subscribeAction(formData: FormData): Promise<void> {
@@ -14,8 +15,13 @@ export async function subscribeAction(formData: FormData): Promise<void> {
 
   const plan = String(formData.get("plan"));
   const method = String(formData.get("method")) as PaymentMethodId;
-  if (!PLANS.some((p) => p.id === plan && p.price) || !METHODS.some((m) => m.id === method)) {
-    redirect("/abonnement"); // saisie hors formulaire officiel
+
+  // L'offre est revalidée en base, pas contre une liste figée : une offre
+  // désactivée entre l'affichage de la page et l'envoi du formulaire ne doit
+  // pas pouvoir être souscrite.
+  const offre = await offreParId(plan);
+  if (!offre || !offre.active || offre.prixCatalogue <= 0 || !METHODS.some((m) => m.id === method)) {
+    redirect("/abonnement"); // saisie hors formulaire officiel, ou offre retirée
   }
 
   // Un refus du PSP (moyen non activé, panne…) ne doit pas finir en 500 :
@@ -27,7 +33,7 @@ export async function subscribeAction(formData: FormData): Promise<void> {
     ({ checkoutUrl } = await startCheckout(
       session.user.id,
       session.user.email ?? "",
-      plan as Exclude<PlanId, "corporate">,
+      plan,
       method
     ));
   } catch (e) {

@@ -1,76 +1,14 @@
 /**
- * @a4a/payments — offres A4A+ et abstraction des prestataires de paiement.
+ * @a4a/payments — abstraction des prestataires de paiement.
  * DF-03 : PayDunya/CinetPay (MoMo, Orange Money, carte) + Stripe/PayPal (international).
+ *
+ * La grille tarifaire A4A+ ne vit plus ici : elle est administrable en base
+ * (modèle `Offer`, lu par `apps/web/lib/offres.ts`). Une constante figée
+ * imposait un déploiement pour changer un prix, et surtout elle ne pouvait
+ * pas porter de remise.
  */
 
-export type PlanId = "essentiel" | "diaspora" | "pro" | "corporate";
 export type PaymentMethodId = "momo" | "orange" | "wave" | "moov" | "djamo" | "card" | "paypal";
-
-export interface Plan {
-  id: PlanId;
-  name: string;
-  /** XOF / mois — null : sur devis */
-  price: number | null;
-  tagline: string;
-  features: string[];
-  highlight?: boolean;
-}
-
-/**
- * Offres A4A+ — grille du Business Model 2026-2031 (§4.1 pilier 3) :
- * Essentiel 2 000 · Diaspora 3 500 · Pro 4 000 · Corporate 50 000.
- */
-export const PLANS: Plan[] = [
-  {
-    id: "essentiel",
-    name: "Essentiel",
-    price: 2000,
-    tagline: "Tout le journal, sans publicité.",
-    features: [
-      "Articles premium en illimité",
-      "Archives complètes",
-      "Sans publicité",
-      "Newsletter quotidienne La Matinale",
-    ],
-  },
-  {
-    id: "diaspora",
-    name: "Diaspora",
-    price: 3500,
-    tagline: "Rester relié au pays, où que vous soyez.",
-    features: [
-      "Tout Essentiel",
-      "Accès prioritaire aux offres d'emploi en Côte d'Ivoire",
-      "Webinaire diaspora mensuel",
-      "Alertes démarches et actualité consulaire",
-    ],
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    price: 4000,
-    tagline: "Pour décider : data et rapports.",
-    highlight: true,
-    features: [
-      "Tout Essentiel",
-      "Intelligence économique cacao & café",
-      "Rapports marchés mensuels",
-      "Données et indicateurs exportables",
-    ],
-  },
-  {
-    id: "corporate",
-    name: "Corporate",
-    price: 50000,
-    tagline: "L'offre des directions et des équipes.",
-    features: [
-      "Tout Pro",
-      "Recherche IA sur l'archive A4A",
-      "2 interviews dirigeants par an",
-      "Rapports sur mesure et licences multi-comptes",
-    ],
-  },
-];
 
 /**
  * Moyens proposés à l'abonné. Côté PayDunya, le choix fait ici n'impose PAS
@@ -88,9 +26,6 @@ export const METHODS: { id: PaymentMethodId; label: string }[] = [
   { id: "paypal", label: "PayPal" },
 ];
 
-export function planById(id: string): Plan | undefined {
-  return PLANS.find((p) => p.id === id);
-}
 
 export function formatXOF(amount: number): string {
   return `${amount.toLocaleString("fr-FR")} FCFA`;

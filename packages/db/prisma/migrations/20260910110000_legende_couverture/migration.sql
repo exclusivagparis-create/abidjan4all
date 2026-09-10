@@ -1,0 +1,12 @@
+-- Légende propre à l'image de une.
+--
+-- La page article affichait « 📷 Illustration : » suivi de MediaAsset.alt,
+-- soit le libellé de classement du média dans la médiathèque. Ce libellé
+-- existe pour retrouver un fichier, pas pour être lu sous une photo — et une
+-- même image servant plusieurs articles, il ne pouvait décrire aucun contexte
+-- en particulier. La légende appartient donc à l'article.
+--
+-- Colonne laissée vide : aucune reprise depuis MediaAsset.alt, ce serait
+-- réintroduire exactement ce qu'on retire. Sans légende saisie, rien ne
+-- s'affiche.
+ALTER TABLE "Article" ADD COLUMN "coverCaption" TEXT;

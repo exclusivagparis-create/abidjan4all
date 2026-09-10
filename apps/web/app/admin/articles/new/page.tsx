@@ -34,6 +34,7 @@ export default async function NewArticlePage() {
     status: "draft",
     scheduledAt: null,
     coverAssetId: null,
+    coverCaption: "",
     featuredRank: null,
     hidden: false,
     slug: null,

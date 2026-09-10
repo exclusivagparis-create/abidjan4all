@@ -13,7 +13,20 @@ const BlockSchema = z.object({
   html: z.string().optional(), // bloc « Texte enrichi » (nettoyé au save)
   cite: z.string().optional(),
   url: z.string().optional(),
+  /**
+   * Texte alternatif : décrit l'image pour qui ne la voit pas (lecteurs
+   * d'écran, image non chargée). Jamais affiché sous la photo.
+   */
   alt: z.string().optional(),
+  /**
+   * Légende éditoriale, affichée sous l'image.
+   *
+   * Distincte de `alt`, qu'elle partageait auparavant : un seul champ servait
+   * les deux usages, et comme il était pré-rempli avec le libellé du média
+   * dans la médiathèque, les articles héritaient d'un nom de classement en
+   * guise de légende.
+   */
+  caption: z.string().optional(),
   variant: z.enum(["orange", "blue", "teal", "red", "green", "purple"]).optional(), // encadré coloré
 });
 
@@ -29,6 +42,8 @@ const ArticleInputSchema = z.object({
   tags: z.array(z.string().trim().min(1)).max(12),
   scheduledAt: z.string().nullable().optional(), // ISO ou null
   coverAssetId: z.string().nullable().optional(),
+  /** Légende de l'image de une, propre à l'article (jamais reprise du média). */
+  coverCaption: z.string().nullable().optional(),
   /** Réservé à la rédaction en chef et à l'administration (cf. saveArticle). */
   authorId: z.string().optional(),
   featuredRank: z.number().int().min(1).max(5).nullable().optional(),
@@ -131,6 +146,7 @@ export async function saveArticle(raw: unknown): Promise<ActionResult> {
     tags: input.tags,
     scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
     coverAssetId: input.coverAssetId ?? null,
+    coverCaption: input.coverCaption?.trim() || null,
     featuredRank: input.featuredRank ?? null,
     body: input.blocks as Prisma.InputJsonValue,
     readingTime: computeReadingTime(input.blocks),

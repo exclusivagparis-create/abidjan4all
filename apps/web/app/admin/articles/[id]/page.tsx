@@ -68,6 +68,7 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
     status: article.status,
     scheduledAt: toLocalInput(article.scheduledAt),
     coverAssetId: article.coverAssetId,
+    coverCaption: article.coverCaption ?? "",
     featuredRank: article.featuredRank,
     hidden: article.hidden,
     slug: article.slug,

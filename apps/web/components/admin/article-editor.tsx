@@ -24,7 +24,10 @@ type Block = {
   html?: string;
   cite?: string;
   url?: string;
+  /** Texte alternatif : décrit l'image pour qui ne la voit pas. Jamais affiché. */
   alt?: string;
+  /** Légende éditoriale, affichée sous l'image dans l'article. */
+  caption?: string;
   variant?: CalloutVariant;
 };
 
@@ -41,6 +44,8 @@ export type EditorArticle = {
   status: ArticleStatus;
   scheduledAt: string | null; // valeur pour <input datetime-local>
   coverAssetId: string | null;
+  /** Légende de l'image de une, saisie pour cet article. */
+  coverCaption: string;
   featuredRank: number | null;
   hidden: boolean;
   slug: string | null;
@@ -176,6 +181,7 @@ export function ArticleEditor({
       tags: article.tags,
       scheduledAt: article.scheduledAt ? new Date(article.scheduledAt).toISOString() : null,
       coverAssetId: article.coverAssetId,
+      coverCaption: article.coverCaption.trim() || null,
       featuredRank: article.featuredRank,
       blocks: article.blocks,
       // Toujours transmis ; le serveur l'ignore si le rôle ne permet pas de
@@ -451,11 +457,17 @@ export function ArticleEditor({
                       <img src={block.url} alt={block.alt ?? ""} className="h-40 w-full object-cover" />
                     </div>
                   ) : null}
+                  {/* Légende et texte alternatif sont deux choses différentes,
+                      et partageaient jusqu'ici le même champ. La légende se lit
+                      sous la photo dans l'article ; le texte alternatif ne
+                      s'adresse qu'aux lecteurs d'écran. Les confondre revenait
+                      à publier sous les images un texte écrit pour les
+                      malvoyants — ou l'inverse. */}
                   <input
-                    value={block.alt ?? ""}
+                    value={block.caption ?? ""}
                     onChange={(e) =>
                       setBlock(i, {
-                        alt: e.target.value,
+                        caption: e.target.value,
                         // Tant qu'aucun visuel n'est choisi, la légende tient
                         // lieu de placeholder — le comportement d'avant, qui
                         // permet de poser un emplacement à illustrer plus tard.
@@ -464,8 +476,14 @@ export function ArticleEditor({
                           : { url: `placeholder://${e.target.value}` }),
                       })
                     }
-                    placeholder="Légende du visuel…"
+                    placeholder="Légende affichée sous l'image…"
                     className={inputCls}
+                  />
+                  <input
+                    value={block.alt ?? ""}
+                    onChange={(e) => setBlock(i, { alt: e.target.value })}
+                    placeholder="Texte alternatif (accessibilité, non affiché)…"
+                    className={`${inputCls} mt-2`}
                   />
                   <div className="mt-2.5">
                     {mediaOptions.length === 0 ? (
@@ -477,8 +495,12 @@ export function ArticleEditor({
                         medias={mediaOptions}
                         estChoisi={(m) => block.url === m.url}
                         onChoisir={(m) =>
-                          // La légende du média sert de repli, sans écraser
-                          // celle que le rédacteur a déjà écrite.
+                          // Le libellé du média ne sert plus de légende par
+                          // défaut : c'est un nom de classement
+                          // (« photo-ministre-2 »), écrit pour retrouver un
+                          // fichier, et la même image sert plusieurs articles.
+                          // Il alimente le texte alternatif, son usage légitime,
+                          // et seulement si rien n'y a été saisi.
                           setBlock(i, { url: m?.url, alt: block.alt || m?.alt || "" })
                         }
                       />
@@ -792,6 +814,20 @@ export function ArticleEditor({
               onChoisir={(m) => set("coverAssetId", m?.id ?? null)}
             />
           )}
+          {/* La page article affichait ici le libellé du média dans la
+              médiathèque, un nom de classement lu par les visiteurs faute de
+              mieux. La légende s'écrit désormais pour l'article : laissée
+              vide, aucune n'est affichée. */}
+          <input
+            value={article.coverCaption}
+            onChange={(e) => set("coverCaption", e.target.value)}
+            placeholder="Légende affichée sous la photo…"
+            className={`${inputCls} mt-3`}
+            aria-label="Légende de l'image à la une"
+          />
+          <p className="mt-1.5 text-[11.5px] leading-snug text-ink-3">
+            Le crédit photo reste géré dans la Médiathèque et s&apos;affiche à la suite.
+          </p>
         </Panel>
 
         <Panel title="Référencement">

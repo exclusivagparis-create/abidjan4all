@@ -23,6 +23,8 @@ export interface BlocImporte {
   html?: string;
   url?: string;
   alt?: string;
+  /** Légende reprise d'un `<figcaption>`, quand la source en fournit une. */
+  caption?: string;
 }
 
 /** Balises dont le contenu n'a rien à faire dans un article. */
@@ -71,6 +73,27 @@ export function htmlVersBlocs(html: string): BlocImporte[] {
     for (const noeud of Array.from(element.children)) {
       const balise = noeud.tagName;
       if (IGNOREES.has(balise)) continue;
+
+      // `<figure>` légendée : traitée avant la descente générique, sinon la
+      // figure serait parcourue comme un simple conteneur — l'image d'un côté,
+      // la légende de l'autre, transformée en paragraphe orphelin sous la photo.
+      if (balise === "FIGURE") {
+        const image = noeud.querySelector("img");
+        const src = image?.getAttribute("src") ?? "";
+        if (image && urlImageAcceptable(src)) {
+          const noeudLegende = noeud.querySelector("figcaption");
+          const legende = noeudLegende ? texte(noeudLegende) : "";
+          blocs.push({
+            type: "image",
+            url: src.trim(),
+            alt: image.getAttribute("alt") || undefined,
+            caption: legende || undefined,
+          });
+          continue;
+        }
+        // Figure sans image exploitable : on laisse la descente générique
+        // récupérer le texte qu'elle contient malgré tout.
+      }
 
       // Images : prises où qu'elles se trouvent, y compris enveloppées dans un
       // lien ou une figure — c'est la forme la plus répandue.

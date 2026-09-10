@@ -1,5 +1,7 @@
 import { prisma } from "@a4a/db";
-import { getProviderForMethod, planById, PLANS, type PaymentMethodId, type PlanId } from "@a4a/payments";
+import { getProviderForMethod, type PaymentMethodId } from "@a4a/payments";
+import { offreParId } from "@/lib/offres";
+import { finDePeriodeMensuelle } from "@/lib/periode";
 
 /**
  * Abonnement payant en cours de validité (paywall, espace membre).
@@ -34,11 +36,11 @@ export class CompteIntrouvableError extends Error {
 export async function startCheckout(
   userId: string,
   email: string,
-  planId: PlanId,
+  planId: string,
   method: PaymentMethodId
 ): Promise<{ checkoutUrl: string }> {
-  const plan = planById(planId);
-  if (!plan?.price) throw new Error("Offre invalide.");
+  const offre = await offreParId(planId);
+  if (!offre || !offre.active || offre.prixCatalogue <= 0) throw new Error("Offre invalide.");
 
   // Contrôle avant écriture : sans lui, l'upsert viole la clé étrangère
   // Subscription_userId_fkey et l'erreur remonte en « refus du prestataire ».
@@ -55,7 +57,13 @@ export async function startCheckout(
   const payment = await prisma.payment.create({
     data: {
       subscriptionId: subscription.id,
-      amount: plan.price,
+      // L'offre est inscrite ici et relue telle quelle au fulfillment. La
+      // déduire du montant, comme avant, devenait faux dès la première
+      // remise : le paiement était encaissé puis rejeté, faute d'offre au
+      // prix correspondant.
+      offerId: offre.id,
+      amount: offre.prix,
+      listAmount: offre.prixCatalogue,
       currency: "XOF",
       provider: provider.id,
       providerRef: "", // renseignée juste après par la session prestataire
@@ -65,14 +73,13 @@ export async function startCheckout(
 
   const session = await provider.createCheckout({
     paymentId: payment.id,
-    amount: plan.price,
+    amount: offre.prix,
     currency: "XOF",
     method,
     customerEmail: email,
     returnUrl: "/espace-membre?bienvenue=1",
   });
 
-  // le plan payé est retrouvé au fulfillment à partir du montant
   await prisma.payment.update({
     where: { id: payment.id },
     data: { providerRef: session.providerRef, provider: session.provider },
@@ -82,12 +89,19 @@ export async function startCheckout(
 }
 
 /**
- * Retrouve l'offre payée à partir du montant encaissé. Dérivé de PLANS et non
- * d'une liste écrite à la main : à l'ajout de « Diaspora », une liste figée
- * aurait laissé le paiement sans offre correspondante — encaissé, jamais activé.
+ * Repli pour les paiements antérieurs à la mise en base des offres : ils
+ * n'ont pas d'`offerId`, seulement leur montant. Sans remise à l'époque, le
+ * montant identifiait l'offre sans ambiguïté. Ne sert plus aux paiements neufs.
  */
-function planForAmount(amount: number): PlanId | null {
-  return PLANS.find((p) => p.price === amount)?.id ?? null;
+async function offrePourMontant(amount: number): Promise<string | null> {
+  const offres = await prisma.offer.findMany({
+    where: { price: amount, id: { not: "free" } },
+    select: { id: true },
+  });
+  // Deux offres au même prix rendraient le repli arbitraire : mieux vaut
+  // renoncer que d'activer la mauvaise offre.
+  const [seule] = offres;
+  return offres.length === 1 && seule ? seule.id : null;
 }
 
 /**
@@ -107,11 +121,31 @@ export async function fulfillPayment(
     return { ok: true, invoiceNumber: payment.invoice.number }; // déjà traité
   }
 
-  const plan = planForAmount(payment.amount);
-  if (!plan) return { ok: false, error: "Montant sans offre correspondante." };
+  const plan = payment.offerId ?? (await offrePourMontant(payment.amount));
+  if (!plan) return { ok: false, error: "Paiement sans offre identifiable." };
 
-  const periodEnd = new Date();
-  periodEnd.setMonth(periodEnd.getMonth() + 1);
+  /**
+   * Nouvelle échéance.
+   *
+   * Deux règles, chacune corrigeant un défaut constaté :
+   *
+   * — On repart de la fin de période en cours, pas de l'instant du paiement.
+   *   Sans cela, renouveler trois jours avant l'échéance faisait perdre ces
+   *   trois jours, déjà payés.
+   *
+   * — Le jour anniversaire vient de `since`, la date de souscription, et non
+   *   de l'échéance précédente. Un mois court rabote la date (31 janvier →
+   *   28 février) ; ancrer sur cette date rabotée l'aurait figée à 28 pour
+   *   toujours. En repartant de `since`, le 31 revient dès mars.
+   *
+   * Un abonnement expiré redémarre à la date du paiement : lui rendre son
+   * ancien jour anniversaire lui offrirait les semaines d'interruption.
+   */
+  const maintenant = new Date();
+  const enCours = payment.subscription.currentPeriodEnd && payment.subscription.currentPeriodEnd > maintenant;
+  const depart = enCours ? payment.subscription.currentPeriodEnd! : maintenant;
+  const ancre = enCours ? payment.subscription.since : maintenant;
+  const periodEnd = finDePeriodeMensuelle(depart, ancre);
 
   const year = new Date().getFullYear();
   const count = await prisma.invoice.count();
@@ -121,7 +155,16 @@ export async function fulfillPayment(
     prisma.payment.update({ where: { id: payment.id }, data: { status: "succeeded" } }),
     prisma.subscription.update({
       where: { id: payment.subscriptionId },
-      data: { plan, status: "active", currentPeriodEnd: periodEnd },
+      // `since` est recalé quand un compte non payant s'abonne pour de bon :
+      // la ligne Subscription naît dès la première tentative de checkout, si
+      // bien qu'un essai abandonné en janvier aurait fixé le jour
+      // anniversaire d'un abonnement réellement souscrit en mars.
+      data: {
+        plan,
+        status: "active",
+        currentPeriodEnd: periodEnd,
+        ...(enCours ? {} : { since: maintenant }),
+      },
     }),
     prisma.invoice.create({
       data: {

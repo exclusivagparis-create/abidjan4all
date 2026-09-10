@@ -57,6 +57,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Newsletters", href: canPublish ? "/admin/newsletters" : undefined, icon: "✉" },
     { label: "Groupes", href: isAdmin ? "/admin/community" : undefined, icon: "◉" },
     { label: "Abonnés A4A+", href: isAdmin ? "/admin/subscribers" : undefined, icon: "◍" },
+    { label: "Offres A4A+", href: canPublish ? "/admin/offres" : undefined, icon: "◈" },
     { label: "Utilisateurs", href: isAdmin ? "/admin/users" : undefined, icon: "☺" },
   ];
   const business: NavItem[] = [
