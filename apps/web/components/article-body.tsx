@@ -183,7 +183,11 @@ export function ArticleBody({ blocks, dropCap = true }: { blocks: unknown; dropC
                   className="h-[320px] max-h-[70vh] w-full rounded-[3px]"
                 />
                 {legende ? (
-                  <figcaption className="mt-2 px-0.5 text-[11.5px] leading-normal text-ink-3">{legende}</figcaption>
+                  // Centrée, comme la légende de la photo de une : les deux
+                  // sont le même objet éditorial et doivent se lire pareil.
+                  <figcaption className="mt-2 px-0.5 text-center text-[11.5px] leading-normal text-ink-3">
+                    {legende}
+                  </figcaption>
                 ) : null}
               </figure>
             );
