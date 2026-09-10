@@ -276,7 +276,11 @@ export default async function ArticlePage({ params }: Props) {
                 Sans légende saisie, seul le crédit subsiste — rien n'est
                 inventé pour combler le vide. */}
             {article.coverCaption || article.coverAsset.credit ? (
-              <div className="mt-2 px-0.5 text-[11.5px] leading-normal text-ink-3">
+              // Centrée : la photo de une est elle-même centrée dans la colonne
+              // (`ajuste` lui donne `margin-inline: auto`), et une légende calée
+              // à gauche s'en détachait dès que l'image était plus étroite que
+              // le texte — un portrait, par exemple.
+              <div className="mt-2 px-0.5 text-center text-[11.5px] leading-normal text-ink-3">
                 {article.coverCaption ? (
                   <>
                     <strong className="text-ink-2">📷 Illustration :</strong> {article.coverCaption}
