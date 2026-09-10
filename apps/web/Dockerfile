@@ -1,6 +1,19 @@
-# syntax=docker/dockerfile:1
 # Image de production Abidjan4All (apps/web) — build depuis la racine du monorepo :
 #   docker build -f apps/web/Dockerfile -t abidjan4all-web .
+#
+# Pas de directive `# syntax=` : elle faisait telecharger le frontal
+# docker/dockerfile:1 depuis Docker Hub a CHAQUE construction, alors que ce
+# fichier n'utilise aucune de ses fonctionnalites — ni RUN --mount, ni heredoc,
+# ni --link, ni COPY --parents. Le frontal integre a BuildKit suffit.
+#
+# Ce n'est pas theorique : le 10/09/2026, une panne de Docker Hub a fait echouer
+# deux deploiements de suite sur cette seule resolution, alors que le reste du
+# reseau fonctionnait. Le jour ou il faudra deployer un correctif urgent, mieux
+# vaut ne dependre de Docker Hub que pour l'image de base.
+#
+# Si une fonctionnalite du frontal devient necessaire, remettre la directive en
+# EPINGLANT une version (`docker/dockerfile:1.7`) plutot qu'un tag mouvant :
+# BuildKit resout alors une seule fois au lieu de revalider a chaque build.
 
 # ---------- deps + build ----------
 FROM node:22-slim AS builder
