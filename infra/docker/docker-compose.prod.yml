@@ -67,6 +67,35 @@ services:
       postgres:
         condition: service_healthy
 
+  # Tâches de fond : publication des articles programmés, relances d'échéance
+  # d'abonnement, rapports annonceurs mensuels.
+  #
+  # Elles tournaient dans le serveur web, démarrées par instrumentation.ts.
+  # Chaque instance web tenait donc son propre planificateur : passer à deux
+  # instances aurait envoyé deux relances à chaque abonné et publié deux fois
+  # les articles programmés.
+  #
+  # UNE SEULE RÉPLIQUE, toujours. C'est la garantie de non-duplication, et
+  # elle suffit parce que les trois tâches sont déjà idempotentes. Ajouter des
+  # répliques imposerait d'abord un verrou dans scripts/planificateur.ts.
+  #
+  # `working_dir` place le processus dans apps/web pour que tsx trouve le
+  # tsconfig qui résout les alias `@/` — sans lui, les imports échouent.
+  scheduler:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+      target: builder
+    working_dir: /app/apps/web
+    command: pnpm exec tsx scripts/planificateur.ts
+    restart: unless-stopped
+    env_file: ../../.env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
   postgres:
     image: postgres:15
     restart: unless-stopped
