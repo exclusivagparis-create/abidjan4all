@@ -38,7 +38,7 @@ www.abidjan4all.info {
 #
 # Pour atteindre l'application sans passer par le domaine (débogage), ouvrir un
 # tunnel plutôt qu'un port :
-#   ssh -L 3000:localhost:3000 root@212.227.205.163
+#   ssh -L 3000:localhost:3000 root@31.70.137.228
 # puis http://localhost:3000 sur son poste. Rien ne transite en clair sur le
 # réseau, l'accès reste réservé à qui détient déjà la clé SSH.
 

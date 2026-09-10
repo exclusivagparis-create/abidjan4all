@@ -120,7 +120,7 @@ Déclencheur **Webhook** (AP-03 envoie ses dossiers), puis **étape Code** avec
 Le jeton se lit sur le serveur :
 
 ```bash
-ssh root@212.227.205.163 "cat /root/activepieces/jeton-api-abidjan4all.txt"
+ssh root@31.70.137.228 "cat /root/activepieces/jeton-api-abidjan4all.txt"
 ```
 
 Les rubriques sont **lues au vol** sur `/api/v1/rubriques`, jamais figées : une
