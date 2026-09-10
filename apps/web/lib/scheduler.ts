@@ -37,26 +37,30 @@ export async function publishDueArticles(): Promise<number> {
   return count;
 }
 
-const INTERVAL_MS = 60_000;
-
-// évite un double démarrage (HMR en dev, imports multiples)
-const g = globalThis as unknown as { a4aScheduler?: NodeJS.Timeout };
+export const INTERVALLE_MS = 60_000;
 
 /**
- * Démarré par instrumentation.ts au boot du serveur Node.
- * En production multi-instances, remplacer par un vrai cron (worker/queue).
+ * Une passe complète des tâches planifiées.
+ *
+ * Exécutée par le service `scheduler` (scripts/planificateur.ts), plus par le
+ * serveur web. Ce dernier la lançait via `setInterval` depuis
+ * instrumentation.ts : chaque instance web tenait donc son propre
+ * planificateur, et passer à deux instances aurait envoyé deux relances à
+ * chaque abonné. Un seul processus exécute désormais ces tâches.
+ *
+ * Chaque tâche est isolée : l'échec de l'une n'empêche pas les autres. Une
+ * passe ne lève jamais — le service doit survivre à une panne passagère de la
+ * base ou du SMTP et retenter au tour suivant.
  */
-export function startScheduler() {
-  if (g.a4aScheduler) return;
-  g.a4aScheduler = setInterval(() => {
-    publishDueArticles().catch((e) => console.error("[scheduler]", e));
-    envoyerRapportsSiDebutDeMois();
-    suivreEcheancesAbonnements();
-  }, INTERVAL_MS);
-  console.log("[scheduler] publication automatique des programmés — toutes les 60 s");
-  publishDueArticles().catch((e) => console.error("[scheduler]", e));
-  envoyerRapportsSiDebutDeMois();
-  suivreEcheancesAbonnements();
+export async function executerTachesPlanifiees(): Promise<void> {
+  await Promise.allSettled([
+    publishDueArticles().catch((e) => {
+      console.error("[planificateur:publication]", e);
+      throw e;
+    }),
+    envoyerRapportsSiDebutDeMois(),
+    suivreEcheancesAbonnements(),
+  ]);
 }
 
 /**
@@ -71,22 +75,25 @@ export function startScheduler() {
 const UNE_HEURE_MS = 3_600_000;
 const h = globalThis as unknown as { a4aEcheances?: number };
 
-function suivreEcheancesAbonnements() {
+async function suivreEcheancesAbonnements(): Promise<void> {
   const maintenant = Date.now();
   if (h.a4aEcheances && maintenant - h.a4aEcheances < UNE_HEURE_MS) return;
   h.a4aEcheances = maintenant;
 
-  relancerEcheancesProches()
-    .then((n) => {
-      if (n > 0) console.log(`[scheduler] ${n} relance(s) d'échéance envoyée(s)`);
-    })
-    .catch((e) => console.error("[scheduler:relances]", e));
-
-  marquerEcheancesDepassees()
-    .then((n) => {
-      if (n > 0) console.log(`[scheduler] ${n} abonnement(s) échu(s) passé(s) en impayé`);
-    })
-    .catch((e) => console.error("[scheduler:echeances]", e));
+  // Les deux passes sont indépendantes : une relance qui échoue ne doit pas
+  // empêcher les abonnements échus de basculer en impayé.
+  await Promise.allSettled([
+    relancerEcheancesProches()
+      .then((n) => {
+        if (n > 0) console.log(`[planificateur] ${n} relance(s) d'échéance envoyée(s)`);
+      })
+      .catch((e) => console.error("[planificateur:relances]", e)),
+    marquerEcheancesDepassees()
+      .then((n) => {
+        if (n > 0) console.log(`[planificateur] ${n} abonnement(s) échu(s) passé(s) en impayé`);
+      })
+      .catch((e) => console.error("[planificateur:echeances]", e)),
+  ]);
 }
 
 /**
@@ -95,11 +102,11 @@ function suivreEcheancesAbonnements() {
  * appels répétés ne créent pas de doublon — inutile de mémoriser la dernière
  * exécution. Silencieux s'il n'y a rien à envoyer.
  */
-function envoyerRapportsSiDebutDeMois() {
+async function envoyerRapportsSiDebutDeMois(): Promise<void> {
   if (new Date().getDate() > 3) return;
-  sendMonthlyAdReports()
+  await sendMonthlyAdReports()
     .then((r) => {
-      if (r.envoyes > 0) console.log(`[scheduler] rapports annonceurs : ${r.envoyes} envoyé(s)`);
+      if (r.envoyes > 0) console.log(`[planificateur] rapports annonceurs : ${r.envoyes} envoyé(s)`);
     })
-    .catch((e) => console.error("[scheduler:rapports]", e));
+    .catch((e) => console.error("[planificateur:rapports]", e));
 }
