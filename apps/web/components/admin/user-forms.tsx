@@ -34,7 +34,7 @@ export function CreateUserForm() {
         </label>
         <label className="flex min-w-[220px] flex-col gap-1.5">
           <span className="text-xs font-semibold text-ink-2">Email</span>
-          <input name="email" type="email" required placeholder="aya.kouadio@abidjan4all.net" className="rounded-[8px] border border-line bg-surface px-3 py-2 text-[13px] text-ink outline-none" />
+          <input name="email" type="email" required placeholder="aya.kouadio@abidjan4all.info" className="rounded-[8px] border border-line bg-surface px-3 py-2 text-[13px] text-ink outline-none" />
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-semibold text-ink-2">Rôle</span>

@@ -16,6 +16,15 @@ import { RichTextEditor } from "./rich-text-editor";
 import { SelecteurImage } from "./selecteur-image";
 import { STATUS_META } from "./status-chip";
 
+/**
+ * Domaine affiché dans l'aperçu de référencement. Il suit la même variable que
+ * les URL canoniques : un domaine écrit en dur finit par mentir le jour où le
+ * site change d'adresse — ce qui est arrivé avec abidjan4all.net.
+ */
+const DOMAINE_SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://abidjan4all.info")
+  .replace(/^https?:\/\//, "")
+  .replace(/\/$/, "");
+
 type BlockType = "paragraph" | "richtext" | "h2" | "quote" | "callout" | "image" | "kpi" | "note";
 type CalloutVariant = "orange" | "blue" | "teal" | "red" | "green" | "purple";
 type Block = {
@@ -836,7 +845,7 @@ export function ArticleEditor({
             /{rubrique?.slug ?? "rubrique"}/{article.slug ?? "généré à l'enregistrement"}
           </div>
           <div className="rounded-[9px] border border-line-2 bg-surface-2 px-3.5 py-3">
-            <div className="mb-0.5 text-xs text-[#1a6ed8]">abidjan4all.net › {rubrique?.slug ?? "…"}</div>
+            <div className="mb-0.5 text-xs text-[#1a6ed8]">{DOMAINE_SITE} › {rubrique?.slug ?? "…"}</div>
             <div className="text-sm font-semibold leading-[1.2] text-[#1a3ca8]">
               {article.title || "Titre de l'article"}
             </div>

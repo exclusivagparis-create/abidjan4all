@@ -1,6 +1,6 @@
 /**
  * SEO / distribution (DF-06) : URL canonique, JSON-LD Schema.org.
- * NEXT_PUBLIC_SITE_URL=https://abidjan4all.net en production.
+ * NEXT_PUBLIC_SITE_URL=https://abidjan4all.info en production.
  */
 
 import { plainTitle } from "@/lib/format";
