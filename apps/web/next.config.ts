@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 // Domaine canonique en production (aligné sur lib/seo.ts).
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://abidjan4all.net").replace(/\/$/, "");
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://abidjan4all.info").replace(/\/$/, "");
 
 /**
  * Redirections 301 depuis l'ancien site abidjan4all.net (URLs `Nom_rNN.html`).

@@ -14,7 +14,7 @@ export const pushConfigured = Boolean(PUBLIC_KEY && PRIVATE_KEY);
 
 if (pushConfigured) {
   webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT ?? "mailto:contact@abidjan4all.net",
+    process.env.VAPID_SUBJECT ?? "mailto:contact@abidjan4all.info",
     PUBLIC_KEY!,
     PRIVATE_KEY!
   );

@@ -104,7 +104,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
   page.drawText(pdfSafe(formatXOF(payment.amount)), { x: 460, y, size: 13, font: sansBold, color: RED });
 
   // Pied de page
-  page.drawText("Exclusiv'AG — Directeur de publication : M. Aka Aka Georges · abidjan4all.net", {
+  page.drawText("Exclusiv'AG — Directeur de publication : M. Aka Aka Georges · abidjan4all.info", {
     x: left, y: 64, size: 8, font: sans, color: MUTED,
   });
   page.drawText("TVA non applicable en l'état — facture générée électroniquement, valable sans signature.", {

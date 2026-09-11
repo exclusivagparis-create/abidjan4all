@@ -126,7 +126,7 @@ export default async function AbonnementPage({
                 </form>
               ) : (
                 <a
-                  href="mailto:regie@abidjan4all.net?subject=Offre%20Corporate%20A4A%2B"
+                  href="mailto:commercial@exclusivag.net?subject=Offre%20Corporate%20A4A%2B"
                   className="mt-auto rounded-pill border border-line bg-surface-2 py-3 text-center text-sm font-semibold"
                 >
                   Contacter la régie
