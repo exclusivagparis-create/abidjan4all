@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { hash } from "bcryptjs";
 import { prisma } from "@a4a/db";
 import { emailLayout, sendEmail } from "@/lib/email";
+import { rattacherInscriptionsNewsletter } from "@/lib/newsletter-rattachement";
 
 const JOURS_VALIDITE = 3;
 
@@ -77,6 +78,9 @@ export async function registerAction(
     data: { name, email, passwordHash: await hash(password, 10), role: "member" },
     select: { id: true },
   });
+  // Une adresse peut avoir été inscrite à une newsletter avant que son
+  // titulaire n'ait un compte : on les réunit dès la création.
+  await rattacherInscriptionsNewsletter(user.id, email);
   await envoyerLienValidation(user.id, email, name);
   return { ok: true, email };
 }

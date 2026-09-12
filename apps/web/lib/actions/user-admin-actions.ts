@@ -8,6 +8,7 @@ import { prisma, type Role } from "@a4a/db";
 import { auth } from "@/auth";
 import { emailConfigured, emailLayout, sendEmail } from "@/lib/email";
 import { SITE_URL } from "@/lib/seo";
+import { rattacherInscriptionsNewsletter } from "@/lib/newsletter-rattachement";
 
 /** Jeton de définition de mot de passe (valide 7 jours) + e-mail d'invitation. */
 async function inviteToSetPassword(userId: string, name: string, email: string): Promise<boolean> {
@@ -87,6 +88,9 @@ export async function createUserAction(
   const user = await prisma.user.create({
     data: { name, email, role: role as Role, passwordHash: hashSync(password, 10) },
   });
+  // Même règle que l'inscription libre : les inscriptions newsletter
+  // portant cette adresse rejoignent le compte.
+  await rattacherInscriptionsNewsletter(user.id, email);
   revalidatePath("/admin/users");
 
   // E-mail d'invitation si le SMTP est configuré ; sinon repli : mot de passe
