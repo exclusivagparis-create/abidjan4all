@@ -2,9 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@a4a/db";
+import { prisma, Prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
 import { segmentsValides } from "@/lib/newsletter-segments";
+import { lireAdresses, TAILLE_MAX_OCTETS, type LectureAdresses } from "@/lib/newsletter-import";
 
 /**
  * Gestion du catalogue des newsletters (créer, modifier, supprimer) et de
@@ -94,39 +95,148 @@ export async function deleteNewsletterAction(id: string): Promise<void> {
 // Inscrits
 // ---------------------------------------------------------------------------
 
+/** Ce qu'a produit une injection d'adresses, pour le rendre compte à l'écran. */
+interface BilanInjection {
+  /** Inscriptions créées. */
+  ajoutes: number;
+  /** Adresses déjà présentes sur cette lettre — réinscrites si elles étaient éteintes. */
+  existants: number;
+  /** Adresses de l'apport qui correspondent à un compte existant. */
+  rattaches: number;
+}
+
 /**
- * Ajoute une adresse à une newsletter (inscription hors ligne, salon,
- * demande par téléphone). Rattache le compte si l'adresse en a un.
+ * Coeur commun de l'ajout d'inscrits, qu'il vienne d'une adresse tapée à la
+ * main, d'une liste collée dans le champ ou d'un fichier plat.
+ *
+ * Tient en un nombre fixe de requêtes, quelle que soit la taille de l'apport :
+ * une par adresse ferait des milliers d'allers-retours sur un fichier de
+ * salon.
+ *
+ * Les adresses déjà inscrites ne sont pas dupliquées. On les réactive si elles
+ * étaient désinscrites, mais **sans toucher à leurs centres d'intérêt** : la
+ * personne les a peut-être choisis elle-même dans son espace membre, et un
+ * ajout par la rédaction n'a pas à les effacer.
+ */
+async function injecterAdresses(
+  newsletterId: string,
+  adresses: string[],
+  segments: string[]
+): Promise<BilanInjection> {
+  const [comptes, existantes] = await Promise.all([
+    prisma.user.findMany({ where: { email: { in: adresses } }, select: { id: true, email: true } }),
+    prisma.newsletterSubscription.findMany({
+      where: { newsletterId, email: { in: adresses } },
+      select: { email: true },
+    }),
+  ]);
+
+  const compteParAdresse = new Map(comptes.map((c) => [c.email.toLowerCase(), c.id]));
+  const dejaInscrites = new Set(existantes.map((s) => s.email.toLowerCase()));
+  const nouvelles = adresses.filter((a) => !dejaInscrites.has(a));
+
+  const cree = nouvelles.length
+    ? await prisma.newsletterSubscription.createMany({
+        data: nouvelles.map((email) => ({
+          newsletterId,
+          email,
+          confirmed: true,
+          segments,
+          // Rattachement immédiat quand le compte existe déjà.
+          userId: compteParAdresse.get(email) ?? null,
+        })),
+        skipDuplicates: true,
+      })
+    : { count: 0 };
+
+  if (cree.count > 0) {
+    await prisma.newsletter.update({
+      where: { id: newsletterId },
+      data: { subscribersCount: { increment: cree.count } },
+    });
+  }
+
+  if (dejaInscrites.size > 0) {
+    const connues = [...dejaInscrites];
+
+    // Un ajout par la rédaction vaut réinscription pour une adresse éteinte.
+    await prisma.newsletterSubscription.updateMany({
+      where: { newsletterId, email: { in: connues }, confirmed: false },
+      data: { confirmed: true },
+    });
+
+    // Inscriptions restées orphelines d'un apport antérieur : on les réunit à
+    // leur compte. Une seule requête, sans boucle côté application.
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE "NewsletterSubscription" AS s
+      SET "userId" = u."id"
+      FROM "User" AS u
+      WHERE s."newsletterId" = ${newsletterId}
+        AND s."userId" IS NULL
+        AND s."email" = u."email"
+        AND s."email" IN (${Prisma.join(connues)})
+    `);
+  }
+
+  return { ajoutes: cree.count, existants: dejaInscrites.size, rattaches: compteParAdresse.size };
+}
+
+/** Construit la destination de retour : le bilan de l'apport, lisible à l'écran. */
+function retourAvecBilan(bilan: BilanInjection, lecture: LectureAdresses): string {
+  const params = new URLSearchParams({
+    ajoutes: String(bilan.ajoutes),
+    existants: String(bilan.existants),
+    rattaches: String(bilan.rattaches),
+  });
+  if (lecture.nbInvalides > 0) params.set("invalides", String(lecture.nbInvalides));
+  if (lecture.doublons > 0) params.set("doublons", String(lecture.doublons));
+  if (lecture.tronque) params.set("tronque", "1");
+  return `/admin/newsletters?${params.toString()}`;
+}
+
+/**
+ * Ajoute une ou plusieurs adresses à une newsletter (inscription hors ligne,
+ * salon, demande par téléphone). Le champ accepte une adresse seule ou une
+ * liste séparée par des virgules — même lecture que le fichier plat.
  */
 export async function ajouterInscritAction(newsletterId: string, formData: FormData): Promise<void> {
   await requirePublisher();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 160);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) redirect("/admin/newsletters?erreur=email");
+
+  const lecture = lireAdresses(String(formData.get("email") ?? ""));
+  if (lecture.adresses.length === 0) redirect("/admin/newsletters?erreur=email");
 
   const segments = segmentsValides(formData.getAll("segments").map((s) => String(s)));
-  const compte = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-
-  const deja = await prisma.newsletterSubscription.findUnique({
-    where: { newsletterId_email: { newsletterId, email } },
-    select: { id: true },
-  });
-  if (deja) {
-    // Déjà là : on remet l'inscription active et on prend les segments.
-    await prisma.newsletterSubscription.update({
-      where: { id: deja.id },
-      data: { confirmed: true, segments, userId: compte?.id ?? undefined },
-    });
-  } else {
-    await prisma.$transaction([
-      prisma.newsletterSubscription.create({
-        data: { newsletterId, email, confirmed: true, segments, userId: compte?.id ?? null },
-      }),
-      prisma.newsletter.update({ where: { id: newsletterId }, data: { subscribersCount: { increment: 1 } } }),
-    ]);
-  }
+  const bilan = await injecterAdresses(newsletterId, lecture.adresses, segments);
 
   revalidatePath("/admin/newsletters");
-  redirect("/admin/newsletters?inscrit=ok");
+  revalidatePath("/espace-membre");
+  redirect(retourAvecBilan(bilan, lecture));
+}
+
+/**
+ * Injecte en masse les adresses d'un fichier plat : texte ou CSV, UTF-8,
+ * virgule entre les adresses. Disponible sur chaque newsletter.
+ *
+ * Le fichier est lu tel quel, sans colonne imposée : tout ce qui ressemble à
+ * une adresse est retenu, le reste est écarté et rapporté. La rédaction n'a
+ * donc pas à préparer ses fichiers.
+ */
+export async function importerInscritsAction(newsletterId: string, formData: FormData): Promise<void> {
+  await requirePublisher();
+
+  const fichier = formData.get("fichier");
+  if (!(fichier instanceof File) || fichier.size === 0) redirect("/admin/newsletters?erreur=fichier");
+  if (fichier.size > TAILLE_MAX_OCTETS) redirect("/admin/newsletters?erreur=taille");
+
+  const lecture = lireAdresses(await fichier.text());
+  if (lecture.adresses.length === 0) redirect("/admin/newsletters?erreur=aucune");
+
+  const segments = segmentsValides(formData.getAll("segments").map((s) => String(s)));
+  const bilan = await injecterAdresses(newsletterId, lecture.adresses, segments);
+
+  revalidatePath("/admin/newsletters");
+  revalidatePath("/espace-membre");
+  redirect(retourAvecBilan(bilan, lecture));
 }
 
 /** Retire une inscription (désinscription à la demande, adresse erronée). */

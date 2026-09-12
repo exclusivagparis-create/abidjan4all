@@ -24,6 +24,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@a4a/db";
 import { STUDIO_ROLES } from "@/lib/roles";
+import { rattacherInscriptionsNewsletter } from "@/lib/newsletter-rattachement";
 
 /** Nom du cookie portant le jeton d'intention de rattachement. */
 export const COOKIE_INTENTION = "a4a_lien_social";
@@ -235,6 +236,9 @@ export async function resoudreConnexionSociale(input: {
       },
       select: { id: true, name: true, role: true },
     });
+    // Le compte naît ici : une inscription newsletter portée par cette
+    // adresse, ajoutée avant par la rédaction, le rejoint.
+    await rattacherInscriptionsNewsletter(cree.id, email);
     return { ok: true, user: cree, nouveau: true };
   }
 

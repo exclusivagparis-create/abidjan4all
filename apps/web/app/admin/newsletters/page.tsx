@@ -9,17 +9,22 @@ import {
   updateNewsletterAction,
   deleteNewsletterAction,
   ajouterInscritAction,
+  importerInscritsAction,
   retirerInscritAction,
 } from "@/lib/actions/newsletter-admin-actions";
 import { PageBodyEditor } from "@/components/admin/page-body-editor";
 import { SEGMENTS } from "@/lib/newsletter-segments";
+import { MAX_ADRESSES } from "@/lib/newsletter-import";
 import { emailConfigured } from "@/lib/email";
 import { formatDate } from "@/lib/format";
 
 const MESSAGES: Record<string, string> = {
   lettre: "Newsletter invalide — le nom doit faire au moins deux caractères.",
   inscrits: "Cette newsletter a des inscrits : retirez-les d'abord, ou gardez-la.",
-  email: "Adresse e-mail invalide.",
+  email: "Aucune adresse valable — attendu une adresse, ou plusieurs séparées par des virgules.",
+  fichier: "Choisissez un fichier .txt ou .csv contenant les adresses.",
+  taille: "Fichier trop volumineux — 900 Ko au maximum.",
+  aucune: "Aucune adresse valable dans ce fichier. Attendu : du texte UTF-8, adresses séparées par des virgules.",
   "1": "Édition invalide — objet requis.",
 };
 const SUCCES: Record<string, string> = {
@@ -28,15 +33,51 @@ const SUCCES: Record<string, string> = {
   supprimee: "Newsletter supprimée.",
 };
 
+/** Paramètres de retour d'un apport d'adresses (ajout à la main ou fichier). */
+interface ParamsApport {
+  ajoutes?: string;
+  existants?: string;
+  rattaches?: string;
+  invalides?: string;
+  doublons?: string;
+  tronque?: string;
+}
+
+/**
+ * Rend compte d'un apport d'adresses en une phrase : ce qui est entré, ce qui
+ * était déjà là, ce qui a été écarté.
+ *
+ * Sans ce bilan, la rédaction n'aurait aucun moyen de savoir si son fichier
+ * est passé en entier — le compteur d'inscrits ne dit pas pourquoi il a monté
+ * de 480 quand le fichier en contenait 500.
+ */
+function bilanApport(p: ParamsApport): string | null {
+  if (p.ajoutes === undefined) return null;
+  const n = (v?: string) => Math.max(0, Number(v ?? 0) || 0);
+
+  const morceaux = [`${n(p.ajoutes)} adresse(s) ajoutée(s)`];
+  if (n(p.existants)) morceaux.push(`${n(p.existants)} déjà inscrite(s)`);
+  if (n(p.rattaches)) morceaux.push(`${n(p.rattaches)} rattachée(s) à un compte`);
+  if (n(p.doublons)) morceaux.push(`${n(p.doublons)} doublon(s) dans le fichier`);
+  if (n(p.invalides)) morceaux.push(`${n(p.invalides)} écartée(s), faute de ressembler à une adresse`);
+
+  const phrase = morceaux.join(" · ") + ".";
+  return p.tronque === "1"
+    ? `${phrase} Plafond de ${MAX_ADRESSES.toLocaleString("fr-FR")} adresses atteint : la fin du fichier n'a pas été lue.`
+    : phrase;
+}
+
 export const metadata: Metadata = { title: "Newsletters · Studio" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminNewsletters({
   searchParams,
 }: {
-  searchParams: Promise<{ erreur?: string; lettre?: string; inscrit?: string }>;
+  searchParams: Promise<{ erreur?: string; lettre?: string } & ParamsApport>;
 }) {
-  const [{ erreur, lettre }, session] = await Promise.all([searchParams, auth()]);
+  const [params, session] = await Promise.all([searchParams, auth()]);
+  const { erreur, lettre } = params;
+  const bilan = bilanApport(params);
   if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
 
   const [newsletters, editions, articles] = await Promise.all([
@@ -91,13 +132,20 @@ export default async function AdminNewsletters({
           {SUCCES[lettre]}
         </p>
       ) : null}
+      {bilan ? (
+        <p className="mb-4 rounded-md bg-[rgba(14,138,95,0.1)] px-4 py-2.5 text-[13px] font-semibold text-green">
+          {bilan}
+        </p>
+      ) : null}
 
       {/* Catalogue : les lettres auxquelles on peut s'abonner */}
       <section className="mb-6">
         <h2 className="mb-1 text-sm font-bold">Les newsletters</h2>
         <p className="mb-4 max-w-[72ch] text-[12.5px] text-ink-3">
-          Chaque newsletter a sa propre liste d&apos;inscrits. Les membres choisissent celles qu&apos;ils reçoivent
-          depuis leur espace membre ; vous pouvez aussi y ajouter une adresse à la main.
+          Chaque newsletter a sa propre liste d&apos;inscrits. Les membres choisissent celles qu&apos;ils
+          reçoivent depuis leur espace membre ; vous pouvez aussi y ajouter des adresses à la main, ou
+          injecter un fichier plat. Une adresse qui correspond à un compte lui est rattachée — et si le
+          compte est créé plus tard, le rattachement se fait à ce moment-là.
         </p>
 
         <div className="grid gap-3">
@@ -134,22 +182,53 @@ export default async function AdminNewsletters({
                 </div>
               </form>
 
-              <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-line-2 pt-3">
-                <form action={ajouterInscritAction.bind(null, nl.id)} className="flex flex-1 flex-wrap items-end gap-2">
-                  <label className="grid min-w-[220px] flex-1 gap-1 text-[11px] font-semibold text-ink-3">
+              <div className="mt-3 grid gap-2.5 border-t border-line-2 pt-3">
+                <form action={ajouterInscritAction.bind(null, nl.id)} className="flex flex-wrap items-end gap-2">
+                  <label className="grid min-w-[260px] flex-1 gap-1 text-[11px] font-semibold text-ink-3">
                     Ajouter un inscrit (adresse e-mail)
-                    <input name="email" type="email" required placeholder="lecteur@exemple.com" className={inp} />
+                    <input
+                      name="email"
+                      type="text"
+                      required
+                      placeholder="lecteur@exemple.com, autre@exemple.com"
+                      className={inp}
+                    />
+                    <span className="text-[10.5px] font-normal text-ink-3">
+                      Une adresse, ou plusieurs séparées par des virgules.
+                    </span>
                   </label>
                   <button type="submit" className="rounded-pill border border-ink px-4 py-2 text-[11.5px] font-bold text-ink">
                     Ajouter
                   </button>
                 </form>
+
+                <form action={importerInscritsAction.bind(null, nl.id)} className="flex flex-wrap items-end gap-2">
+                  <label className="grid min-w-[260px] flex-1 gap-1 text-[11px] font-semibold text-ink-3">
+                    Injection en masse par fichier (.txt ou .csv)
+                    <input
+                      name="fichier"
+                      type="file"
+                      accept=".txt,.csv,text/plain,text/csv"
+                      required
+                      className={`${inp} file:mr-3 file:rounded-pill file:border-0 file:bg-surface-2 file:px-3 file:py-1 file:text-[11px] file:font-semibold file:text-ink-2`}
+                    />
+                    <span className="text-[10.5px] font-normal text-ink-3">
+                      Texte UTF-8, adresses séparées par des virgules — le retour à la ligne, le
+                      point-virgule et la tabulation sont acceptés aussi. Jusqu&apos;à{" "}
+                      {MAX_ADRESSES.toLocaleString("fr-FR")} adresses par envoi, 900 Ko maximum.
+                    </span>
+                  </label>
+                  <button type="submit" className="rounded-pill border border-ink px-4 py-2 text-[11.5px] font-bold text-ink">
+                    Injecter
+                  </button>
+                </form>
+
                 <form action={deleteNewsletterAction.bind(null, nl.id)}>
                   <button
                     type="submit"
                     className="rounded-pill border border-[rgba(214,40,45,0.4)] bg-surface px-3 py-2 text-[11.5px] font-semibold text-red"
                   >
-                    Supprimer
+                    Supprimer la newsletter
                   </button>
                 </form>
               </div>
