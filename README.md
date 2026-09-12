@@ -32,25 +32,53 @@ pnpm dev                                 # http://localhost:3000
 La page `/design` reproduit le nuancier du design system pour comparaison avec
 `design/Design System.dc.html` (source de vérité visuelle).
 
-## Déploiement (IONOS VPS)
+## Déploiement (VPS IONOS)
+
+### Première installation
 
 ```bash
 # sur le serveur (Docker + compose v2 installés)
-git clone <repo> && cd abidjan4all
+git clone <repo> /root/abidjan4all && cd /root/abidjan4all
 cp .env.example .env    # renseigner POSTGRES_PASSWORD, AUTH_SECRET,
                         # NEXT_PUBLIC_SITE_URL, AI_API_KEY, clés PSP,
                         # clés VAPID (npx web-push generate-vapid-keys)…
-docker compose -f infra/docker/docker-compose.prod.yml up -d --build
+cd infra/docker && docker compose --env-file ../../.env -f docker-compose.prod.yml up -d --build
+```
+
+### Mise à jour
+
+```bash
+cd /root/abidjan4all && git pull --ff-only
+cd infra/docker && docker compose --env-file ../../.env -f docker-compose.prod.yml up -d --build
+```
+
+**Lancer Compose depuis `infra/docker`, jamais depuis la racine du dépôt.**
+Compose tire le nom du projet du dossier courant. La pile en production
+s'appelle `docker`, d'après `infra/docker`. Depuis la racine, Compose en
+déduirait le projet `abidjan4all` et démarrerait une *seconde* pile à côté de
+la première, sur les mêmes ports, au lieu de mettre à jour celle qui tourne.
+
+**`--env-file ../../.env` est obligatoire** : le `.env` vit à la racine du
+dépôt, pas dans `infra/docker`. Sans ce drapeau, Compose s'arrête sur
+`POSTGRES_PASSWORD is missing a value`.
+
+Contrôle après coup — les deux conteneurs applicatifs doivent être fraîchement
+redémarrés, et aucun conteneur d'un autre projet n'apparaître :
+
+```bash
+docker ps --filter 'label=com.docker.compose.project=docker'
 ```
 
 Le service `migrate` applique les migrations Prisma avant le démarrage du web.
 Alertes Web Push (DF-04) : sans clés VAPID, les alertes sont désactivées sans
 casser le site ; l'opt-in vit dans l'espace membre, l'envoi part à la
 publication (Studio et scheduler), filtré par les rubriques suivies.
-TLS et cache : Cloudflare (ou caddy/traefik) devant le port 3000 — l'accueil est
-rendu à la requête, à mettre en cache CDN court (30-60 s) à l'échelle.
-CI : `.github/workflows/ci.yml` (type-check + build sur PostgreSQL de service +
-image Docker) dès que le repo aura un remote GitHub.
+TLS et cache : le conteneur `caddy` termine TLS devant le port 3000 (voir
+`infra/docker/Caddyfile`) — l'accueil est rendu à la requête, à mettre en
+cache CDN court (30-60 s) à l'échelle.
+CI : `.github/workflows/ci.yml` — type-check, build sur un PostgreSQL de
+service et construction de l'image Docker, sur chaque pull request et sur
+chaque push vers `main`.
 
 ## Feuille de route (cahier des charges)
 
