@@ -99,8 +99,8 @@ export function buildEditionHtml(params: {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 0"><tr><td align="center">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e0d8cc">
         <tr><td style="background:#1a1a1a;padding:16px 28px">
-          <span style="font-size:20px;font-weight:700;color:#fff">ABIDJAN<span style="color:#F47920">4</span>ALL</span>
-          <span style="float:right;font-size:12px;color:#bbb;padding-top:6px">${escapeHtml(newsletterName)}</span>
+          <img src="${SITE_URL}/logo-web-dark.png" alt="Abidjan4All" width="200" height="51" style="display:inline-block;vertical-align:middle;border:0;height:51px;width:200px" />
+          <span style="float:right;font-size:12px;color:#bbb;padding-top:18px">${escapeHtml(newsletterName)}</span>
         </td></tr>
         ${sponsorBlock}
         ${introHtml ? `<tr><td style="padding:24px 28px 6px;font-size:15px;line-height:1.6;color:#333">${introHtml}</td></tr>` : ""}

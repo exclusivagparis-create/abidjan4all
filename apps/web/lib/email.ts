@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { SITE_URL } from "@/lib/seo";
 
 /**
  * Envoi d'e-mails transactionnels via SMTP (IONOS en production). Comme la
@@ -66,7 +67,7 @@ export function emailLayout(title: string, bodyHtml: string, cta?: { label: stri
       <tr><td align="center">
         <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e0d8cc">
           <tr><td style="background:#1a1a1a;padding:18px 28px">
-            <span style="font-size:20px;font-weight:700;color:#fff">ABIDJAN<span style="color:#F47920">4</span>ALL</span>
+            <img src="${SITE_URL}/logo-web-dark.png" alt="Abidjan4All" width="200" height="51" style="display:block;border:0;height:51px;width:200px" />
           </td></tr>
           <tr><td style="padding:28px">
             <h1 style="margin:0 0 14px;font-size:20px;color:#1a1a1a">${title}</h1>

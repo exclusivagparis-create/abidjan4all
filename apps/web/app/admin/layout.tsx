@@ -84,7 +84,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const sidebar = (
     <>
       <div className="flex items-center gap-2.5 px-2 pb-5">
-        <img src="/logo-dark.png" alt="Abidjan4All" className="h-5" />
+        <img src="/logo-web-dark.png" alt="Abidjan4All" className="h-8" />
         <span className="border-l border-white/20 pl-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#F5C24B]">
           Studio
         </span>
