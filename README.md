@@ -80,6 +80,23 @@ CI : `.github/workflows/ci.yml` — type-check, build sur un PostgreSQL de
 service et construction de l'image Docker, sur chaque pull request et sur
 chaque push vers `main`.
 
+### Ancien domaine (abidjan4all.net)
+
+Le site d'origine a vécu des années sur `abidjan4all.net`. Son trafic et son
+référencement reviennent au nouveau domaine par une redirection 301 servie
+depuis ce serveur (bloc `abidjan4all.net` du `Caddyfile`), relayée par les
+règles du Studio (Business → Redirections).
+
+**Ordre impératif** : basculer d'abord les enregistrements DNS vers ce serveur,
+vérifier qu'ils résolvent, et seulement ensuite déployer. Caddy réclame un
+certificat dès qu'un nom figure dans sa configuration, et Let's Encrypt
+plafonne les échecs à cinq par heure et par nom.
+
+```bash
+dig +short abidjan4all.net @1.1.1.1      # doit répondre l'IP de ce serveur
+curl -sI https://abidjan4all.net/Politique_r6.html | head -3   # 301 vers /politique
+```
+
 ## Feuille de route (cahier des charges)
 
 DF-01 Front-End/UX · DF-02 CMS/Back-End · DF-03 Monétisation (A4A+, paywall, pub, marketplace) ·

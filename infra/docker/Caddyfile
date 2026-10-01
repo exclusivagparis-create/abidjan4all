@@ -31,6 +31,32 @@ www.abidjan4all.info {
 	redir https://abidjan4all.info{uri} permanent
 }
 
+# ---------------------------------------------------------------------------
+# Ancien domaine — abidjan4all.net
+#
+# Le site d'origine a vécu des années sur ce nom : des milliers de liens, de
+# partages WhatsApp et de pages indexées y mènent encore. Tant qu'il répondait
+# sur son ancien hébergement, les deux sites se concurrençaient sur les mêmes
+# contenus, et le crédit accumulé par le .net ne profitait pas au .info.
+#
+# Chaque adresse est donc renvoyée vers le MÊME chemin sur abidjan4all.info,
+# en 301. L'application prend le relais : elle consulte les règles du Studio
+# (3 146 chargées pour la bascule), et à défaut renvoie les adresses en .html
+# vers l'accueil. Deux sauts au total, que les moteurs suivent sans perte.
+#
+# PRÉALABLE OBLIGATOIRE : les enregistrements A de `abidjan4all.net` et de
+# `www.abidjan4all.net` doivent déjà pointer vers ce serveur. Caddy réclame un
+# certificat dès qu'un nom apparaît ici, et Let's Encrypt plafonne les échecs
+# à cinq par heure et par nom : déployer avant la bascule DNS consommerait le
+# quota avant même qu'elle soit faite.
+#
+#   dig +short abidjan4all.net @1.1.1.1      → doit répondre 31.70.137.228
+#   dig +short www.abidjan4all.net @1.1.1.1  → idem
+#
+abidjan4all.net, www.abidjan4all.net {
+	redir https://abidjan4all.info{uri} permanent
+}
+
 # L'accès direct par IP servait TOUT le site en HTTP clair, page de connexion
 # et Studio compris : identifiants et cookie de session voyageaient en clair
 # pour qui empruntait cette adresse. Un confort de recette payé d'une fuite
