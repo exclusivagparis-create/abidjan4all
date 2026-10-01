@@ -2,21 +2,35 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
-import { createRedirectAction, deleteRedirectAction } from "@/lib/actions/redirect-actions";
+import { createRedirectAction, deleteRedirectAction, importRedirectsAction } from "@/lib/actions/redirect-actions";
 import { formatDate } from "@/lib/format";
+import { MAX_REGLES } from "@/lib/redirects-import";
 
 export const metadata: Metadata = { title: "Redirections · Studio" };
 export const dynamic = "force-dynamic";
 
 const ERREURS: Record<string, string> = {
-  from: "Adresse source invalide — une seule section, ex. /ancienne-page.html",
+  from: "Adresse source invalide — /ancienne-page.html ou /rubrique/article, deux sections au plus.",
   to: "Destination invalide — un chemin interne (/rubrique/article) ou une URL https.",
   doublon: "Une redirection existe déjà pour cette adresse source.",
   boucle: "La source et la destination sont identiques.",
+  taille: "Fichier trop lourd — découpez-le en lots de moins de 900 Ko.",
+  vide: "Aucun contenu : déposez un fichier ou collez les lignes.",
+  aucune: "Aucune ligne exploitable dans ce fichier — une règle par ligne, « source, destination ».",
 };
 
-export default async function AdminRedirections({ searchParams }: { searchParams: Promise<{ erreur?: string }> }) {
-  const [{ erreur }, session] = await Promise.all([searchParams, auth()]);
+type Params = {
+  erreur?: string;
+  importees?: string;
+  existantes?: string;
+  rejets?: string;
+  doublons?: string;
+  tronque?: string;
+};
+
+export default async function AdminRedirections({ searchParams }: { searchParams: Promise<Params> }) {
+  const [params, session] = await Promise.all([searchParams, auth()]);
+  const { erreur, importees } = params;
   if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
 
   const rules = await prisma.redirect.findMany({ orderBy: [{ hits: "desc" }, { createdAt: "desc" }] });
@@ -35,6 +49,16 @@ export default async function AdminRedirections({ searchParams }: { searchParams
         <p className="mb-4 rounded-md bg-[rgba(214,40,45,0.1)] px-4 py-2.5 text-[13px] font-semibold text-red">{ERREURS[erreur]}</p>
       ) : null}
 
+      {importees ? (
+        <p className="mb-4 rounded-md bg-[rgba(14,138,95,0.1)] px-4 py-2.5 text-[13px] font-semibold text-green">
+          {importees} redirection{Number(importees) > 1 ? "s" : ""} importée{Number(importees) > 1 ? "s" : ""}.
+          {Number(params.existantes) > 0 ? ` ${params.existantes} déjà en place, inchangée(s).` : ""}
+          {Number(params.doublons) > 0 ? ` ${params.doublons} source(s) répétée(s) dans le fichier.` : ""}
+          {Number(params.rejets) > 0 ? ` ${params.rejets} ligne(s) écartée(s).` : ""}
+          {params.tronque ? ` Fichier tronqué à ${MAX_REGLES} règles : relancez avec le reste.` : ""}
+        </p>
+      ) : null}
+
       <section className="mb-6 rounded-[14px] border border-dashed border-line bg-surface-2 p-5">
         <div className="mb-3 text-xs font-bold uppercase tracking-[0.06em] text-ink-3">Nouvelle redirection</div>
         <form action={createRedirectAction} className="flex flex-wrap items-end gap-3">
@@ -48,6 +72,37 @@ export default async function AdminRedirections({ searchParams }: { searchParams
             <input name="to" required placeholder="/politique/mon-article" className={inp} />
           </label>
           <button type="submit" className="rounded-pill bg-brand-fill px-5 py-2.5 text-xs font-bold text-brand-on">Ajouter</button>
+        </form>
+      </section>
+
+      {/* Import en masse : la bascule de l'ancien site représente des milliers
+          de règles, impossibles à saisir une par une. */}
+      <section className="mb-6 rounded-[14px] border border-dashed border-line bg-surface-2 p-5">
+        <div className="mb-1.5 text-xs font-bold uppercase tracking-[0.06em] text-ink-3">Import en masse</div>
+        <p className="mb-3 max-w-[75ch] text-[12.5px] text-ink-3">
+          Une règle par ligne : l&apos;ancienne adresse, puis la nouvelle, séparées par une virgule, un
+          point-virgule, une tabulation ou une flèche. Exemple :{" "}
+          <code>/mon-article_a4396.html, /politique/mon-article</code>. Les sources déjà enregistrées sont
+          conservées telles quelles. Jusqu&apos;à {MAX_REGLES.toLocaleString("fr-FR")} règles par envoi.
+        </p>
+        <form action={importRedirectsAction} className="grid gap-3">
+          <input
+            type="file"
+            name="fichier"
+            accept=".csv,.tsv,.txt,text/plain,text/csv"
+            className="text-[12.5px] text-ink-2 file:mr-3 file:rounded-pill file:border-0 file:bg-surface file:px-4 file:py-2 file:text-xs file:font-semibold file:text-ink"
+          />
+          <textarea
+            name="colle"
+            rows={4}
+            placeholder={"/ancien-titre_a4396.html, /politique/nouveau-titre\n/autre-titre_a4210.html, /diaspora/autre-titre"}
+            className={`${inp} font-mono leading-relaxed`}
+          />
+          <div>
+            <button type="submit" className="rounded-pill bg-brand-fill px-5 py-2.5 text-xs font-bold text-brand-on">
+              Importer les redirections
+            </button>
+          </div>
         </form>
       </section>
 

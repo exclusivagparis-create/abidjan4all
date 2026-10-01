@@ -84,6 +84,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+/**
+ * Suit une règle de redirection du Studio portant sur cette adresse d'article,
+ * s'il en existe une. Sans retour : soit elle redirige, soit elle laisse
+ * l'appelant conclure.
+ *
+ * Elle est consultée dans les deux cas où le lecteur n'obtient pas l'article :
+ * quand il n'existe plus — doublon de la migration supprimé au profit d'une
+ * autre copie — et quand il a été dépublié ou masqué. Sans ce recours, les
+ * liens déjà partagés vers l'adresse abandonnée tombaient sur une 404, et le
+ * référencement de l'article avec eux.
+ */
+async function suivreRegle(rubriqueSlug: string, slug: string): Promise<void> {
+  const regle = await prisma.redirect.findUnique({ where: { from: `/${rubriqueSlug}/${slug}` } });
+  if (!regle) return;
+  await prisma.redirect.update({ where: { id: regle.id }, data: { hits: { increment: 1 } } }).catch(() => {});
+  permanentRedirect(regle.to);
+}
+
 export default async function ArticlePage({ params }: Props) {
   const { rubrique: rubriqueSlug, slug } = await params;
   const article = await getArticle(rubriqueSlug, slug);
@@ -102,6 +120,8 @@ export default async function ArticlePage({ params }: Props) {
       select: { rubrique: { select: { slug: true } } },
     });
     if (ailleurs) permanentRedirect(`/${ailleurs.rubrique.slug}/${slug}`);
+
+    await suivreRegle(rubriqueSlug, slug);
     notFound();
   }
 
@@ -115,8 +135,14 @@ export default async function ArticlePage({ params }: Props) {
     (enApercu || article.hidden) && session?.user
       ? (await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }))?.role ?? null
       : null;
-  if (enApercu && !["journalist", "editor", "admin"].includes(viewerRole ?? "")) notFound();
-  if (article.hidden && !["editor", "admin"].includes(viewerRole ?? "")) notFound();
+  if (enApercu && !["journalist", "editor", "admin"].includes(viewerRole ?? "")) {
+    await suivreRegle(rubriqueSlug, slug);
+    notFound();
+  }
+  if (article.hidden && !["editor", "admin"].includes(viewerRole ?? "")) {
+    await suivreRegle(rubriqueSlug, slug);
+    notFound();
+  }
   const unlocked = session?.user ? await hasActiveSubscription(session.user.id) : false;
   const blocks = Array.isArray(article.body) ? article.body : [];
   const gated = article.premium && !unlocked;
