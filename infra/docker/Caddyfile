@@ -54,7 +54,54 @@ www.abidjan4all.info {
 #   dig +short www.abidjan4all.net @1.1.1.1  → idem
 #
 abidjan4all.net, www.abidjan4all.net {
-	redir https://abidjan4all.info{uri} permanent
+	# Sections de l'ancien site sans équivalent sur le nouveau. Elles sont
+	# traitées ici, et non par une règle du Studio, parce qu'elles se comptent
+	# par centaines d'adresses et qu'une règle de section les couvre toutes —
+	# y compris celles que l'export Search Console (plafonné à 1 000 lignes)
+	# ne nous a jamais montrées.
+	#
+	# `handle` et non `redir` : les blocs s'excluent l'un l'autre et le plus
+	# précis l'emporte, quel que soit l'ordre d'écriture. Avec des `redir`
+	# empilés, la dernière règle, celle qui attrape tout, raflerait aussi ces
+	# chemins.
+
+	# Mots-clés : la recherche du nouveau site rend le même service, le terme
+	# cherché est repris tel quel.
+	handle /tags/* {
+		@mot path_regexp mot ^/tags/(.+?)/?$
+		redir @mot https://abidjan4all.info/recherche?q={re.mot.1} permanent
+		redir https://abidjan4all.info/recherche permanent
+	}
+
+	# Galeries photo et diaporamas : aucun équivalent, le lecteur venait pour
+	# de l'actualité.
+	handle /photos/* {
+		redir https://abidjan4all.info/actualite permanent
+	}
+	handle /slideshow/* {
+		redir https://abidjan4all.info/actualite permanent
+	}
+
+	# Vidéos : la rubrique existe, sans correspondance pièce par pièce.
+	handle /videos/* {
+		redir https://abidjan4all.info/videos permanent
+	}
+
+	# Petites annonces de l'ancien site.
+	handle /classifieds/* {
+		redir https://abidjan4all.info/annonces permanent
+	}
+
+	# Annuaire de liens sponsorisés.
+	handle /links/* {
+		redir https://abidjan4all.info/actualite permanent
+	}
+
+	# Tout le reste : même chemin sur le nouveau domaine, où les règles du
+	# Studio mènent à l'article.
+	handle {
+		redir https://abidjan4all.info{uri} permanent
+	}
 }
 
 # L'accès direct par IP servait TOUT le site en HTTP clair, page de connexion
