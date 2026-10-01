@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Redirections · Studio" };
 export const dynamic = "force-dynamic";
 
 const ERREURS: Record<string, string> = {
-  from: "Adresse source invalide — une seule section, ex. /ancienne-page.html",
+  from: "Adresse source invalide — /ancienne-page.html ou /rubrique/article, deux sections au plus.",
   to: "Destination invalide — un chemin interne (/rubrique/article) ou une URL https.",
   doublon: "Une redirection existe déjà pour cette adresse source.",
   boucle: "La source et la destination sont identiques.",

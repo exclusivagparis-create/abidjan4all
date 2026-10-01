@@ -44,9 +44,10 @@ export interface LectureRedirections {
 /**
  * Normalise un chemin source.
  *
- * Le repli de route du site ne voit qu'une seule section d'adresse : une
- * source en `/dossier/page.html` ne serait jamais consultée. On la refuse ici
- * plutôt que de créer une règle qui ne servira jamais.
+ * Deux sections au plus : ce sont les seules adresses où le site consulte ces
+ * règles — le repli de rubrique pour une section, la page d'article pour deux.
+ * Une source plus profonde serait enregistrée sans jamais être lue, on la
+ * refuse donc ici plutôt que de créer une règle inerte.
  */
 export function normaliserSource(brut: string): string | null {
   let s = brut.trim().replace(/^["']+|["']+$/g, "");
@@ -60,7 +61,8 @@ export function normaliserSource(brut: string): string | null {
   if (!s.startsWith("/")) s = `/${s}`;
   s = s.split("#")[0] ?? "";
   if (!s) return null;
-  if (s.slice(1).includes("/")) return null;
+  const sections = s.slice(1).split("/").filter(Boolean);
+  if (sections.length === 0 || sections.length > 2) return null;
   if (s.length > 200) return null;
   return s;
 }

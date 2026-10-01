@@ -13,13 +13,19 @@ async function requirePublisher() {
   }
 }
 
-/** Normalise un chemin source : "/ancienne-page.html" (une seule section). */
+/**
+ * Normalise un chemin source : "/ancienne-page.html" ou "/rubrique/article".
+ *
+ * Deux sections au plus : ce sont les seules adresses où le site consulte ces
+ * règles — le repli de rubrique pour une section, la page d'article pour deux.
+ * Au-delà, la règle serait enregistrée sans jamais être lue.
+ */
 function normalizeFrom(raw: string): string | null {
   let s = raw.trim();
   if (!s) return null;
   if (!s.startsWith("/")) s = `/${s}`;
-  // le repli de route ne voit qu'une section — pas de sous-chemins
-  if (s.slice(1).includes("/")) return null;
+  const sections = s.slice(1).split("/").filter(Boolean);
+  if (sections.length === 0 || sections.length > 2) return null;
   return s.slice(0, 200);
 }
 
