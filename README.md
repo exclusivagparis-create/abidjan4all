@@ -97,6 +97,18 @@ dig +short abidjan4all.net @1.1.1.1      # doit répondre l'IP de ce serveur
 curl -sI https://abidjan4all.net/Politique_r6.html | head -3   # 301 vers /politique
 ```
 
+Bascule faite le 01/10/2026 : le domaine est servi par ce serveur, et les
+3 146 règles de la migration sont chargées dans le Studio.
+
+**Quand le `Caddyfile` change par `git pull`, recréer le conteneur** plutôt que
+recharger : le fichier est monté un à un, git le remplace au lieu de le
+modifier, et le conteneur reste accroché à l'ancien — `caddy reload` répond
+alors « config is unchanged » sans rien changer.
+
+```bash
+docker compose -f infra/docker/docker-compose.prod.yml --env-file .env up -d --force-recreate caddy
+```
+
 ## Feuille de route (cahier des charges)
 
 DF-01 Front-End/UX · DF-02 CMS/Back-End · DF-03 Monétisation (A4A+, paywall, pub, marketplace) ·
