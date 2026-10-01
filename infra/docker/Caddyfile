@@ -54,7 +54,54 @@ www.abidjan4all.info {
 #   dig +short www.abidjan4all.net @1.1.1.1  → idem
 #
 abidjan4all.net, www.abidjan4all.net {
-	redir https://abidjan4all.info{uri} permanent
+	# Sections de l'ancien site sans équivalent sur le nouveau. Elles sont
+	# traitées ici, et non par une règle du Studio, parce qu'elles se comptent
+	# par centaines d'adresses et qu'une règle de section les couvre toutes —
+	# y compris celles que l'export Search Console (plafonné à 1 000 lignes)
+	# ne nous a jamais montrées.
+	#
+	# `handle` et non `redir` : les blocs s'excluent l'un l'autre et le plus
+	# précis l'emporte, quel que soit l'ordre d'écriture. Avec des `redir`
+	# empilés, la dernière règle, celle qui attrape tout, raflerait aussi ces
+	# chemins.
+
+	# Mots-clés : la recherche du nouveau site rend le même service, le terme
+	# cherché est repris tel quel.
+	handle /tags/* {
+		@mot path_regexp mot ^/tags/(.+?)/?$
+		redir @mot https://abidjan4all.info/recherche?q={re.mot.1} permanent
+		redir https://abidjan4all.info/recherche permanent
+	}
+
+	# Galeries photo et diaporamas : aucun équivalent, le lecteur venait pour
+	# de l'actualité.
+	handle /photos/* {
+		redir https://abidjan4all.info/actualite permanent
+	}
+	handle /slideshow/* {
+		redir https://abidjan4all.info/actualite permanent
+	}
+
+	# Vidéos : la rubrique existe, sans correspondance pièce par pièce.
+	handle /videos/* {
+		redir https://abidjan4all.info/videos permanent
+	}
+
+	# Petites annonces de l'ancien site.
+	handle /classifieds/* {
+		redir https://abidjan4all.info/annonces permanent
+	}
+
+	# Annuaire de liens sponsorisés.
+	handle /links/* {
+		redir https://abidjan4all.info/actualite permanent
+	}
+
+	# Tout le reste : même chemin sur le nouveau domaine, où les règles du
+	# Studio mènent à l'article.
+	handle {
+		redir https://abidjan4all.info{uri} permanent
+	}
 }
 
 # L'accès direct par IP servait TOUT le site en HTTP clair, page de connexion
@@ -83,8 +130,21 @@ abidjan4all.net, www.abidjan4all.net {
 # La même précaution vaut pour tout sous-domaine ajouté ensuite : on écrit son
 # bloc en commentaire, on bascule le DNS, on décommente, puis on recharge.
 #
-# Rechargement sans redémarrage, après toute modification de ce fichier :
+# Rechargement sans redémarrage, après une modification faite SUR PLACE dans ce
+# fichier (éditeur sur le serveur) :
 #   cd /root/abidjan4all && docker compose -f infra/docker/docker-compose.prod.yml --env-file .env exec caddy caddy reload --config /etc/caddy/Caddyfile
+#
+# APRÈS UN `git pull`, le rechargement ne suffit pas — il faut recréer le
+# conteneur :
+#   cd /root/abidjan4all && docker compose -f infra/docker/docker-compose.prod.yml --env-file .env up -d --force-recreate caddy
+#
+# Ce fichier est monté un à un (`./Caddyfile:/etc/caddy/Caddyfile`), et Docker
+# attache le montage au FICHIER, pas à son chemin. Or git ne modifie pas un
+# fichier : il le remplace. Le conteneur reste donc accroché à l'ancien, devenu
+# invisible, et `caddy reload` relit fidèlement la version d'avant en
+# annonçant « config is unchanged ». Vérification quand le doute s'installe :
+#   docker compose … exec caddy grep -c "le_nom_ajouté" /etc/caddy/Caddyfile
+# Une réponse à 0 alors que le fichier du dépôt le contient signe ce cas.
 #
 # `activepieces-app` est joignable parce que le conteneur Caddy a été rattaché
 # au réseau d'Activepieces. Le port 80 visé est celui de l'application DANS son
