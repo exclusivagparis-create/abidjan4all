@@ -127,7 +127,22 @@ export default async function HomePage() {
   // Derniers articles = tout ce qui n'a pas encore trouvé sa place.
   const derniers = articles.filter((a) => !dejaVu.has(a.id)).slice(0, 6);
 
-  const rubriquesExplorer = rubriques.filter((r) => r._count.articles > 0);
+  /**
+   * Toutes les rubriques, y compris celles encore sans article.
+   *
+   * Le filtre d'avant ne gardait que les rubriques déjà pourvues : une
+   * rubrique nouvellement ouverte restait donc invisible tant qu'elle était
+   * vide, c'est-à-dire précisément quand on a besoin de l'annoncer. La carte
+   * affiche « Nouveau » à la place du compteur, pour que l'absence d'articles
+   * se lise comme une ouverture et non comme une panne.
+   *
+   * Deux exceptions : Vidéos et Nos directs ne portent pas d'articles — leurs
+   * pages sont alimentées par les vidéos et les directs. Comptées ici, elles
+   * s'annonceraient éternellement « Nouveau » tout en étant bien remplies.
+   * Elles ont déjà leur place dans le menu et dans la bande de services.
+   */
+  const SANS_ARTICLES = ["videos", "en-direct"];
+  const rubriquesExplorer = rubriques.filter((r) => !SANS_ARTICLES.includes(r.slug));
   const tickerItems = liveUpdates.map((u) => u.title ?? u.liveBlog.title);
 
   return (
