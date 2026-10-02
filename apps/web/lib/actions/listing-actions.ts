@@ -7,6 +7,7 @@ import type { PaymentMethodId } from "@a4a/payments";
 import { auth, PUBLISH_ROLES } from "@/auth";
 import { startOrderCheckout } from "@/lib/order-billing";
 import { TARIFS_EMPLOI, TARIFS_IMMO, trouverPalier, type PalierAnnonce } from "@/lib/tarifs";
+import { lireCriteres } from "@/lib/annonces-immobilier";
 
 const TYPES: ListingType[] = ["emploi", "immobilier", "service"];
 /** Durée d'une annonce gratuite (service) — les payantes suivent leur palier. */
@@ -48,6 +49,19 @@ export async function createListingAction(_prev: ListingResult | undefined, form
   const price = priceRaw ? Math.max(0, Number(priceRaw) || 0) : null;
   const payant = GRILLE_PAYANTE[type as ListingType];
 
+  // Critères propres à l'immobilier : ils rendent la vitrine /annonces/immobilier
+  // cherchable (vente ou location, pièces, surface, quartier). Ignorés pour les
+  // autres catégories, où le formulaire ne les présente pas.
+  const criteres =
+    type === "immobilier"
+      ? lireCriteres({
+          transaction: formData.get("transaction"),
+          surface: formData.get("surface"),
+          pieces: formData.get("pieces"),
+          quartier: formData.get("quartier"),
+        })
+      : {};
+
   // Palier + moyen de paiement requis pour les catégories payantes.
   let palier: PalierAnnonce | undefined;
   let method: PaymentMethodId | undefined;
@@ -68,7 +82,7 @@ export async function createListingAction(_prev: ListingResult | undefined, form
       description,
       price,
       location,
-      attributes: contact ? { contact } : {},
+      attributes: { ...criteres, ...(contact ? { contact } : {}) },
       authorId: author.id,
       expiresAt: new Date(Date.now() + dureeJours * 24 * 3600 * 1000),
     },
