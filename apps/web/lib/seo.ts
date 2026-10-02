@@ -18,9 +18,14 @@ export function organizationJsonLd() {
     "@id": `${SITE_URL}#organization`,
     name: SITE_NAME,
     url: SITE_URL,
+    // Logo déclaré aux moteurs : le même que celui affiché sur le site, sans
+    // quoi Google Actualités montrerait une marque que le lecteur ne
+    // reconnaîtrait pas en arrivant.
     logo: {
       "@type": "ImageObject",
-      url: absoluteUrl("/logo-light.png"),
+      url: absoluteUrl("/logo-web-light.png"),
+      width: 320,
+      height: 81,
     },
     sameAs: [],
   };

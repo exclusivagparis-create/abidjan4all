@@ -19,8 +19,11 @@ export async function SiteFooter() {
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          <img src="/logo-light.png" alt="Abidjan4All" className="h-8 [display:var(--show-light)]" />
-          <img src="/logo-dark.png" alt="" aria-hidden className="h-8 [display:var(--show-dark)]" />
+          {/* Même logo qu'en en-tête : le pied de page portait encore la
+              version typographique d'avant la refonte, si bien qu'un lecteur
+              qui descendait voyait deux marques différentes sur la même page. */}
+          <img src="/logo-web-light.png" alt="Abidjan4All" className="h-11 [display:var(--show-light)]" />
+          <img src="/logo-web-dark.png" alt="" aria-hidden className="h-11 [display:var(--show-dark)]" />
           <span className="text-[13px] text-ink-3">
             Média numérique de la Côte d&apos;Ivoire et de la diaspora
           </span>
