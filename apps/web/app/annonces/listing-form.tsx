@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { createListingAction, type ListingResult } from "@/lib/actions/listing-actions";
 import { TARIFS_EMPLOI, TARIFS_IMMO, formatFCFA, type PalierAnnonce } from "@/lib/tarifs";
+import { TRANSACTIONS } from "@/lib/annonces-immobilier";
 
 const field = "w-full rounded-[8px] border border-line bg-surface px-3.5 py-2.5 text-[14px] text-ink outline-none focus:border-ink-3";
 const label = "grid gap-1.5 text-xs font-semibold text-ink-2";
@@ -69,6 +70,24 @@ export function ListingForm({ connected }: { connected: boolean }) {
         </label>
         <label className={label}>Localisation<input name="location" required maxLength={80} placeholder="Abidjan, Cocody" className={field} /></label>
       </div>
+      {/* Critères propres à l'immobilier : sans eux, une annonce n'est trouvable
+          que par son titre, et la vitrine ne peut rien filtrer. Présentés
+          seulement pour cette catégorie, pour ne pas alourdir les deux autres. */}
+      {type === "immobilier" ? (
+        <fieldset className="grid gap-4 rounded-[10px] border border-line-2 bg-surface-2 p-4 sm:grid-cols-2">
+          <legend className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-ink-3">Le bien</legend>
+          <label className={label}>
+            Vente ou location
+            <select name="transaction" className={field} defaultValue="location">
+              {TRANSACTIONS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+            </select>
+          </label>
+          <label className={label}>Quartier ou commune<input name="quartier" maxLength={60} placeholder="Cocody" className={field} /></label>
+          <label className={label}>Nombre de pièces<input name="pieces" type="number" min={1} max={50} placeholder="3" className={field} /></label>
+          <label className={label}>Surface en m²<input name="surface" type="number" min={1} placeholder="85" className={field} /></label>
+        </fieldset>
+      ) : null}
+
       <label className={label}>Titre<input name="title" required maxLength={140} placeholder="Développeur web — CDI" className={field} /></label>
       <label className={label}>Description<textarea name="description" required rows={5} maxLength={4000} className={`${field} resize-y`} /></label>
       <div className="grid gap-4 sm:grid-cols-2">

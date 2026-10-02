@@ -67,6 +67,19 @@ export default async function AnnoncesPage({ searchParams }: { searchParams: Pro
           <span className="flex-none text-[12.5px] font-bold text-green">Banque de CV →</span>
         </Link>
 
+        {/* Immobilier : vitrine à part, avec recherche par quartier, pièces et
+            prix. Le filtre ci-dessous ne sait pas faire cela, et une annonce
+            immobilière ne se cherche pas comme une offre d'emploi. */}
+        <Link
+          href="/annonces/immobilier"
+          className="mb-6 flex items-center justify-between gap-3 rounded-[12px] border border-line bg-surface-2 px-5 py-3.5 hover:border-ink-3"
+        >
+          <span className="text-[13.5px] font-semibold text-ink-2">
+            🏠 Vous cherchez un logement ? Parcourez l&apos;<span className="text-blue">immobilier par quartier, pièces et prix</span>.
+          </span>
+          <span className="flex-none text-[12.5px] font-bold text-blue">Immobilier →</span>
+        </Link>
+
         <div className="mb-6 flex flex-wrap gap-2">
           <Link href="/annonces" className={`rounded-pill px-3.5 py-1.5 text-xs font-semibold ${!filter ? "bg-navy text-white" : "border border-line bg-surface text-ink-2"}`}>
             Toutes
@@ -104,7 +117,7 @@ export default async function AnnoncesPage({ searchParams }: { searchParams: Pro
           ) : null}
         </div>
 
-        <h2 className="mb-4 border-b-2 border-ink pb-3 font-serif text-[26px] font-medium">Déposer une annonce</h2>
+        <h2 id="deposer" className="mb-4 scroll-mt-20 border-b-2 border-ink pb-3 font-serif text-[26px] font-medium">Déposer une annonce</h2>
         <ListingForm connected={Boolean(session?.user)} />
       </main>
       <SiteFooter />
