@@ -21,6 +21,10 @@ const ICONES: Record<string, string> = {
   videos: "🎬",
   actualite: "📰",
   "en-direct": "🔴",
+  "panafricanisme-ua": "🤝",
+  education: "🎓",
+  "actu-people": "✨",
+  "faits-divers": "🚨",
 };
 
 function iconePour(slug: string): string {
@@ -45,8 +49,16 @@ export function RubriqueExplorer({ rubriques }: { rubriques: RubriqueCarte[] }) 
         >
           <div className="text-[24px] leading-none">{iconePour(r.slug)}</div>
           <div className="mt-1.5 text-[12.5px] font-bold text-ink">{r.name}</div>
+          {/* Une rubrique qui vient d'ouvrir affiche « Nouveau » plutôt que
+              « 0 article » : le lecteur y lit une invitation, pas une panne. */}
           <div className="text-[10.5px] font-semibold text-ink-3">
-            {r._count.articles} article{r._count.articles > 1 ? "s" : ""}
+            {r._count.articles > 0 ? (
+              <>
+                {r._count.articles} article{r._count.articles > 1 ? "s" : ""}
+              </>
+            ) : (
+              <span style={{ color: r.color }}>Nouveau</span>
+            )}
           </div>
         </Link>
       ))}
