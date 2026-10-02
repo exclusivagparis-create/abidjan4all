@@ -34,8 +34,8 @@ export function FormulaireAutorisation({
       <div className="w-full rounded-[14px] border border-line bg-surface p-7 shadow-[var(--shadow-sm)]">
         {/* Deux fichiers, comme dans le pied de page : le thème sombre du
             lecteur ne doit pas avaler un logo noir. */}
-        <img src="/logo-light.png" alt="Abidjan4All" className="mb-6 h-7 [display:var(--show-light)]" />
-        <img src="/logo-dark.png" alt="Abidjan4All" className="mb-6 h-7 [display:var(--show-dark)]" />
+        <img src="/logo-web-light.png" alt="Abidjan4All" className="mb-6 h-9 [display:var(--show-light)]" />
+        <img src="/logo-web-dark.png" alt="Abidjan4All" className="mb-6 h-9 [display:var(--show-dark)]" />
 
         <h1 className="mb-2 font-serif text-[23px] font-semibold leading-[1.25] text-ink">
           Autoriser «&nbsp;{client.name}&nbsp;» à accéder au site&nbsp;?

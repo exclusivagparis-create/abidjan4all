@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@a4a/db";
 import { RESEAUX_ACTIFS } from "@/lib/reseaux";
+import { AppInstallable } from "@/components/app-installable";
 
 export async function SiteFooter() {
   const [rubriques, pages] = await Promise.all([
@@ -10,9 +11,19 @@ export async function SiteFooter() {
   return (
     <footer className="mt-16 border-t border-line bg-surface">
       <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 py-10">
+        {/* Enregistre le service worker sur toutes les pages — condition de
+            l'installation comme des alertes push — et propose l'installation
+            quand le navigateur l'accepte. Invisible sinon. */}
+        <div className="mb-6 empty:mb-0">
+          <AppInstallable />
+        </div>
+
         <div className="flex flex-wrap items-center gap-4">
-          <img src="/logo-light.png" alt="Abidjan4All" className="h-8 [display:var(--show-light)]" />
-          <img src="/logo-dark.png" alt="" aria-hidden className="h-8 [display:var(--show-dark)]" />
+          {/* Même logo qu'en en-tête : le pied de page portait encore la
+              version typographique d'avant la refonte, si bien qu'un lecteur
+              qui descendait voyait deux marques différentes sur la même page. */}
+          <img src="/logo-web-light.png" alt="Abidjan4All" className="h-11 [display:var(--show-light)]" />
+          <img src="/logo-web-dark.png" alt="" aria-hidden className="h-11 [display:var(--show-dark)]" />
           <span className="text-[13px] text-ink-3">
             Média numérique de la Côte d&apos;Ivoire et de la diaspora
           </span>

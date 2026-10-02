@@ -16,8 +16,8 @@ export default async function LoginPage({
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-bg px-6 text-ink">
       <Link href="/" className="mb-8">
-        <img src="/logo-light.png" alt="Abidjan4All" className="h-10 [display:var(--show-light)]" />
-        <img src="/logo-dark.png" alt="" aria-hidden className="h-10 [display:var(--show-dark)]" />
+        <img src="/logo-web-light.png" alt="Abidjan4All" className="h-12 [display:var(--show-light)]" />
+        <img src="/logo-web-dark.png" alt="" aria-hidden className="h-12 [display:var(--show-dark)]" />
       </Link>
 
       <div className="w-full max-w-[400px] rounded-lg border border-line bg-surface p-8 shadow-[var(--shadow-md)]">
