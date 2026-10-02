@@ -6,7 +6,7 @@ export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // tolérant au build sans base (docker build/CI) : régénéré au runtime (ISR 1 h)
-  const [articles, rubriques] = await Promise.all([
+  const [articles, rubriques, fiches] = await Promise.all([
     prisma.article.findMany({
       where: { status: "published" },
       select: { slug: true, updatedAt: true, rubrique: { select: { slug: true } } },
@@ -14,13 +14,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       take: 5000,
     }),
     prisma.rubrique.findMany({ select: { slug: true }, orderBy: { order: "asc" } }),
-  ]).catch(() => [[], []] as const);
+    prisma.guideFiche.findMany({
+      where: { published: true },
+      select: { slug: true, updatedAt: true },
+      orderBy: { order: "asc" },
+    }),
+  ]).catch(() => [[], [], []] as const);
 
   const statics: MetadataRoute.Sitemap = [
     { url: absoluteUrl("/"), changeFrequency: "hourly", priority: 1 },
     { url: absoluteUrl("/en-direct"), changeFrequency: "hourly", priority: 0.9 },
     { url: absoluteUrl("/recherche"), changeFrequency: "weekly", priority: 0.3 },
     { url: absoluteUrl("/abonnement"), changeFrequency: "monthly", priority: 0.6 },
+    // Le Guide vise le trafic de longue durée : il change peu mais compte.
+    { url: absoluteUrl("/guide"), changeFrequency: "weekly", priority: 0.7 },
   ];
 
   return [
@@ -35,6 +42,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: a.updatedAt,
       changeFrequency: "weekly" as const,
       priority: 0.7,
+    })),
+    ...fiches.map((f) => ({
+      url: absoluteUrl(`/guide/${f.slug}`),
+      lastModified: f.updatedAt,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
     })),
   ];
 }

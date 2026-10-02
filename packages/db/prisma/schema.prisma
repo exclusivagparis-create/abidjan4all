@@ -471,6 +471,63 @@ model Group {
 }
 
 // ---------------------------------------------------------------------------
+// Guide de l'Afrique — fiches de fond
+// ---------------------------------------------------------------------------
+
+/// Fiche encyclopédique : un pays, un peuple, une institution, une tradition.
+///
+/// Séparée de l'article parce qu'elle ne s'écrit ni ne se lit comme lui : pas
+/// de date de péremption, pas de fil chronologique, et une structure fixe —
+/// l'encadré d'identité puis les mêmes sections d'une fiche à l'autre. C'est
+/// ce qui rend le format consultable, et ce qui le fait remonter durablement
+/// dans les moteurs, là où un article d'actualité retombe en quelques jours.
+///
+/// Les champs d'identité sont du texte et non des nombres : une population
+/// s'écrit « 31,9 millions (2024) », une superficie « 322 462 km² ». Les
+/// contraindre en nombres obligerait la rédaction à mentir par omission sur
+/// l'année de référence ou la source.
+model GuideFiche {
+  id    String    @id @default(cuid())
+  slug  String    @unique
+  title String
+  kind  GuideKind @default(pays)
+
+  /// Afrique de l'Ouest, Afrique centrale… Sert à grouper le sommaire.
+  region  String?
+  /// Chapô : deux ou trois phrases, affichées en tête et dans le sommaire.
+  summary String
+
+  // Encadré d'identité — vide pour les fiches thématiques.
+  capitale     String?
+  population   String?
+  superficie   String?
+  langues      String?
+  monnaie      String?
+  independance String?
+
+  // Sections rédigées (HTML nettoyé, même filtre que les articles).
+  histoire String?
+  culture  String?
+  societe  String?
+  economie String?
+  aSavoir  String?
+
+  coverUrl  String?
+  published Boolean  @default(false)
+  /// Rang dans le sommaire ; à égalité, le titre tranche.
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published, region])
+}
+
+enum GuideKind {
+  pays
+  theme
+}
+
+// ---------------------------------------------------------------------------
 // Pages statiques (À propos, Mentions légales, Contact, CGU, Confidentialité)
 // ---------------------------------------------------------------------------
 
