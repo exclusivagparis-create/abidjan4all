@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { completeLessonAction, enrollAction } from "@/lib/actions/learning-actions";
+import { formatTaille, peutTelecharger, ressourcesDe } from "@/lib/formation-ressources";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,17 @@ export default async function CoursePage({ params }: Props) {
     sub.status !== "canceled" &&
     (!sub.currentPeriodEnd || sub.currentPeriodEnd > new Date());
   const payant = Boolean(session?.user) && course.price > 0 && !abonnementCouvrant;
+
+  // Même règle que la route de téléchargement — une seule définition, pour
+  // que la page ne propose jamais un fichier que la route refusera.
+  const telechargeable =
+    Boolean(session?.user) &&
+    peutTelecharger({
+      inscrit: Boolean(enrollment),
+      prix: course.price,
+      abonnementCouvrant,
+      role: session?.user?.role,
+    });
 
   const enroll = enrollAction.bind(null, course.slug);
   const modules = [...new Set(course.lessons.map((l) => l.module))];
@@ -150,28 +162,62 @@ export default async function CoursePage({ params }: Props) {
                     ? enrollment.progressPct >= Math.round((lesson.order / course.lessons.length) * 100)
                     : false;
                   const complete = completeLessonAction.bind(null, course.slug, lesson.id);
+                  const fichiers = ressourcesDe(lesson.resources);
                   return (
-                    <div key={lesson.id} className="flex items-center gap-4 border-b border-line-2 px-5 py-4 last:border-b-0">
-                      <span
-                        className={`flex h-8 w-8 flex-none items-center justify-center rounded-pill text-xs font-bold ${
-                          done ? "bg-green text-white" : "bg-surface-2 text-ink-3"
-                        }`}
-                      >
-                        {done ? "✓" : lesson.order}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-serif text-[16px] font-semibold leading-snug">{lesson.title}</div>
-                        <div className="text-xs text-ink-3">{Math.round(lesson.durationSec / 60)} min · vidéo</div>
+                    <div key={lesson.id} className="border-b border-line-2 px-5 py-4 last:border-b-0">
+                      <div className="flex items-center gap-4">
+                        <span
+                          className={`flex h-8 w-8 flex-none items-center justify-center rounded-pill text-xs font-bold ${
+                            done ? "bg-green text-white" : "bg-surface-2 text-ink-3"
+                          }`}
+                        >
+                          {done ? "✓" : lesson.order}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-serif text-[16px] font-semibold leading-snug">{lesson.title}</div>
+                          <div className="text-xs text-ink-3">
+                            {Math.round(lesson.durationSec / 60)} min · {lesson.videoUrl ? "vidéo" : "leçon"}
+                            {fichiers.length > 0 ? ` · ${fichiers.length} document${fichiers.length > 1 ? "s" : ""}` : ""}
+                          </div>
+                        </div>
+                        {enrollment && !done ? (
+                          <form action={complete}>
+                            <button
+                              type="submit"
+                              className="rounded-pill border border-line bg-surface-2 px-3.5 py-2 text-[11.5px] font-semibold"
+                            >
+                              Marquer comme suivie
+                            </button>
+                          </form>
+                        ) : null}
                       </div>
-                      {enrollment && !done ? (
-                        <form action={complete}>
-                          <button
-                            type="submit"
-                            className="rounded-pill border border-line bg-surface-2 px-3.5 py-2 text-[11.5px] font-semibold"
-                          >
-                            Marquer comme suivie
-                          </button>
-                        </form>
+
+                      {/* Documents de la leçon. Annoncés même sans accès : le
+                          lecteur doit savoir ce que l'inscription lui apporte,
+                          mais le lien n'existe que s'il y a droit. */}
+                      {fichiers.length > 0 ? (
+                        <ul className="mt-3 grid gap-1.5 pl-12">
+                          {fichiers.map((f) =>
+                            telechargeable ? (
+                              <li key={f.url}>
+                                <a
+                                  href={`/formation/${course.slug}/fichier/${lesson.id}?f=${encodeURIComponent(f.url)}`}
+                                  className="inline-flex flex-wrap items-center gap-2 text-[13px] font-semibold text-blue hover:underline"
+                                >
+                                  <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[10.5px] font-bold uppercase text-ink-3">{f.label}</span>
+                                  {f.nom}
+                                  <span className="font-normal text-ink-3">{formatTaille(f.taille)}</span>
+                                </a>
+                              </li>
+                            ) : (
+                              <li key={f.url} className="flex flex-wrap items-center gap-2 text-[13px] text-ink-3">
+                                <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[10.5px] font-bold uppercase">{f.label}</span>
+                                <span className="font-semibold">{f.nom}</span>
+                                <span>🔒 réservé aux inscrits</span>
+                              </li>
+                            )
+                          )}
+                        </ul>
                       ) : null}
                     </div>
                   );

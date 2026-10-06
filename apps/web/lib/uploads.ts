@@ -1,5 +1,6 @@
 import { mkdir, unlink, writeFile } from "fs/promises";
 import path from "path";
+import { EXTENSIONS_SERVIES, FORMATS } from "@/lib/formation-ressources";
 
 /**
  * Répertoire de stockage des fichiers uploadés — volume Docker persistant en
@@ -49,12 +50,42 @@ export async function saveDocumentUpload(file: File): Promise<{ ok: true; url: s
   return { ok: true, url: `/documents/${name}` };
 }
 
+/**
+ * Écrit un fichier joint à une leçon (support de cours, modèle, exercice) et
+ * renvoie son URL INTERNE `/documents/…`.
+ *
+ * Même rangement que les éditions Intelligence, pour la même raison : le
+ * fichier est la contrepartie d'un paiement, il ne doit sortir que par une
+ * route qui vérifie l'inscription au cours.
+ *
+ * Les formats admis sont énumérés (bureautique et archives) : accepter
+ * n'importe quel type ouvrirait la porte au dépôt d'exécutables sur un
+ * serveur qui sert ensuite des fichiers à des tiers.
+ */
+export async function saveLessonDocument(file: File): Promise<{ ok: true; url: string; ext: string } | { ok: false; error: string }> {
+  if (file.size === 0) return { ok: false, error: "Fichier vide." };
+  if (file.size > MAX_DOCUMENT) return { ok: false, error: "Fichier trop lourd (25 Mo max)." };
+
+  const format = FORMATS[file.type];
+  if (!format) {
+    return { ok: false, error: `Format non pris en charge (${file.type || "inconnu"}) — PDF, Word, Excel, PowerPoint, CSV ou ZIP.` };
+  }
+
+  const name = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.${format.ext}`;
+  await mkdir(UPLOAD_DIR, { recursive: true });
+  await writeFile(path.join(UPLOAD_DIR, name), Buffer.from(await file.arrayBuffer()));
+  return { ok: true, url: `/documents/${name}`, ext: format.ext };
+}
+
 /** Chemin disque d'un document `/documents/…`, ou null si le nom est douteux. */
 export function documentPath(url: string | null | undefined): string | null {
   if (!url?.startsWith("/documents/")) return null;
   const name = path.basename(url);
-  // Noms générés par saveDocumentUpload uniquement — aucune traversée possible.
-  if (!/^[a-z0-9-]+\.pdf$/.test(name)) return null;
+  // Noms générés par les fonctions ci-dessus uniquement, et extensions
+  // explicitement servies — aucune traversée de répertoire possible, aucun
+  // exécutable servi même si un fichier d'un autre type traînait là.
+  const extensions = [...new Set(["pdf", ...EXTENSIONS_SERVIES])].join("|");
+  if (!new RegExp(`^[a-z0-9-]+\\.(${extensions})$`).test(name)) return null;
   return path.join(UPLOAD_DIR, name);
 }
 

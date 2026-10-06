@@ -9,6 +9,8 @@ import {
   deleteLessonAction,
   updateCourseAction,
 } from "@/lib/actions/admin-content-actions";
+import { addLessonResourceAction, removeLessonResourceAction } from "@/lib/actions/formation-fichiers-actions";
+import { formatTaille, ressourcesDe } from "@/lib/formation-ressources";
 
 export const metadata: Metadata = { title: "Cours · Studio" };
 export const dynamic = "force-dynamic";
@@ -59,18 +61,60 @@ export default async function AdminCourse({ params }: { params: Promise<{ id: st
       </section>
 
       <div className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-[var(--shadow-sm)]">
-        {course.lessons.map((l) => (
-          <div key={l.id} className="flex flex-wrap items-center gap-3 border-b border-line-2 px-5 py-3 last:border-b-0">
-            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-pill bg-navy text-[12px] font-bold text-white">{l.order}</span>
-            <div className="min-w-0 flex-1">
-              <div className="font-semibold">{l.title}</div>
-              <div className="text-[11.5px] text-ink-3">{l.module} · {Math.round(l.durationSec / 60)} min · {l.videoUrl ? "vidéo" : "sans vidéo"}</div>
+        {course.lessons.map((l) => {
+          const fichiers = ressourcesDe(l.resources);
+          return (
+            <div key={l.id} className="border-b border-line-2 px-5 py-3 last:border-b-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="flex h-8 w-8 flex-none items-center justify-center rounded-pill bg-navy text-[12px] font-bold text-white">{l.order}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold">{l.title}</div>
+                  <div className="text-[11.5px] text-ink-3">
+                    {l.module} · {Math.round(l.durationSec / 60)} min · {l.videoUrl ? "vidéo" : "sans vidéo"}
+                    {fichiers.length > 0 ? ` · ${fichiers.length} fichier${fichiers.length > 1 ? "s" : ""}` : ""}
+                  </div>
+                </div>
+                <form action={deleteLessonAction.bind(null, l.id, course.id)}>
+                  <button type="submit" className="rounded-pill border border-[rgba(214,40,45,0.4)] bg-surface px-3 py-1 text-[11px] font-semibold text-red">Suppr.</button>
+                </form>
+              </div>
+
+              {/* Documents de la leçon : support de cours, modèle, exercice.
+                  Ils ne sortent que par la route qui vérifie l'inscription —
+                  leur adresse n'est donc jamais partageable telle quelle. */}
+              <div className="mt-2.5 pl-11">
+                {fichiers.length > 0 ? (
+                  <ul className="mb-2 grid gap-1.5">
+                    {fichiers.map((f) => (
+                      <li key={f.url} className="flex flex-wrap items-center gap-2 text-[12.5px]">
+                        <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[10.5px] font-bold uppercase text-ink-3">{f.label}</span>
+                        <span className="font-semibold">{f.nom}</span>
+                        <span className="text-ink-3">{formatTaille(f.taille)}</span>
+                        <form action={removeLessonResourceAction.bind(null, l.id, course.id, f.url)}>
+                          <button type="submit" className="text-[11.5px] font-semibold text-red hover:underline">retirer</button>
+                        </form>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+
+                <form action={addLessonResourceAction.bind(null, l.id, course.id)} className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="file"
+                    name="fichier"
+                    required
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.zip"
+                    className="text-[12px] text-ink-2 file:mr-2 file:rounded-pill file:border-0 file:bg-surface-2 file:px-3 file:py-1.5 file:text-[11.5px] file:font-semibold file:text-ink"
+                  />
+                  <input name="nom" maxLength={120} placeholder="Nom affiché (optionnel)" className="rounded-[8px] border border-line bg-surface px-2.5 py-1.5 text-[12px]" />
+                  <button type="submit" className="rounded-pill border border-line bg-surface-2 px-3 py-1.5 text-[11.5px] font-bold text-ink">
+                    Joindre
+                  </button>
+                </form>
+              </div>
             </div>
-            <form action={deleteLessonAction.bind(null, l.id, course.id)}>
-              <button type="submit" className="rounded-pill border border-[rgba(214,40,45,0.4)] bg-surface px-3 py-1 text-[11px] font-semibold text-red">Suppr.</button>
-            </form>
-          </div>
-        ))}
+          );
+        })}
         {course.lessons.length === 0 ? <p className="px-5 py-8 text-center text-[13px] text-ink-3">Aucune leçon.</p> : null}
       </div>
     </div>
