@@ -7,10 +7,11 @@ import { SiteFooter } from "@/components/site-footer";
 import { PlaceholderMedia } from "@/components/placeholder-media";
 import { RichTitle } from "@/components/rich-title";
 import { VideoPlayer } from "@/components/video-player";
+import { LienVideo, VueLecteurIntegre } from "@/components/video-vue";
 import { AdSlot } from "@/components/ad-slot";
 import { thumbnailUrl } from "@/lib/video";
 import { articleListSelect } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatVues } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Vidéos" };
 export const dynamic = "force-dynamic";
@@ -62,13 +63,17 @@ export default async function VideosPage() {
                 provider={une.provider}
                 providerRef={une.providerRef}
                 title={une.title}
+                videoId={une.id}
                 className="aspect-video w-full rounded-[14px]"
               />
+              <VueLecteurIntegre id={une.id} />
               <h2 className="mt-4 font-serif text-[28px] font-semibold leading-[1.12]">{une.title}</h2>
               {une.description ? (
                 <p className="mt-2 max-w-[65ch] font-serif text-[16px] leading-[1.5] text-ink-2">{une.description}</p>
               ) : null}
-              <div className="mt-2 text-[12.5px] text-ink-3">{formatDate(une.publishedAt)}</div>
+              <div className="mt-2 text-[12.5px] text-ink-3">
+                {formatDate(une.publishedAt)} · {formatVues(une.views)}
+              </div>
             </div>
 
             {autres.length > 0 ? (
@@ -83,11 +88,10 @@ export default async function VideosPage() {
                   {autres.map((v) => {
                     const vignette = thumbnailUrl(v.provider, v.providerRef);
                     return (
-                      <a
+                      <LienVideo
                         key={v.id}
+                        id={v.id}
                         href={v.sourceUrl}
-                        target="_blank"
-                        rel="noreferrer"
                         className="flex items-center gap-3 border-b border-line-2 py-2.5 last:border-b-0 hover:opacity-80"
                       >
                         {vignette ? (
@@ -100,9 +104,11 @@ export default async function VideosPage() {
                         )}
                         <span className="min-w-0 flex-1">
                           <span className="line-clamp-2 font-serif text-[14px] font-semibold leading-[1.22]">{v.title}</span>
-                          <span className="mt-0.5 block text-[11px] text-ink-3">{formatDate(v.publishedAt)}</span>
+                          <span className="mt-0.5 block text-[11px] text-ink-3">
+                            {formatDate(v.publishedAt)} · {formatVues(v.views)}
+                          </span>
                         </span>
-                      </a>
+                      </LienVideo>
                     );
                   })}
                 </div>

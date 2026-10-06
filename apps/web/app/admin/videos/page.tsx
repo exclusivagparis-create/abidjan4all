@@ -10,7 +10,7 @@ import {
   updateVideoAction,
 } from "@/lib/actions/video-actions";
 import { PROVIDER_LABEL, thumbnailUrl, type VideoProvider } from "@/lib/video";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatNombre } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Vidéos · Studio" };
 export const dynamic = "force-dynamic";
@@ -98,6 +98,12 @@ export default async function AdminVideos({ searchParams }: { searchParams: Prom
                     ) : null}
                     <span className="text-[11px] text-ink-3">
                       {PROVIDER_LABEL[v.provider as VideoProvider] ?? v.provider} · {formatDate(v.publishedAt)}
+                    </span>
+                    {/* Compte entier ici, abrégé côté lecteurs : c'est dans le
+                        Studio qu'on compare deux formats ou qu'on répond à un
+                        annonceur. */}
+                    <span className="rounded-pill bg-surface-2 px-2 py-0.5 text-[10.5px] font-bold text-ink-2">
+                      ▶ {formatNombre(v.views)} {v.views > 1 ? "lectures" : "lecture"}
                     </span>
                   </div>
                   <div className="mt-1 truncate font-serif text-[17px] font-semibold">{v.title}</div>

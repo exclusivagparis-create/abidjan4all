@@ -598,6 +598,10 @@ model Video {
   providerRef String
   /// Direct/streaming en cours : mis en avant et badgé « EN DIRECT ».
   live        Boolean  @default(false)
+  /// Nombre de lectures lancées depuis le site. Compte les intentions de
+  /// regarder — un clic sur la vignette, une interaction avec le lecteur —,
+  /// pas les lectures côté plateforme, que nous ne voyons pas.
+  views       Int      @default(0)
   published   Boolean  @default(true)
   publishedAt DateTime @default(now())
   createdAt   DateTime @default(now())
