@@ -117,7 +117,10 @@ export default async function AdminUsers({
                       </span>
                       <div>
                         <div className="font-bold">
-                          {u.name}
+                          {/* La fiche porte ce que le tableau ne peut pas tenir :
+                              correction du nom et de l'adresse, envoi d'un lien
+                              de mot de passe, état du compte. */}
+                          <a href={`/admin/users/${u.id}`} className="hover:underline">{u.name}</a>
                           {self ? <span className="ml-1.5 text-[10px] font-semibold text-ink-3">(vous)</span> : null}
                         </div>
                         <div className="text-[11.5px] text-ink-3">{u.email}</div>
@@ -159,6 +162,12 @@ export default async function AdminUsers({
                         <form action={setUserRoleAction.bind(null, u.id)}>
                           <RoleButtons current={u.role} />
                         </form>
+                        <a
+                          href={`/admin/users/${u.id}`}
+                          className="rounded-pill border border-line bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-ink"
+                        >
+                          Corriger
+                        </a>
                         <UserDeleteButton id={u.id} name={u.name} />
                       </span>
                     )}
