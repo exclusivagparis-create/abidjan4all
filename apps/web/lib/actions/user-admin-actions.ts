@@ -30,6 +30,39 @@ async function inviteToSetPassword(userId: string, name: string, email: string):
   });
 }
 
+/**
+ * Jeton de réinitialisation + e-mail, à la demande de l'administration.
+ *
+ * Distinct de l'invitation ci-dessus par le texte seulement : un lecteur qui
+ * a déjà un compte et appelle au secours ne doit pas recevoir « bienvenue,
+ * votre compte vient d'être créé », qui le ferait douter de ce qu'il lit.
+ *
+ * Les jetons encore valides sont invalidés d'abord : sinon un lien envoyé
+ * trois semaines plus tôt, peut-être retrouvé dans une boîte partagée,
+ * resterait utilisable.
+ */
+async function sendResetLink(userId: string, name: string, email: string): Promise<boolean> {
+  const token = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000);
+  await prisma.$transaction([
+    prisma.passwordSetToken.updateMany({ where: { userId, usedAt: null }, data: { usedAt: new Date() } }),
+    prisma.passwordSetToken.create({ data: { token, userId, expiresAt } }),
+  ]);
+
+  const url = `${SITE_URL}/definir-mot-de-passe?token=${token}`;
+  return sendEmail({
+    to: email,
+    subject: "Abidjan4All — définir un nouveau mot de passe",
+    html: emailLayout(
+      `Bonjour ${name},`,
+      `<p>À la demande de la rédaction, vous pouvez définir un nouveau mot de passe pour votre compte <b>Abidjan4All</b> (${email}).</p>
+       <p>Ce lien est valable 7 jours. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de passe actuel reste valable.</p>`,
+      { label: "Définir mon mot de passe", url }
+    ),
+    text: `Bonjour ${name}, définissez un nouveau mot de passe pour votre compte Abidjan4All (${email}) ici, sous 7 jours : ${url}`,
+  });
+}
+
 const ASSIGNABLE_ROLES: Role[] = ["reader", "member", "journalist", "editor", "admin", "partner", "ad_manager"];
 
 /** Garde : seul un admin encore présent en base peut administrer les comptes. */
@@ -155,6 +188,72 @@ export async function deleteUserAction(userId: string): Promise<DeleteUserResult
   ]);
   revalidatePath("/admin/users");
   return { ok: true };
+}
+
+/**
+ * Corrige l'identité d'un compte : nom affiché et adresse e-mail.
+ *
+ * Une adresse mal saisie à l'inscription enferme son titulaire dehors — il ne
+ * reçoit ni le lien de confirmation, ni celui de réinitialisation, et le
+ * support ne pouvait jusqu'ici que supprimer puis recréer le compte, en
+ * perdant son historique.
+ *
+ * L'adresse corrigée est tenue pour vérifiée, comme pour les comptes créés
+ * par l'administration : c'est une personne de la rédaction qui l'a saisie,
+ * et laisser le compte « non confirmé » en refuserait la connexion, ce qui
+ * reproduirait le problème qu'on vient de résoudre.
+ */
+export async function updateUserIdentityAction(userId: string, formData: FormData): Promise<void> {
+  await requireAdmin();
+
+  const name = String(formData.get("name") ?? "").trim().slice(0, 80);
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 160);
+  const retour = `/admin/users/${userId}`;
+
+  if (name.length < 2) redirect(`${retour}?erreur=nom`);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) redirect(`${retour}?erreur=email`);
+
+  const compte = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  if (!compte) redirect("/admin/users");
+
+  const changeDAdresse = compte.email !== email;
+  if (changeDAdresse) {
+    const occupe = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    if (occupe && occupe.id !== userId) redirect(`${retour}?erreur=occupe`);
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { name, email, ...(changeDAdresse ? { emailVerified: new Date() } : {}) },
+  });
+
+  // Les inscriptions à la newsletter portant la nouvelle adresse rejoignent le
+  // compte, comme à l'inscription : sans cela, le lecteur resterait abonné
+  // sous une identité détachée de son compte.
+  if (changeDAdresse) await rattacherInscriptionsNewsletter(userId, email);
+
+  revalidatePath("/admin/users");
+  revalidatePath(retour);
+  redirect(`${retour}?ok=identite`);
+}
+
+/**
+ * Envoie au titulaire un lien pour redéfinir son mot de passe.
+ *
+ * Le mot de passe actuel n'est pas touché : tant que le lien n'est pas
+ * utilisé, le compte reste accessible comme avant. L'administration ne voit
+ * jamais de mot de passe, ni avant ni après.
+ */
+export async function sendPasswordLinkAction(userId: string): Promise<void> {
+  await requireAdmin();
+  const retour = `/admin/users/${userId}`;
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+  if (!user) redirect("/admin/users");
+  if (!emailConfigured) redirect(`${retour}?erreur=smtp`);
+
+  const envoye = await sendResetLink(userId, user.name, user.email);
+  redirect(`${retour}?${envoye ? "ok=lien" : "erreur=envoi"}`);
 }
 
 /** Bascule le statut vérifié (coche publique du profil). */
