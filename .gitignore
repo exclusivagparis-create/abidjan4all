@@ -12,6 +12,10 @@ dist/
 # uploads locaux (médiathèque dev — S3 en production)
 apps/web/public/uploads/
 
+# Client Prisma généré : en développement, Next le cherche dans apps/web/.prisma
+# (l'image Docker y pose un lien symbolique). C'est un artefact de machine.
+apps/web/.prisma/
+
 # divers
 .DS_Store
 npm-debug.log*
