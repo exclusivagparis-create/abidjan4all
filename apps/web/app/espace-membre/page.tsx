@@ -151,6 +151,12 @@ export default async function EspaceMembrePage({
             </div>
           </div>
           <div className="ml-auto flex flex-wrap gap-2">
+            {/* Le fil personnalisé se règle et se lit ici : il n'a de sens que
+                pour un membre connecté, et n'apparaît donc pas dans le menu
+                public. */}
+            <Link href="/mon-fil" className="rounded-pill bg-navy px-4 py-2 text-xs font-bold text-white">
+              ✦ Mon fil
+            </Link>
             {user.role === "partner" ? (
               <Link
                 href="/espace-annonceur"
