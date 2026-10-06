@@ -205,6 +205,8 @@ model User {
   pushSubscriptions       PushSubscription[]
   passwordSetTokens       PasswordSetToken[]
   emailVerificationTokens EmailVerificationToken[]
+  refundRequests          RefundRequest[]
+  refundsHandled          RefundRequest[]          @relation("RefundHandler")
   apiTokens               ApiToken[]
   oauthCodes              OAuthCode[]
   accounts                Account[]
@@ -898,7 +900,52 @@ model Payment {
   status      PaymentStatus @default(pending)
   createdAt   DateTime      @default(now())
 
-  invoice Invoice?
+  invoice        Invoice?
+  refundRequests RefundRequest[]
+}
+
+/// Demande de remboursement d'un paiement, traitée à la main.
+///
+/// Le remboursement lui-même se fait chez le prestataire — PayDunya, Stripe,
+/// PayPal — et pas ici : aucune API n'est appelée, aucun mouvement d'argent
+/// n'est déclenché par le site. Ce modèle sert à ce qu'une demande ne se
+/// perde pas dans une boîte mail, qu'on sache qui l'a traitée et quand, et
+/// que le lecteur reçoive une réponse.
+///
+/// Rattachée au paiement et non au seul abonnement : c'est une somme précise
+/// qu'on rembourse, et un abonné peut en avoir réglé plusieurs.
+model RefundRequest {
+  id String @id @default(cuid())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  payment   Payment @relation(fields: [paymentId], references: [id])
+  paymentId String
+
+  /// Motif écrit par le lecteur. Lu tel quel par la rédaction.
+  reason String
+  status RefundStatus @default(en_attente)
+
+  /// Note interne : décision, référence du remboursement chez le prestataire.
+  note String?
+
+  /// Qui a tranché, pour qu'une décision ait un auteur.
+  handledBy   User?     @relation("RefundHandler", fields: [handledById], references: [id])
+  handledById String?
+  handledAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
+
+enum RefundStatus {
+  en_attente
+  acceptee
+  refusee
+  remboursee
 }
 
 model Invoice {

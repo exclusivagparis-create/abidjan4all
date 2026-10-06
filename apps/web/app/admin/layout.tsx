@@ -21,13 +21,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/login?next=/admin");
   }
 
-  const [reviewCount, pendingComments, pendingListings, pendingReservations, brandLeads] = await Promise.all([
-    prisma.article.count({ where: { status: "review" } }),
-    prisma.comment.count({ where: { status: "pending" } }),
-    prisma.listing.count({ where: { status: "pending" } }),
-    prisma.adCampaign.count({ where: { status: "pending_review" } }),
-    prisma.brandLead.count({ where: { status: "nouveau" } }),
-  ]);
+  const [reviewCount, pendingComments, pendingListings, pendingReservations, brandLeads, remboursementsEnAttente] =
+    await Promise.all([
+      prisma.article.count({ where: { status: "review" } }),
+      prisma.comment.count({ where: { status: "pending" } }),
+      prisma.listing.count({ where: { status: "pending" } }),
+      prisma.adCampaign.count({ where: { status: "pending_review" } }),
+      prisma.brandLead.count({ where: { status: "nouveau" } }),
+      // Une demande de remboursement qui dort finit en litige : elle est
+      // comptée dans le menu, comme les commentaires à modérer.
+      prisma.refundRequest.count({ where: { status: "en_attente" } }),
+    ]);
 
   const canPublish = PUBLISH_ROLES.includes(user.role as (typeof PUBLISH_ROLES)[number]);
   // Gestionnaire Régie : seule la régie est accessible (le middleware renvoie
@@ -58,6 +62,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Newsletters", href: canPublish ? "/admin/newsletters" : undefined, icon: "✉" },
     { label: "Groupes", href: isAdmin ? "/admin/community" : undefined, icon: "◉" },
     { label: "Abonnés A4A+", href: isAdmin ? "/admin/subscribers" : undefined, icon: "◍" },
+    { label: "Remboursements", href: isAdmin || canPublish ? "/admin/remboursements" : undefined, icon: "↩", badge: remboursementsEnAttente, badgeColor: "var(--orange)" },
     { label: "Offres A4A+", href: canPublish ? "/admin/offres" : undefined, icon: "◈" },
     { label: "Utilisateurs", href: isAdmin ? "/admin/users" : undefined, icon: "☺" },
   ];
