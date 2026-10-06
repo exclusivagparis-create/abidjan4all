@@ -14,7 +14,9 @@ import { mesAbonnements } from "@/lib/intelligence";
 import { mesInscriptions } from "@/lib/events";
 import { annulerMonInscriptionAction } from "@/lib/actions/event-actions";
 import { choisirMesNewslettersAction } from "@/lib/actions/newsletter-admin-actions";
+import { demanderRemboursementAction } from "@/lib/actions/remboursement-actions";
 import { SEGMENTS } from "@/lib/newsletter-segments";
+import { ETATS, MOTIF_MAX, MOTIF_MIN, contestable, raisonIndisponible } from "@/lib/remboursement";
 import { formatDateFull, initials } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Espace membre" };
@@ -38,9 +40,9 @@ const nf = new Intl.NumberFormat("fr-FR");
 export default async function EspaceMembrePage({
   searchParams,
 }: {
-  searchParams: Promise<{ bienvenue?: string }>;
+  searchParams: Promise<{ bienvenue?: string; remb?: string }>;
 }) {
-  const [{ bienvenue }, session] = await Promise.all([searchParams, auth()]);
+  const [{ bienvenue, remb }, session] = await Promise.all([searchParams, auth()]);
   if (!session?.user) redirect("/login?next=/espace-membre");
 
   const user = await prisma.user.findUnique({
@@ -88,6 +90,40 @@ export default async function EspaceMembrePage({
   const plan = sub ? await prisma.offer.findUnique({ where: { id: sub.plan } }) : null;
   const paying = sub && sub.plan !== "free";
   const status = sub ? SUB_STATUS[sub.status] : undefined;
+
+  // Demandes de remboursement : celles déjà déposées, et les paiements encore
+  // contestables. Les deux viennent ensemble, la seconde liste dépendant de
+  // la première — un paiement déjà contesté ne l'est pas deux fois.
+  const demandes = await prisma.refundRequest.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    include: { payment: { select: { amount: true } } },
+  });
+  const dejaDemandes = new Set(demandes.map((d) => d.paymentId));
+  const paiementsPourDemande = (sub?.payments ?? []).map((p) => ({
+    id: p.id,
+    createdAt: p.createdAt,
+    status: p.status,
+    dejaDemande: dejaDemandes.has(p.id),
+  }));
+  const paiementsContestables = (sub?.payments ?? []).filter((p) =>
+    contestable({ id: p.id, createdAt: p.createdAt, status: p.status, dejaDemande: dejaDemandes.has(p.id) })
+  );
+
+  const MESSAGES_REMB: Record<string, { texte: string; ton: "ok" | "attention" }> = {
+    recue: {
+      texte: "Votre demande est enregistrée. La rédaction vous répondra par e-mail.",
+      ton: "ok",
+    },
+    motif: { texte: "Expliquez en quelques mots ce qui motive votre demande.", ton: "attention" },
+    introuvable: { texte: "Ce paiement est introuvable sur votre compte.", ton: "attention" },
+    "hors-delai": {
+      texte: "Ce paiement ne peut plus être contesté : il date de plus de 30 jours, ou une demande existe déjà.",
+      ton: "attention",
+    },
+  };
+  const messageRemboursement = remb ? MESSAGES_REMB[remb] : undefined;
 
   return (
     <div className="min-h-screen bg-bg text-ink">
@@ -504,6 +540,85 @@ export default async function EspaceMembrePage({
                 </span>
               </div>
             ))
+          )}
+        </section>
+
+        {/* Remboursement : sous les factures, parce que c'est une facture
+            précise que l'on conteste, pas « l'abonnement » en général. */}
+        <section className="rounded-[14px] border border-line bg-surface p-6 shadow-[var(--shadow-sm)]">
+          <h2 className="mb-1 text-sm font-bold uppercase tracking-[0.06em] text-ink-3">Demander un remboursement</h2>
+          <p className="mb-4 max-w-[70ch] text-[12.5px] text-ink-3">
+            La rédaction examine chaque demande et vous répond par e-mail. Le remboursement, s&apos;il est accordé, est
+            effectué par le prestataire qui a encaissé le paiement — comptez quelques jours avant qu&apos;il apparaisse
+            sur votre compte. Résilier votre abonnement ne déclenche pas de remboursement : vous gardez l&apos;accès
+            jusqu&apos;au terme de la période déjà payée.
+          </p>
+
+          {messageRemboursement ? (
+            <p
+              className={`mb-4 rounded-[8px] px-4 py-3 text-[13px] font-semibold ${
+                messageRemboursement.ton === "ok"
+                  ? "bg-[rgba(46,139,87,0.1)] text-green"
+                  : "bg-[rgba(232,100,26,0.1)] text-orange"
+              }`}
+            >
+              {messageRemboursement.texte}
+            </p>
+          ) : null}
+
+          {demandes.length > 0 ? (
+            <ul className="mb-4 grid gap-2">
+              {demandes.map((d) => (
+                <li key={d.id} className="flex flex-wrap items-center gap-2.5 rounded-[10px] bg-surface-2 px-4 py-2.5 text-[12.5px]">
+                  <span
+                    className="rounded-pill px-2 py-0.5 text-[10.5px] font-bold uppercase text-white"
+                    style={{ background: ETATS[d.status].couleur }}
+                  >
+                    {ETATS[d.status].label}
+                  </span>
+                  <span className="font-bold">{formatXOF(d.payment.amount)}</span>
+                  <span className="text-ink-3">demandé le {formatDateFull(d.createdAt)}</span>
+                  {d.note ? <span className="w-full text-ink-2">Réponse : {d.note}</span> : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {paiementsContestables.length > 0 ? (
+            <form action={demanderRemboursementAction} className="grid gap-3">
+              <label className="grid gap-1.5 text-xs font-semibold text-ink-2">
+                Paiement concerné
+                <select name="paymentId" className="rounded-[8px] border border-line bg-bg px-3 py-2.5 text-[14px]">
+                  {paiementsContestables.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {formatXOF(p.amount)} — {formatDateFull(p.createdAt)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1.5 text-xs font-semibold text-ink-2">
+                Motif
+                <textarea
+                  name="motif"
+                  rows={4}
+                  required
+                  minLength={MOTIF_MIN}
+                  maxLength={MOTIF_MAX}
+                  placeholder="Dites-nous ce qui s'est passé : double prélèvement, service non rendu, erreur de formule…"
+                  className="resize-y rounded-[8px] border border-line bg-bg px-3 py-2.5 text-[14px]"
+                />
+              </label>
+              <div>
+                <button type="submit" className="rounded-pill bg-red px-5 py-2.5 text-[13px] font-bold text-white">
+                  Envoyer ma demande
+                </button>
+              </div>
+            </form>
+          ) : (
+            <p className="rounded-[8px] bg-surface-2 px-4 py-3 text-[12.5px] text-ink-3">
+              {raisonIndisponible(paiementsPourDemande)} Pour toute autre question, écrivez à{" "}
+              <a href="mailto:contact@abidjan4all.info" className="font-semibold text-blue">contact@abidjan4all.info</a>.
+            </p>
           )}
         </section>
       </main>
