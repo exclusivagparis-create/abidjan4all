@@ -127,7 +127,19 @@ export function xmlEscape(s: string): string {
  *
  * L'échappement Unicode reste du JSON parfaitement valide : les moteurs de
  * recherche lisent la même donnée, le navigateur ne voit plus de balise.
+ *
+ * ATTENTION AUX ANTISLASHS. Ce qu'on veut écrire dans le JSON, c'est la SUITE
+ * DE SIX CARACTÈRES qui désigne le chevron, pas le chevron lui-même. Avec un
+ * seul antislash, le littéral VAUT « < » et le remplacement ne fait rien :
+ * la fonction rend alors son entrée inchangée. C'est la forme qu'avait ce
+ * code jusqu'au 7 octobre 2026, ce commentaire d'alerte compris — un défaut
+ * invisible à la relecture, puisque le code a l'air juste.
+ *
+ * Un contrôle automatique garde désormais la main : voir `seo.test.ts`.
  */
 export function jsonLdScript(donnees: unknown): string {
-  return JSON.stringify(donnees).replace(/</g, "\u003c").replace(/>/g, "\u003e").replace(/&/g, "\u0026");
+  return JSON.stringify(donnees)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
 }

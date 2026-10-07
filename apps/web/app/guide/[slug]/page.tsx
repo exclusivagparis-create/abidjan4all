@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, jsonLdScript } from "@/lib/seo";
 import { identiteDe, sectionsDe } from "@/lib/guide";
 import { formatDate } from "@/lib/format";
 
@@ -76,7 +76,7 @@ export default async function FichePage({ params }: Props) {
   return (
     <div className="min-h-screen bg-bg text-ink">
       <SiteHeader />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
 
       <main className="mx-auto max-w-[820px] px-4 pb-24 pt-10 sm:px-6 lg:px-8">
         <nav className="mb-4 text-[12.5px] text-ink-3">
