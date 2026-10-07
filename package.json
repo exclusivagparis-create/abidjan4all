@@ -13,7 +13,8 @@
     "lint": "turbo run lint",
     "db:generate": "pnpm --filter @a4a/db db:generate",
     "db:migrate": "pnpm --filter @a4a/db db:migrate",
-    "db:studio": "pnpm --filter @a4a/db db:studio"
+    "db:studio": "pnpm --filter @a4a/db db:studio",
+    "test": "turbo run test"
   },
   "devDependencies": {
     "turbo": "^2.5.0"

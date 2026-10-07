@@ -53,6 +53,12 @@ jobs:
       - name: Type-check (tous les packages)
         run: pnpm lint
 
+      # Contrôles unitaires : du calcul pur, sans base ni serveur. Ils
+      # existent pour les défauts que la relecture ne voit pas — un
+      # échappement qui n'échappe rien, par exemple.
+      - name: Contrôles unitaires
+        run: pnpm test
+
       - name: Build de production
         run: pnpm build
 
