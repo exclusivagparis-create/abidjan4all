@@ -30,7 +30,14 @@ function sel(): string {
   return selDuJour;
 }
 
-/** Première IP publique de la chaîne de proxys (Caddy ajoute X-Forwarded-For). */
+/**
+ * Adresse du visiteur, d'après `X-Forwarded-For`.
+ *
+ * Le Caddyfile remplace cet en-tête par l'adresse du pair au lieu de s'y
+ * ajouter : le premier maillon est donc celui du visiteur, et non une valeur
+ * qu'il aurait écrite lui-même. Avant ce réglage, le sel quotidien comme le
+ * pays d'origine reposaient sur une donnée fournie par l'appelant.
+ */
 export function ipDeLaRequete(h: Headers): string | null {
   const xff = h.get("x-forwarded-for");
   if (xff) {

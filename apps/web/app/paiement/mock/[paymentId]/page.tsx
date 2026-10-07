@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
+import { simulateurActif } from "@/lib/simulateur-paiement";
 import { METHODS, formatXOF } from "@a4a/payments";
 import { settleMockPayment } from "@/lib/actions/billing-actions";
 
@@ -13,6 +14,11 @@ export default async function MockCheckoutPage({
 }: {
   params: Promise<{ paymentId: string }>;
 }) {
+  // Le simulateur n'existe que s'il est le prestataire actif : en
+  // production, cette page n'a pas lieu d'être. Voir
+  // lib/simulateur-paiement.ts.
+  if (!simulateurActif()) notFound();
+
   const { paymentId } = await params;
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },

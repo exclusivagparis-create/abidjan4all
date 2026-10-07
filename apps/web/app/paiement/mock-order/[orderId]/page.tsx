@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
+import { simulateurActif } from "@/lib/simulateur-paiement";
 import { formatXOF } from "@a4a/payments";
 import { settleMockOrder } from "@/lib/actions/order-actions";
 
@@ -20,6 +21,11 @@ export default async function MockOrderCheckoutPage({
 }: {
   params: Promise<{ orderId: string }>;
 }) {
+  // Le simulateur n'existe que s'il est le prestataire actif : en
+  // production, cette page n'a pas lieu d'être. Voir
+  // lib/simulateur-paiement.ts.
+  if (!simulateurActif()) notFound();
+
   const { orderId } = await params;
   const order = await prisma.order.findUnique({
     where: { id: orderId },

@@ -1,8 +1,9 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@a4a/db";
+import { simulateurActif } from "@/lib/simulateur-paiement";
 import { METHODS, type PaymentMethodId } from "@a4a/payments";
 import { auth, signOut } from "@/auth";
 import { CompteIntrouvableError, failPayment, fulfillPayment, startCheckout } from "@/lib/billing";
@@ -58,6 +59,9 @@ export async function subscribeAction(formData: FormData): Promise<void> {
 
 /** Page mock PSP : simule l'issue du paiement puis revient sur le site. */
 export async function settleMockPayment(paymentId: string, outcome: "paid" | "failed") {
+  // Jamais en production : voir lib/simulateur-paiement.ts.
+  if (!simulateurActif()) notFound();
+
   const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
   if (!payment) redirect("/abonnement");
 
