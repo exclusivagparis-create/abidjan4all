@@ -14,12 +14,16 @@ import { formatDateFull, initials } from "@/lib/format";
 import { auth } from "@/auth";
 import { hasActiveSubscription } from "@/lib/billing";
 import { absoluteUrl, breadcrumbJsonLd, jsonLdScript, newsArticleJsonLd } from "@/lib/seo";
+import { APERCU_PARAM, apercuRedaction, doitLireLeRole } from "@/lib/apercu-redaction";
 
 // Idem page rubrique : l'en-tête dépend de la session, donc pas de cache
 // partagé. Le paywall A4A+ lisait déjà la session sur cette page.
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ rubrique: string; slug: string }> };
+type Props = {
+  params: Promise<{ rubrique: string; slug: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
 // Sans filtre de statut : le bouton « Prévisualiser dans un onglet » du Studio
 // pointe ici pour les brouillons/relectures/programmés. La page décide ensuite
@@ -41,12 +45,15 @@ const APERCU_LABEL: Record<string, string> = {
   scheduled: "programmé",
 };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { rubrique, slug } = await params;
   const article = await getArticle(rubrique, slug);
   if (!article) return {};
   // Aperçu rédaction : jamais indexé, pas de métadonnées de partage.
   if (article.status !== "published") return { robots: { index: false, follow: false } };
+  // L'adresse d'aperçu non plus : elle montre un article payant en entier, et
+  // un lien partagé par mégarde ne doit pas finir dans un index.
+  if ((await searchParams)?.[APERCU_PARAM]) return { robots: { index: false, follow: false } };
   const seo = (article.seo ?? {}) as { metaTitle?: string; metaDescription?: string };
   const path = `/${article.rubrique.slug}/${article.slug}`;
   const image =
@@ -102,8 +109,9 @@ async function suivreRegle(rubriqueSlug: string, slug: string): Promise<void> {
   permanentRedirect(regle.to);
 }
 
-export default async function ArticlePage({ params }: Props) {
+export default async function ArticlePage({ params, searchParams }: Props) {
   const { rubrique: rubriqueSlug, slug } = await params;
+  const requete = (await searchParams) ?? {};
   const article = await getArticle(rubriqueSlug, slug);
   if (!article) {
     // L'article n'est pas sous cette rubrique — mais il existe peut-être
@@ -131,10 +139,15 @@ export default async function ArticlePage({ params }: Props) {
   // masqués ; la rédaction prévisualise les autres (le rôle vient de la base,
   // pas du JWT — un rôle rétrogradé perdrait l'accès immédiatement).
   const enApercu = article.status !== "published";
-  const viewerRole =
-    (enApercu || article.hidden) && session?.user
-      ? (await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }))?.role ?? null
-      : null;
+  const apercuDemande = Boolean(requete[APERCU_PARAM]);
+  const viewerRole = doitLireLeRole({
+    enApercu,
+    masque: article.hidden,
+    apercuDemande,
+    connecte: Boolean(session?.user),
+  })
+    ? (await prisma.user.findUnique({ where: { id: session!.user.id }, select: { role: true } }))?.role ?? null
+    : null;
   if (enApercu && !["journalist", "editor", "admin"].includes(viewerRole ?? "")) {
     await suivreRegle(rubriqueSlug, slug);
     notFound();
@@ -143,7 +156,12 @@ export default async function ArticlePage({ params }: Props) {
     await suivreRegle(rubriqueSlug, slug);
     notFound();
   }
-  const unlocked = session?.user ? await hasActiveSubscription(session.user.id) : false;
+  // Aperçu rédaction : l'article entier, mais seulement sur demande explicite
+  // (`?apercu=1`) et avec un bandeau. En navigation ordinaire, la rédaction
+  // voit le mur comme un lecteur — c'est le témoin qui révélerait une fuite.
+  const apercu = apercuRedaction(viewerRole, requete[APERCU_PARAM]);
+  const abonne = session?.user ? await hasActiveSubscription(session.user.id) : false;
+  const unlocked = abonne || apercu;
   const blocks = Array.isArray(article.body) ? article.body : [];
   const gated = article.premium && !unlocked;
   const visibleBlocks = gated ? blocks.slice(0, 2) : blocks;
@@ -181,6 +199,18 @@ export default async function ArticlePage({ params }: Props) {
         <div className="bg-[#B7791F] px-4 py-2.5 text-center text-[12.5px] font-bold text-white">
           Aperçu — article non publié ({APERCU_LABEL[article.status] ?? article.status}). Seule la rédaction voit
           cette page.
+        </div>
+      ) : null}
+
+      {/* Le bandeau n'est pas décoratif : sans lui, un rédacteur croirait que
+          le mur payant est tombé, ou qu'il n'a jamais fonctionné. */}
+      {apercu && article.premium ? (
+        <div className="bg-navy px-4 py-2.5 text-center text-[12.5px] font-bold text-white">
+          Aperçu rédaction — vous lisez l&apos;article entier. Un lecteur sans abonnement A4A+ voit le mur après deux
+          paragraphes.{" "}
+          <Link href={`/${article.rubrique.slug}/${article.slug}`} className="underline">
+            Voir comme un lecteur
+          </Link>
         </div>
       ) : null}
 

@@ -603,7 +603,10 @@ export function ArticleEditor({
 
           {article.slug ? (
             <a
-              href={`/${rubrique?.slug ?? "article"}/${article.slug}`}
+              // `?apercu=1` : sans ce paramètre, un article premium s'ouvre
+              // derrière son mur payant, et la prévisualisation ne montre que
+              // deux paragraphes — inutile là où elle sert le plus.
+              href={`/${rubrique?.slug ?? "article"}/${article.slug}?apercu=1`}
               target="_blank"
               rel="noreferrer"
               className="mb-2 block rounded-pill border border-line bg-surface-2 px-4 py-2 text-center text-[12.5px] font-semibold text-ink"
