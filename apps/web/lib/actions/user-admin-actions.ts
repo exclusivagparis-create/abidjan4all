@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma, type Role } from "@a4a/db";
 import { auth } from "@/auth";
-import { emailConfigured, emailLayout, sendEmail } from "@/lib/email";
+import { echapperHtml, emailConfigured, emailLayout, sendEmail } from "@/lib/email";
 import { SITE_URL } from "@/lib/seo";
 import { rattacherInscriptionsNewsletter } from "@/lib/newsletter-rattachement";
 
@@ -22,7 +22,7 @@ async function inviteToSetPassword(userId: string, name: string, email: string):
     subject: "Bienvenue sur Abidjan4All — activez votre compte",
     html: emailLayout(
       `Bonjour ${name},`,
-      `<p>Un compte vient d'être créé pour vous sur <b>Abidjan4All</b> (${email}).</p>
+      `<p>Un compte vient d'être créé pour vous sur <b>Abidjan4All</b> (${echapperHtml(email)}).</p>
        <p>Pour l'activer, définissez votre mot de passe personnel en cliquant sur le bouton ci-dessous. Ce lien est valable 7 jours.</p>`,
       { label: "Définir mon mot de passe", url }
     ),
@@ -55,7 +55,7 @@ async function sendResetLink(userId: string, name: string, email: string): Promi
     subject: "Abidjan4All — définir un nouveau mot de passe",
     html: emailLayout(
       `Bonjour ${name},`,
-      `<p>À la demande de la rédaction, vous pouvez définir un nouveau mot de passe pour votre compte <b>Abidjan4All</b> (${email}).</p>
+      `<p>À la demande de la rédaction, vous pouvez définir un nouveau mot de passe pour votre compte <b>Abidjan4All</b> (${echapperHtml(email)}).</p>
        <p>Ce lien est valable 7 jours. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de passe actuel reste valable.</p>`,
       { label: "Définir mon mot de passe", url }
     ),

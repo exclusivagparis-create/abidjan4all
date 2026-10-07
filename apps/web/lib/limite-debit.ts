@@ -80,9 +80,24 @@ export function limiter(cle: string, max: number, fenetreS: number): Verdict {
  * volontairement sévère : mieux vaut limiter trop que pas du tout.
  */
 export function adresseAppelant(request: Request): string {
-  const xff = request.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0]!.trim();
-  return request.headers.get("x-real-ip")?.trim() || "inconnu";
+  return adresseDesEntetes(request.headers);
+}
+
+/**
+ * Même lecture, depuis des en-têtes seuls.
+ *
+ * Les actions serveur ne reçoivent pas d'objet `Request` : elles obtiennent
+ * leurs en-têtes par `headers()`. Sans cette variante, les formulaires
+ * publics — contact, inscription, mot de passe oublié — n'avaient aucun
+ * plafond possible, et c'est pour cela qu'ils n'en avaient aucun.
+ */
+export function adresseDesEntetes(entetes: Headers): string {
+  const xff = entetes.get("x-forwarded-for");
+  if (xff) {
+    const premiere = xff.split(",")[0]?.trim();
+    if (premiere) return premiere;
+  }
+  return entetes.get("x-real-ip")?.trim() || "inconnu";
 }
 
 /** Réponse normalisée quand la limite est atteinte. */

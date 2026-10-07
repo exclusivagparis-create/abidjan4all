@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@a4a/db";
+import { adresseDesEntetes } from "@/lib/limite-debit";
 
 /**
  * Mesure d'audience maison, sans cookie ni service tiers.
@@ -39,12 +40,11 @@ function sel(): string {
  * pays d'origine reposaient sur une donnée fournie par l'appelant.
  */
 export function ipDeLaRequete(h: Headers): string | null {
-  const xff = h.get("x-forwarded-for");
-  if (xff) {
-    const premiere = xff.split(",")[0]?.trim();
-    if (premiere) return premiere;
-  }
-  return h.get("x-real-ip");
+  // Une seule lecture de l'en-tête dans tout le dépôt : celle de la limitation
+  // de débit. La logique était dupliquée ici, à un détail près — de quoi
+  // corriger un jour l'une sans l'autre.
+  const adresse = adresseDesEntetes(h);
+  return adresse === "inconnu" ? null : adresse;
 }
 
 /**

@@ -1,9 +1,12 @@
 "use server";
 
+import { headers } from "next/headers";
+
 import { randomBytes } from "node:crypto";
 import { hash } from "bcryptjs";
 import { prisma } from "@a4a/db";
-import { emailLayout, sendEmail } from "@/lib/email";
+import { adresseDesEntetes, limiter } from "@/lib/limite-debit";
+import { echapperHtml, emailLayout, sendEmail } from "@/lib/email";
 import { rattacherInscriptionsNewsletter } from "@/lib/newsletter-rattachement";
 
 const JOURS_VALIDITE = 3;
@@ -36,6 +39,14 @@ export async function registerAction(
   _prev: RegisterResult | undefined,
   formData: FormData
 ): Promise<RegisterResult> {
+  // Plafond : ce formulaire était ouvert sans limite. Le pot de miel arrête
+  // les robots naïfs, pas un script écrit pour nous.
+  {
+    const { autorise, attendre } = limiter(`inscription:${adresseDesEntetes(await headers())}`, 5, 3600);
+    if (!autorise) {
+      return { ok: false, error: `Trop de tentatives d’inscription. Réessayez dans ${Math.ceil(attendre / 60)} minutes.` };
+    }
+  }
   const name = String(formData.get("name") ?? "").trim().slice(0, 80);
   const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 160);
   const password = String(formData.get("password") ?? "");
@@ -99,7 +110,7 @@ async function envoyerLienValidation(userId: string, email: string, name: string
     subject: "Confirmez votre adresse — Abidjan4All",
     html: emailLayout(
       "Bienvenue sur Abidjan4All",
-      `<p>Bonjour ${name},</p>
+      `<p>Bonjour ${echapperHtml(name)},</p>
        <p>Confirmez votre adresse pour activer votre compte membre : accès à votre espace, aux groupes,
        aux commentaires et aux petites annonces.</p>
        <p style="color:#777;font-size:13px">Ce lien est valable ${JOURS_VALIDITE} jours. Si vous n'êtes pas à
@@ -146,6 +157,24 @@ export async function requestPasswordResetAction(
   const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 160);
   if (!emailPlausible(email)) return { ok: false, error: "Cette adresse e-mail ne semble pas valide." };
 
+  /**
+   * Deux seaux, parce qu'il y a deux nuisances distinctes.
+   *
+   * Par adresse d'appel : empêche de balayer le site. Par adresse visée :
+   * empêche d'inonder la boîte de quelqu'un dont on connaît l'e-mail — un
+   * geste qui ne demandait qu'une page rechargée en boucle, et qui épuisait
+   * au passage le quota d'envoi SMTP de tout le site.
+   *
+   * Le refus garde le même visage que le succès : dire « trop de demandes
+   * pour cette adresse » révélerait qu'un compte existe, ce que tout le reste
+   * de cette fonction s'applique précisément à taire.
+   */
+  const entetes = await headers();
+  const trop =
+    !limiter(`mdp-oublie:${adresseDesEntetes(entetes)}`, 5, 3600).autorise ||
+    !limiter(`mdp-oublie-adresse:${email}`, 3, 3600).autorise;
+  if (trop) return { ok: true };
+
   const user = await prisma.user.findUnique({ where: { email }, select: { id: true, name: true } });
   if (user) {
     const token = jeton();
@@ -160,7 +189,7 @@ export async function requestPasswordResetAction(
       subject: "Réinitialiser votre mot de passe — Abidjan4All",
       html: emailLayout(
         "Réinitialiser votre mot de passe",
-        `<p>Bonjour ${user.name},</p>
+        `<p>Bonjour ${echapperHtml(user.name)},</p>
          <p>Vous avez demandé à changer votre mot de passe. Ce lien est valable 2 heures et ne fonctionne qu'une fois.</p>
          <p style="color:#777;font-size:13px">Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail :
          votre mot de passe actuel reste valable.</p>`,
