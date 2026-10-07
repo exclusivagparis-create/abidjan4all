@@ -1,8 +1,9 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@a4a/db";
+import { simulateurActif } from "@/lib/simulateur-paiement";
 import type { PaymentMethodId } from "@a4a/payments";
 import { auth } from "@/auth";
 import { startOrderCheckout, fulfillOrder, failOrder } from "@/lib/order-billing";
@@ -34,6 +35,9 @@ function retourEchec(kind: string): string {
 
 /** Page mock PSP (commandes one-off) : simule l'issue puis revient sur le site. */
 export async function settleMockOrder(orderId: string, outcome: "paid" | "failed") {
+  // Jamais en production : voir lib/simulateur-paiement.ts.
+  if (!simulateurActif()) notFound();
+
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) redirect("/annonces");
 

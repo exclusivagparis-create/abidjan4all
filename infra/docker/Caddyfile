@@ -1,7 +1,24 @@
 # Reverse-proxy TLS de production — certificats Let's Encrypt automatiques.
 
 abidjan4all.info {
-	reverse_proxy web:3000
+	# `header_up X-Forwarded-For {remote_host}` REMPLACE la chaîne au lieu de
+	# s'y ajouter, et c'est tout l'objet de cette ligne.
+	#
+	# Par défaut, Caddy *ajoute* l'adresse du pair en fin de chaîne et conserve
+	# ce que le client avait écrit devant. Or l'application lit le PREMIER
+	# maillon de `X-Forwarded-For` — convention correcte derrière un proxy qui
+	# fait autorité, fausse ici. L'appelant choisissait donc lui-même sa propre
+	# identité, et il suffisait de faire varier un en-tête pour contourner la
+	# limite d'essais de connexion, les plafonds des routes d'IA, l'anti-
+	# gonflage des vues vidéo et du compteur d'impressions publicitaires, et
+	# pour brouiller la mesure d'audience et le pays d'origine.
+	#
+	# Aucun CDN ni autre intermédiaire devant ce serveur : l'adresse du pair
+	# EST celle du visiteur, et elle fait seule foi. Le jour où un service
+	# s'interposerait, c'est cette ligne qu'il faudrait revoir — et elle seule.
+	reverse_proxy web:3000 {
+		header_up X-Forwarded-For {remote_host}
+	}
 	encode gzip
 
 	# Journal d'accès — sert à connaître les navigateurs réellement utilisés

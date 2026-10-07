@@ -67,9 +67,16 @@ export function limiter(cle: string, max: number, fenetreS: number): Verdict {
 /**
  * Adresse de l'appelant, telle que Caddy la transmet.
  *
- * Le premier maillon de `x-forwarded-for` est la seule valeur qui vaille : les
- * suivantes sont ajoutées par les intermédiaires et peuvent être forgées par le
- * client. À défaut, tout le monde partage le seau « inconnu » — c'est
+ * On lit le premier maillon de `x-forwarded-for`, et cela ne vaut QUE parce
+ * que le Caddyfile remplace cet en-tête par l'adresse du pair
+ * (`header_up X-Forwarded-For {remote_host}`) au lieu de s'y ajouter.
+ *
+ * Ce commentaire affirmait l'inverse — que les maillons suivants étaient les
+ * forgeables — et c'était faux dans les deux sens : avec un proxy qui ajoute,
+ * c'est le premier maillon qui vient du client, donc l'appelant choisissait son
+ * propre seau et toutes les limites de ce fichier tombaient.
+ *
+ * À défaut d'en-tête, tout le monde partage le seau « inconnu » — c'est
  * volontairement sévère : mieux vaut limiter trop que pas du tout.
  */
 export function adresseAppelant(request: Request): string {
