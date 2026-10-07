@@ -147,13 +147,29 @@ export async function fulfillPayment(
   const ancre = enCours ? payment.subscription.since : maintenant;
   const periodEnd = finDePeriodeMensuelle(depart, ancre);
 
-  const year = new Date().getFullYear();
-  const count = await prisma.invoice.count();
-  const invoiceNumber = `A4A-${year}-${String(count + 1).padStart(6, "0")}`;
+  const invoiceNumber = await prisma.$transaction(async (tx) => {
+    /**
+     * Le numéro se calculait AVANT la transaction : un `count()`, puis `+1`.
+     *
+     * Deux paiements simultanés lisaient donc le même compte et réclamaient le
+     * même numéro. `Invoice.number` étant unique, la seconde transaction
+     * échouait — argent encaissé chez le prestataire, `Payment` resté
+     * `pending`, abonnement non activé et aucune facture. Rare, mais
+     * exactement au mauvais endroit.
+     *
+     * Ce verrou consultatif sérialise l'attribution du numéro, et seulement
+     * elle : il est posé sur la transaction et tombe avec elle, qu'elle
+     * réussisse ou non. Une séquence Postgres serait plus légère mais
+     * laisserait un trou à chaque annulation, or une numérotation de factures
+     * doit rester continue. La constante n'a pas de sens en soi, elle doit
+     * seulement n'être partagée par aucun autre verrou du schéma.
+     */
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(4210001)`;
 
-  await prisma.$transaction([
-    prisma.payment.update({ where: { id: payment.id }, data: { status: "succeeded" } }),
-    prisma.subscription.update({
+    const numero = `A4A-${new Date().getFullYear()}-${String((await tx.invoice.count()) + 1).padStart(6, "0")}`;
+
+    await tx.payment.update({ where: { id: payment.id }, data: { status: "succeeded" } });
+    await tx.subscription.update({
       where: { id: payment.subscriptionId },
       // `since` est recalé quand un compte non payant s'abonne pour de bon :
       // la ligne Subscription naît dès la première tentative de checkout, si
@@ -165,15 +181,17 @@ export async function fulfillPayment(
         currentPeriodEnd: periodEnd,
         ...(enCours ? {} : { since: maintenant }),
       },
-    }),
-    prisma.invoice.create({
+    });
+    await tx.invoice.create({
       data: {
         paymentId: payment.id,
-        number: invoiceNumber,
-        url: `/invoices/${invoiceNumber}.pdf`, // génération PDF : à venir
+        number: numero,
+        url: `/invoices/${numero}.pdf`, // génération PDF : à venir
       },
-    }),
-  ]);
+    });
+
+    return numero;
+  });
 
   return { ok: true, invoiceNumber };
 }

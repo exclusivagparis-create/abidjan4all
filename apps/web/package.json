@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit",
-    "test": "node --import tsx --test lib/seo.test.ts lib/apercu-redaction.test.ts lib/mur-payant.test.ts lib/simulateur-paiement.test.ts"
+    "test": "node --import tsx --test lib/seo.test.ts lib/apercu-redaction.test.ts lib/mur-payant.test.ts lib/simulateur-paiement.test.ts lib/email.test.ts"
   },
   "dependencies": {
     "@a4a/ai": "workspace:*",

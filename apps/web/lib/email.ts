@@ -61,6 +61,36 @@ export async function sendEmail(opts: {
 }
 
 /** Gabarit sobre aux couleurs A4A pour les e-mails transactionnels. */
+/**
+ * Échappe une valeur destinée à du HTML.
+ *
+ * Ce fichier n'en avait aucune, et le formulaire de contact interpolait le nom,
+ * l'adresse, l'objet et le message directement dans un courriel envoyé à la
+ * rédaction. N'importe qui pouvait donc faire expédier, par notre propre
+ * serveur et sous notre SPF/DKIM, un message aux couleurs d'Abidjan4All
+ * contenant le lien de son choix. Un hameçonnage visant notre équipe, signé
+ * par nous.
+ *
+ * L'esperluette d'abord, sans quoi les remplacements suivants se
+ * réécriraient les uns les autres.
+ */
+export function echapperHtml(valeur: unknown): string {
+  return String(valeur ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Gabarit des courriels.
+ *
+ * `title`, `cta.label` et `cta.url` sont échappés ICI : ce sont toujours du
+ * texte, jamais du balisage, et les échapper au centre évite d'avoir à y
+ * penser à chaque appel. `bodyHtml`, lui, est du HTML voulu — c'est donc à
+ * l'appelant d'échapper ce qu'il y interpole, avec `echapperHtml`.
+ */
 export function emailLayout(title: string, bodyHtml: string, cta?: { label: string; url: string }): string {
   return `<!doctype html><html lang="fr"><body style="margin:0;background:#f5f0e8;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 0">
@@ -70,11 +100,11 @@ export function emailLayout(title: string, bodyHtml: string, cta?: { label: stri
             <img src="${SITE_URL}/logo-web-dark.png" alt="Abidjan4All" width="200" height="51" style="display:block;border:0;height:51px;width:200px" />
           </td></tr>
           <tr><td style="padding:28px">
-            <h1 style="margin:0 0 14px;font-size:20px;color:#1a1a1a">${title}</h1>
+            <h1 style="margin:0 0 14px;font-size:20px;color:#1a1a1a">${echapperHtml(title)}</h1>
             <div style="font-size:15px;line-height:1.6;color:#333">${bodyHtml}</div>
             ${
               cta
-                ? `<div style="margin:26px 0 8px"><a href="${cta.url}" style="display:inline-block;background:#a01520;color:#fff;text-decoration:none;padding:12px 24px;border-radius:999px;font-weight:700;font-size:14px">${cta.label}</a></div>`
+                ? `<div style="margin:26px 0 8px"><a href="${echapperHtml(cta.url)}" style="display:inline-block;background:#a01520;color:#fff;text-decoration:none;padding:12px 24px;border-radius:999px;font-weight:700;font-size:14px">${echapperHtml(cta.label)}</a></div>`
                 : ""
             }
           </td></tr>

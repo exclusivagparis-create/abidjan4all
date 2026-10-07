@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma, type RefundStatus } from "@a4a/db";
 import { formatXOF } from "@a4a/payments";
 import { auth } from "@/auth";
-import { emailConfigured, emailLayout, sendEmail } from "@/lib/email";
+import { echapperHtml, emailConfigured, emailLayout, sendEmail } from "@/lib/email";
 import { ETATS, MOTIF_MAX, MOTIF_MIN, contestable, estEtat } from "@/lib/remboursement";
 
 /**
@@ -121,7 +121,7 @@ export async function traiterRemboursementAction(id: string, formData: FormData)
       subject: `Votre demande de remboursement — ${ETATS[etat].label.toLowerCase()}`,
       html: emailLayout(
         `Bonjour ${demande.user.name},`,
-        `${corps[etat] ?? ""}${note ? `<p><b>Précision de la rédaction :</b> ${note}</p>` : ""}`
+        `${corps[etat] ?? ""}${note ? `<p><b>Précision de la rédaction :</b> ${echapperHtml(note)}</p>` : ""}`
       ),
       text: `Votre demande de remboursement est ${ETATS[etat].label.toLowerCase()}.${note ? ` ${note}` : ""}`,
     });

@@ -1,15 +1,26 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@a4a/db";
+import { adresseDesEntetes, limiter } from "@/lib/limite-debit";
 import { auth, PUBLISH_ROLES } from "@/auth";
-import { emailConfigured, emailLayout, sendEmail } from "@/lib/email";
+import { echapperHtml, emailConfigured, emailLayout, sendEmail } from "@/lib/email";
 
 export type ContactResult = { ok: true } | { ok: false; error: string };
 
 /** Soumission publique du formulaire de contact. */
 export async function submitContactAction(_prev: ContactResult | undefined, formData: FormData): Promise<ContactResult> {
+  // Plafond : ce formulaire était ouvert sans limite. Le pot de miel arrête
+  // les robots naïfs, pas un script écrit pour nous.
+  {
+    const { autorise, attendre } = limiter(`contact:${adresseDesEntetes(await headers())}`, 5, 3600);
+    if (!autorise) {
+      return { ok: false, error: `Trop de messages envoyés. Réessayez dans ${Math.ceil(attendre / 60)} minutes.` };
+    }
+  }
+
   const name = String(formData.get("name") ?? "").trim().slice(0, 80);
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const subject = String(formData.get("subject") ?? "").trim().slice(0, 140);
@@ -38,7 +49,12 @@ export async function submitContactAction(_prev: ContactResult | undefined, form
       subject: `[Contact] ${subject}`,
       html: emailLayout(
         `Nouveau message de ${name}`,
-        `<p><b>De :</b> ${name} &lt;${email}&gt;</p><p><b>Objet :</b> ${subject}</p><hr/><p>${body.replace(/\n/g, "<br/>")}</p>`
+        // Quatre valeurs écrites par un inconnu, échappées avant d'entrer dans
+        // le HTML. Les sauts de ligne deviennent des <br/> APRÈS échappement :
+        // dans l'autre ordre, l'opération réintroduirait du balisage.
+        `<p><b>De :</b> ${echapperHtml(name)} &lt;${echapperHtml(email)}&gt;</p>` +
+          `<p><b>Objet :</b> ${echapperHtml(subject)}</p><hr/>` +
+          `<p>${echapperHtml(body).replace(/\n/g, "<br/>")}</p>`
       ),
       text: `De: ${name} <${email}>\nObjet: ${subject}\n\n${body}`,
     }).catch(() => {});

@@ -1,8 +1,10 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma, type BrandLeadStatus } from "@a4a/db";
+import { adresseDesEntetes, limiter } from "@/lib/limite-debit";
 import { auth, PUBLISH_ROLES } from "@/auth";
 import { sendEmail, emailConfigured } from "@/lib/email";
 import { formatFCFA } from "@/lib/tarifs";
@@ -34,6 +36,14 @@ export async function demanderDevisAction(
   _prev: BrandLeadResult | undefined,
   formData: FormData
 ): Promise<BrandLeadResult> {
+  // Plafond : ce formulaire était ouvert sans limite. Le pot de miel arrête
+  // les robots naïfs, pas un script écrit pour nous.
+  {
+    const { autorise, attendre } = limiter(`devis-brand:${adresseDesEntetes(await headers())}`, 5, 3600);
+    if (!autorise) {
+      return { ok: false, error: `Trop de demandes envoyées. Réessayez dans ${Math.ceil(attendre / 60)} minutes.` };
+    }
+  }
   // Pot de miel : rempli = robot. On répond « ok » sans rien enregistrer.
   if (String(formData.get("website") ?? "").trim()) return { ok: true };
 
