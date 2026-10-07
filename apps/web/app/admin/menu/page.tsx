@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import {
   createMenuItemAction,
   deleteMenuItemAction,
@@ -21,7 +22,7 @@ const ERREURS: Record<string, string> = {
 
 export default async function AdminMenu({ searchParams }: { searchParams: Promise<{ erreur?: string }> }) {
   const [{ erreur }, session] = await Promise.all([searchParams, auth()]);
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const [items, rubriques] = await Promise.all([
     prisma.menuItem.findMany({ orderBy: { order: "asc" } }),

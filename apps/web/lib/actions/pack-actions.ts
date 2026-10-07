@@ -3,17 +3,14 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma, type AdFormat } from "@a4a/db";
-import { auth } from "@/auth";
+import { REGIE_ROLES } from "@/auth";
+import { exigerRoleOuRediriger } from "@/lib/garde-role";
 
 const FORMATS: AdFormat[] = ["leaderboard_728x90", "mpu_300x250", "native", "interstitial", "skin", "video"];
 
 /** Administration ou Gestionnaire Régie (rôle relu en base, jamais le JWT seul). */
 async function requireRegie() {
-  const session = await auth();
-  if (!session?.user) redirect("/login?next=/admin/ads/tarifs");
-  const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } });
-  if (!me || !["admin", "ad_manager"].includes(me.role)) redirect("/admin");
-  return me;
+  return exigerRoleOuRediriger(REGIE_ROLES, "/admin/ads/tarifs");
 }
 
 function parsePackForm(formData: FormData) {

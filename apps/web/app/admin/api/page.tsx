@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
-import { auth } from "@/auth";
+import { auth, ADMIN_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { SCOPES } from "@/lib/api-auth";
 import { formatDateFull } from "@/lib/format";
 import { CreerJeton, LigneJeton } from "@/components/admin/api-tokens";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminApiPage() {
   const session = await auth();
-  if (session?.user?.role !== "admin") redirect("/admin");
+  if (!(await exigerRole(ADMIN_ROLES))) redirect("/admin");
 
   const jetons = await prisma.apiToken.findMany({
     orderBy: [{ revokedAt: "asc" }, { createdAt: "desc" }],

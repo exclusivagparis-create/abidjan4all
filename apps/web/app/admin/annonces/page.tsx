@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { prisma, type ListingStatus, type ListingType } from "@a4a/db";
 import { formatXOF } from "@a4a/payments";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { deleteListingAction, setListingStatusAction } from "@/lib/actions/listing-actions";
 import { formatDate } from "@/lib/format";
 
@@ -18,7 +19,7 @@ const STATUS_META: Record<ListingStatus, { label: string; color: string }> = {
 
 export default async function AdminAnnonces({ searchParams }: { searchParams: Promise<{ statut?: string }> }) {
   const [{ statut }, session] = await Promise.all([searchParams, auth()]);
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const filter = ["pending", "published", "expired"].includes(statut ?? "") ? (statut as ListingStatus) : undefined;
   const [listings, counts] = await Promise.all([

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { identiteEnBase } from "@/lib/garde-role";
+import { roleAdmis } from "@/lib/roles";
 import { prisma } from "@a4a/db";
 import { apiError } from "@/lib/api";
 import { auth, PUBLISH_ROLES } from "@/auth";
@@ -7,9 +9,9 @@ const ModerateInput = z.object({ status: z.enum(["pending", "approved", "rejecte
 
 // POST /api/v1/comments/:id/moderate (editor+) { status }
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!session?.user) return apiError("unauthorized", "Authentification requise.", 401);
-  if (!PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) {
+  const moi = await identiteEnBase();
+  if (!moi) return apiError("unauthorized", "Authentification requise.", 401);
+  if (!roleAdmis(moi.role, PUBLISH_ROLES)) {
     return apiError("forbidden", "Rôle editor ou admin requis.", 403);
   }
 

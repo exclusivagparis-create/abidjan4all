@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type BrandLeadStatus } from "@a4a/db";
-import { auth, PUBLISH_ROLES } from "@/auth";
+import { auth, PUBLISH_ROLES, REGIE_OU_PUBLICATION } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import {
   createOfferAction,
   updateOfferAction,
@@ -31,7 +32,7 @@ const LEAD_META: Record<BrandLeadStatus, { label: string; color: string }> = {
 export default async function AdminBrandContent({ searchParams }: { searchParams: Promise<{ erreur?: string }> }) {
   const [{ erreur }, session] = await Promise.all([searchParams, auth()]);
   const autorises = [...PUBLISH_ROLES, "ad_manager"] as string[];
-  if (!autorises.includes(session?.user?.role ?? "")) redirect("/admin");
+  if (!(await exigerRole(REGIE_OU_PUBLICATION))) redirect("/admin");
 
   const [offres, leads] = await Promise.all([
     prisma.brandOffer.findMany({ orderBy: [{ ordre: "asc" }, { title: "asc" }], include: { _count: { select: { leads: true } } } }),

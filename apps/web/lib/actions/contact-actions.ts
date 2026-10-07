@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@a4a/db";
 import { adresseDesEntetes, limiter } from "@/lib/limite-debit";
-import { auth, PUBLISH_ROLES } from "@/auth";
+import { PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { echapperHtml, emailConfigured, emailLayout, sendEmail } from "@/lib/email";
 
 export type ContactResult = { ok: true } | { ok: false; error: string };
@@ -66,8 +67,8 @@ export async function submitContactAction(_prev: ContactResult | undefined, form
 }
 
 async function requirePublisher() {
-  const session = await auth();
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) {
+  const moi = await exigerRole(PUBLISH_ROLES);
+  if (!moi) {
     redirect("/login?next=/admin/contact");
   }
 }

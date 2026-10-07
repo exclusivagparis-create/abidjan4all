@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type Role } from "@a4a/db";
-import { auth } from "@/auth";
+import { ADMIN_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { setUserRoleAction, toggleVerifiedAction } from "@/lib/actions/user-admin-actions";
 import { CreateUserForm, UserDeleteButton } from "@/components/admin/user-forms";
 import { formatDate, initials } from "@/lib/format";
@@ -25,9 +26,9 @@ export default async function AdminUsers({
 }: {
   searchParams: Promise<{ role?: string }>;
 }) {
-  const [{ role }, session] = await Promise.all([searchParams, auth()]);
-  if (session?.user?.role !== "admin") redirect("/admin");
-  const myId = session.user.id;
+  const [{ role }, moi] = await Promise.all([searchParams, exigerRole(ADMIN_ROLES)]);
+  if (!moi) redirect("/admin");
+  const myId = moi.id;
 
   const roleFilter = ROLES.includes(role as Role) ? (role as Role) : undefined;
   const [users, counts, verifiedCount] = await Promise.all([

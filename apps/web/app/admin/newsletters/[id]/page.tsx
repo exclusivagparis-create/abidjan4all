@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import {
   deleteEditionAction,
   sendEditionAction,
@@ -25,7 +26,7 @@ export default async function EditionPage({
   searchParams: Promise<{ ok?: string; erreur?: string; envoye?: string; dest?: string }>;
 }) {
   const [{ id }, sp, session] = await Promise.all([params, searchParams, auth()]);
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const edition = await prisma.newsletterEdition.findUnique({
     where: { id },

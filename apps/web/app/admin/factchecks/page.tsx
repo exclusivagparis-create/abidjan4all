@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type FactCheckVerdict } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { createFactCheckAction, deleteFactCheckAction, updateFactCheckAction } from "@/lib/actions/factcheck-actions";
 import { formatDate } from "@/lib/format";
 
@@ -18,7 +19,7 @@ const VERDICTS = Object.keys(VERDICT_META) as FactCheckVerdict[];
 
 export default async function AdminFactChecks({ searchParams }: { searchParams: Promise<{ erreur?: string }> }) {
   const [{ erreur }, session] = await Promise.all([searchParams, auth()]);
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const items = await prisma.factCheck.findMany({ orderBy: { publishedAt: "desc" }, take: 100 });
   const inp = "rounded-[8px] border border-line bg-surface px-3 py-2 text-[13px]";

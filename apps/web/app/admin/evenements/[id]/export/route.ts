@@ -1,5 +1,6 @@
 import { prisma } from "@a4a/db";
-import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
+import { PUBLISH_ROLES } from "@/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +11,7 @@ function csv(value: string | number): string {
 
 // GET /admin/evenements/:id/export — liste des inscrits, en CSV (accueil, badges).
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!PUBLISH_ROLES.includes(session?.user?.role as (typeof PUBLISH_ROLES)[number])) {
+  if (!(await exigerRole(PUBLISH_ROLES))) {
     return new Response("Accès refusé.", { status: 403 });
   }
 

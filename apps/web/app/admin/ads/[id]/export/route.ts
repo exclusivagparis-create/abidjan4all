@@ -1,5 +1,6 @@
 import { prisma } from "@a4a/db";
-import { auth } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
+import { REGIE_ROLES } from "@/auth";
 
 /** Échappe une valeur pour un champ CSV (guillemets doublés, entouré si besoin). */
 function csv(value: string | number): string {
@@ -9,8 +10,7 @@ function csv(value: string | number): string {
 
 // GET /admin/ads/:id/export — stats par bannière d'une campagne, en CSV.
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!["admin", "ad_manager"].includes(session?.user?.role ?? "")) return new Response("Accès refusé.", { status: 403 });
+  if (!(await exigerRole(REGIE_ROLES))) return new Response("Accès refusé.", { status: 403 });
 
   const { id } = await params;
   const campaign = await prisma.adCampaign.findUnique({

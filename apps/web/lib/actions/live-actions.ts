@@ -3,16 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma, type LiveBlogStatus } from "@a4a/db";
-import { auth, PUBLISH_ROLES, STUDIO_ROLES } from "@/auth";
+import { PUBLISH_ROLES, STUDIO_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 
 export type LiveResult = { ok: true; id: string } | { ok: false; error: string };
 
 async function requireStudio() {
-  const session = await auth();
-  if (!session?.user || !STUDIO_ROLES.includes(session.user.role as (typeof STUDIO_ROLES)[number])) {
+  const moi = await exigerRole(STUDIO_ROLES);
+  if (!moi) {
     return null;
   }
-  return session.user;
+  return moi;
 }
 
 const LiveBlogInput = z.object({
@@ -223,8 +224,8 @@ export async function modifierLiveBlog(
  * au niveau du reporter.
  */
 export async function supprimerLiveBlog(id: string): Promise<LiveResult> {
-  const session = await auth();
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) {
+  const moi = await exigerRole(PUBLISH_ROLES);
+  if (!moi) {
     return { ok: false, error: "Réservé à la rédaction en chef et à l'administration." };
   }
 
@@ -250,8 +251,8 @@ export async function supprimerLiveBlog(id: string): Promise<LiveResult> {
         liveBlogTitle: blog.title,
         extrait: blog.dek ?? blog.title,
         updatesCount: blog.updates.length,
-        deletedById: session.user.id,
-        deletedByName: session.user.name ?? "—",
+        deletedById: moi.id,
+        deletedByName: moi.name,
       },
     }),
     prisma.liveUpdate.deleteMany({ where: { liveBlogId: id } }),

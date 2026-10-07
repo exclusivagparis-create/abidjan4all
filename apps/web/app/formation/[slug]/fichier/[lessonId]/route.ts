@@ -1,4 +1,5 @@
 import { createReadStream, existsSync } from "fs";
+import { identiteEnBase } from "@/lib/garde-role";
 import { stat } from "fs/promises";
 import { Readable } from "stream";
 import { prisma } from "@a4a/db";
@@ -63,7 +64,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     inscrit: Boolean(inscription),
     prix: lecon.course.price,
     abonnementCouvrant,
-    role: session.user.role,
+    role: (await identiteEnBase())?.role,
   });
   if (!autorise) return new Response("Inscription à la formation requise.", { status: 403 });
 

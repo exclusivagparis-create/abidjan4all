@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma, type AdFormat, type AdPriority, type AdStatus } from "@a4a/db";
-import { auth } from "@/auth";
+import { REGIE_ROLES } from "@/auth";
+import { exigerRoleOuRediriger } from "@/lib/garde-role";
 import { removeUpload, saveImageUpload } from "@/lib/uploads";
 import { getPlacement } from "@/lib/ad-placements";
 import { sendMonthlyAdReports } from "@/lib/ad-reports";
@@ -23,11 +24,7 @@ const TRANSITIONS: Record<AdStatus, AdStatus[]> = {
 
 /** Administration ou Gestionnaire Régie (rôle relu en base, jamais le JWT seul). */
 async function requireRegie() {
-  const session = await auth();
-  if (!session?.user) redirect("/login?next=/admin/ads");
-  const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } });
-  if (!me || !["admin", "ad_manager"].includes(me.role)) redirect("/admin");
-  return me;
+  return exigerRoleOuRediriger(REGIE_ROLES, "/admin/ads");
 }
 
 function entierPositifOuNull(v: FormDataEntryValue | null): number | null {

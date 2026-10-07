@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma, Prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRoleOuRediriger } from "@/lib/garde-role";
 import { segmentsValides } from "@/lib/newsletter-segments";
 import { lireAdresses, TAILLE_MAX_OCTETS, type LectureAdresses } from "@/lib/newsletter-import";
 
@@ -13,11 +14,7 @@ import { lireAdresses, TAILLE_MAX_OCTETS, type LectureAdresses } from "@/lib/new
  */
 
 async function requirePublisher() {
-  const session = await auth();
-  if (!session?.user) redirect("/login?next=/admin/newsletters");
-  const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } });
-  if (!me || !PUBLISH_ROLES.includes(me.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
-  return me;
+  return exigerRoleOuRediriger(PUBLISH_ROLES, "/admin/newsletters");
 }
 
 function slugify(s: string): string {

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type BriefKind } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { createSerieAction, setSerieActiveAction } from "@/lib/actions/intelligence-actions";
 import { KIND_LABEL } from "@/lib/intelligence";
 import { formatFCFA } from "@/lib/tarifs";
@@ -15,7 +16,7 @@ const lbl = "grid gap-1 text-[11px] font-semibold text-ink-3";
 
 export default async function AdminIntelligence({ searchParams }: { searchParams: Promise<{ erreur?: string }> }) {
   const [{ erreur }, session] = await Promise.all([searchParams, auth()]);
-  if (!PUBLISH_ROLES.includes(session?.user?.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const series = await prisma.briefSerie.findMany({
     orderBy: [{ ordre: "asc" }, { title: "asc" }],

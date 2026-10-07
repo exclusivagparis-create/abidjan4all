@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type EventKind } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import {
   updateEventAction,
   deleteEventAction,
@@ -50,7 +51,7 @@ export default async function EditEvent({
   searchParams: Promise<{ erreur?: string }>;
 }) {
   const [{ id }, { erreur }, session] = await Promise.all([params, searchParams, auth()]);
-  if (!PUBLISH_ROLES.includes(session?.user?.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const ev = await prisma.event.findUnique({
     where: { id },

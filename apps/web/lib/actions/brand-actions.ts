@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma, type BrandLeadStatus } from "@a4a/db";
 import { adresseDesEntetes, limiter } from "@/lib/limite-debit";
-import { auth, PUBLISH_ROLES } from "@/auth";
+import { REGIE_OU_PUBLICATION } from "@/auth";
+import { exigerRoleOuRediriger } from "@/lib/garde-role";
 import { sendEmail, emailConfigured } from "@/lib/email";
 import { formatFCFA } from "@/lib/tarifs";
 
@@ -13,12 +14,7 @@ const STATUTS: BrandLeadStatus[] = ["nouveau", "en_cours", "gagne", "perdu"];
 
 /** Régie ou rédaction en chef : le brand content est un sujet commercial. */
 async function requireRegieOuPublication() {
-  const session = await auth();
-  if (!session?.user) redirect("/login?next=/admin/brand-content");
-  const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } });
-  const autorises = [...PUBLISH_ROLES, "ad_manager"] as string[];
-  if (!me || !autorises.includes(me.role)) redirect("/admin");
-  return me;
+  return exigerRoleOuRediriger(REGIE_OU_PUBLICATION, "/admin/brand-content");
 }
 
 // ---------------------------------------------------------------------------

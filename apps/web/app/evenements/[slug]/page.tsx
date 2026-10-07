@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { exigerRole } from "@/lib/garde-role";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { formatXOF } from "@a4a/payments";
-import { auth } from "@/auth";
+import { auth, PUBLISH_ROLES } from "@/auth";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PlaceholderMedia } from "@/components/placeholder-media";
@@ -65,7 +66,7 @@ export default async function EventPage({
 
   // Un événement non publié reste visible de la rédaction (relecture).
   const enApercu = ev.status !== "published";
-  if (enApercu && !["editor", "admin"].includes(session?.user?.role ?? "")) notFound();
+  if (enApercu && !(await exigerRole(PUBLISH_ROLES))) notFound();
 
   const [restantes, monInscription] = await Promise.all([
     placesRestantes(ev.id, ev.capacite),

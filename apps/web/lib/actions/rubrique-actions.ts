@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma, type RubriqueKind } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 
 const KINDS: RubriqueKind[] = ["gratuit", "premium", "freemium", "affiliation"];
 
@@ -75,8 +76,8 @@ export async function deleteRubriqueAction(id: string): Promise<void> {
  * sitemap et les redirections 301.
  */
 export async function updateRubriqueAction(id: string, formData: FormData): Promise<void> {
-  const session = await auth();
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) {
+  const moi = await exigerRole(PUBLISH_ROLES);
+  if (!moi) {
     redirect("/admin");
   }
 

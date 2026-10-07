@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { exigerRole } from "@/lib/garde-role";
 import type { Metadata } from "next";
 import { prisma, type ArticleStatus } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
@@ -50,7 +51,7 @@ export default async function AdminArticles({
     page: pageBrute,
   } = await searchParams;
   const session = await auth();
-  const peutSupprimer = PUBLISH_ROLES.includes(session?.user?.role as (typeof PUBLISH_ROLES)[number]);
+  const peutSupprimer = Boolean(await exigerRole(PUBLISH_ROLES));
   const filter = FILTERS.find((f) => f.key === statut) ?? FILTERS[0]!;
   const query = q.trim();
 

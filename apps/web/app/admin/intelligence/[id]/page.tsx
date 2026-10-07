@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type BriefKind } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import {
   updateSerieAction,
   deleteSerieAction,
@@ -42,7 +43,7 @@ export default async function EditSerie({
   searchParams: Promise<{ erreur?: string; abonne?: string }>;
 }) {
   const [{ id }, { erreur, abonne }, session] = await Promise.all([params, searchParams, auth()]);
-  if (!PUBLISH_ROLES.includes(session?.user?.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const serie = await prisma.briefSerie.findUnique({
     where: { id },

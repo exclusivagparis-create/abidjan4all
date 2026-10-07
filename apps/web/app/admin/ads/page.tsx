@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type AdFormat, type AdPriority, type AdStatus } from "@a4a/db";
-import { auth } from "@/auth";
+import { auth, REGIE_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import {
   approveReservationAction,
   createCampaignAction,
@@ -61,7 +62,7 @@ const NEXT_STATUS: Record<AdStatus, Array<{ to: AdStatus; label: string }>> = {
 
 export default async function AdminAds({ searchParams }: { searchParams: Promise<{ erreur?: string; rapports?: string }> }) {
   const [{ erreur, rapports }, session] = await Promise.all([searchParams, auth()]);
-  if (!["admin", "ad_manager"].includes(session?.user?.role ?? "")) redirect("/admin");
+  if (!(await exigerRole(REGIE_ROLES))) redirect("/admin");
 
   const [campaigns, rubriques, partners, emplActifs] = await Promise.all([
     prisma.adCampaign.findMany({ orderBy: [{ status: "asc" }, { createdAt: "desc" }], include: { banners: true } }),

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import {
   createEpisodeAction,
   deleteEpisodeAction,
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPodcast({ params }: { params: Promise<{ id: string }> }) {
   const [{ id }, session] = await Promise.all([params, auth()]);
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const podcast = await prisma.podcast.findUnique({
     where: { id },

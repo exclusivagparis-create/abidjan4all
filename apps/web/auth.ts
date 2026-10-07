@@ -132,4 +132,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
 // Définis dans lib/roles.ts pour éviter un cycle d'import avec la connexion
 // sociale ; réexportés ici, où tout le site va déjà les chercher.
-export { STUDIO_ROLES, PUBLISH_ROLES, REGIE_ROLES } from "./lib/roles";
+export { STUDIO_ROLES, PUBLISH_ROLES, REGIE_ROLES, REGIE_OU_PUBLICATION, ADMIN_ROLES } from "./lib/roles";

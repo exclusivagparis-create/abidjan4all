@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { formatXOF } from "@a4a/payments";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import {
   createLessonAction,
   deleteLessonAction,
@@ -19,7 +20,7 @@ const LEVELS = ["débutant", "intermédiaire", "avancé"];
 
 export default async function AdminCourse({ params }: { params: Promise<{ id: string }> }) {
   const [{ id }, session] = await Promise.all([params, auth()]);
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const course = await prisma.course.findUnique({
     where: { id },

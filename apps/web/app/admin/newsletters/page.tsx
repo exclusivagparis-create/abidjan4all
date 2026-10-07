@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { createEditionAction } from "@/lib/actions/newsletter-actions";
 import {
   createNewsletterAction,
@@ -78,7 +79,7 @@ export default async function AdminNewsletters({
   const [params, session] = await Promise.all([searchParams, auth()]);
   const { erreur, lettre } = params;
   const bilan = bilanApport(params);
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const [newsletters, editions, articles] = await Promise.all([
     prisma.newsletter.findMany({

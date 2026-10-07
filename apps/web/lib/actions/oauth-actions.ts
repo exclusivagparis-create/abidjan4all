@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@a4a/db";
 import { auth, signOut, STUDIO_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { autorise, SCOPE_IDS, type ApiIdentity, type Scope } from "@/lib/api-auth";
 import { creerCode } from "@/lib/oauth";
 
@@ -16,10 +17,8 @@ import { creerCode } from "@/lib/oauth";
  * revalidés en base et contre le rôle réel du compte.
  */
 export async function autoriserAction(formData: FormData): Promise<void> {
-  const session = await auth();
-  if (!session?.user || !STUDIO_ROLES.includes(session.user.role as (typeof STUDIO_ROLES)[number])) {
-    redirect("/login?next=/admin");
-  }
+  const compte = await exigerRole(STUDIO_ROLES);
+  if (!compte) redirect("/login?next=/admin");
 
   const clientId = String(formData.get("client_id") ?? "");
   const redirectUri = String(formData.get("redirect_uri") ?? "");
@@ -35,16 +34,6 @@ export async function autoriserAction(formData: FormData): Promise<void> {
   // vérifiée serait exactement ce que la vérification empêche.
   if (!client || !client.redirectUris.includes(redirectUri) || !codeChallenge) {
     redirect("/oauth/authorize?erreur=demande_invalide");
-  }
-
-  // Le rôle est relu en base : le jeton de session pourrait dater d'avant une
-  // rétrogradation.
-  const compte = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true, name: true, role: true },
-  });
-  if (!compte || !STUDIO_ROLES.includes(compte.role as (typeof STUDIO_ROLES)[number])) {
-    redirect("/login?next=/admin");
   }
 
   const moi: ApiIdentity = {
