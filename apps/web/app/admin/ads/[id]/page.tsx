@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type AdFormat } from "@a4a/db";
-import { auth } from "@/auth";
+import { auth, REGIE_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import {
   approveReservationAction,
   setCampaignStatusAction,
@@ -38,7 +39,7 @@ export default async function EditCampaign({
   searchParams: Promise<{ erreur?: string }>;
 }) {
   const [{ id }, { erreur }, session] = await Promise.all([params, searchParams, auth()]);
-  if (!["admin", "ad_manager"].includes(session?.user?.role ?? "")) redirect("/admin");
+  if (!(await exigerRole(REGIE_ROLES))) redirect("/admin");
 
   const [campaign, rubriques, partners] = await Promise.all([
     prisma.adCampaign.findUnique({ where: { id }, include: { banners: { orderBy: { createdAt: "asc" } } } }),

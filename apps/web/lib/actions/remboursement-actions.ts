@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma, type RefundStatus } from "@a4a/db";
 import { formatXOF } from "@a4a/payments";
-import { auth } from "@/auth";
+import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRoleOuRediriger } from "@/lib/garde-role";
 import { echapperHtml, emailConfigured, emailLayout, sendEmail } from "@/lib/email";
 import { ETATS, MOTIF_MAX, MOTIF_MIN, contestable, estEtat } from "@/lib/remboursement";
 
@@ -71,11 +72,7 @@ export async function demanderRemboursementAction(formData: FormData): Promise<v
 }
 
 async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) redirect("/login?next=/admin/remboursements");
-  const moi = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } });
-  if (!moi || !["admin", "editor"].includes(moi.role)) redirect("/admin");
-  return moi;
+  return exigerRoleOuRediriger(PUBLISH_ROLES, "/admin/remboursements");
 }
 
 /**

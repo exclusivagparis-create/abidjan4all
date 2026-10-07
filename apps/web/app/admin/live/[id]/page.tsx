@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { exigerRole } from "@/lib/garde-role";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
@@ -23,7 +24,7 @@ export default async function AdminLiveDetail({ params }: { params: Promise<{ id
     auth(),
     prisma.rubrique.findMany({ orderBy: { order: "asc" }, select: { id: true, name: true } }),
   ]);
-  const peutSupprimer = PUBLISH_ROLES.includes(session?.user?.role as (typeof PUBLISH_ROLES)[number]);
+  const peutSupprimer = Boolean(await exigerRole(PUBLISH_ROLES));
 
   const updates = await prisma.liveUpdate.findMany({
     where: { liveBlogId: id },

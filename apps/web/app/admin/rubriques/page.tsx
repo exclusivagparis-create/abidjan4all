@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
+import { exigerRole } from "@/lib/garde-role";
+import { roleAdmis } from "@/lib/roles";
 import type { Metadata } from "next";
 import { prisma, type RubriqueKind } from "@a4a/db";
-import { auth, PUBLISH_ROLES } from "@/auth";
+import { PUBLISH_ROLES, ADMIN_ROLES } from "@/auth";
 import {
   createRubriqueAction,
   deleteRubriqueAction,
@@ -30,11 +32,9 @@ export default async function AdminRubriques({
 }: {
   searchParams: Promise<{ erreur?: string }>;
 }) {
-  const [{ erreur }, session] = await Promise.all([searchParams, auth()]);
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) {
-    redirect("/admin");
-  }
-  const isAdmin = session.user.role === "admin";
+  const [{ erreur }, moi] = await Promise.all([searchParams, exigerRole(PUBLISH_ROLES)]);
+  if (!moi) redirect("/admin");
+  const isAdmin = roleAdmis(moi.role, ADMIN_ROLES);
 
   const rubriques = await prisma.rubrique.findMany({
     orderBy: { order: "asc" },

@@ -13,7 +13,8 @@
  */
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { prisma } from "@a4a/db";
-import { auth, PUBLISH_ROLES } from "@/auth";
+import { PUBLISH_ROLES } from "@/auth";
+import { identiteEnBase } from "@/lib/garde-role";
 
 /** Portées disponibles, dans l'ordre où elles s'affichent dans le Studio. */
 export const SCOPES = [
@@ -159,12 +160,15 @@ export async function identifier(request: Request): Promise<ApiIdentity | null> 
   const parJeton = await verifierJeton(request);
   if (parJeton) return parJeton;
 
-  const session = await auth();
-  if (!session?.user) return null;
+  // Role relu en base, jamais le jeton : les routes qui appellent
+  // `autorise` juste apres heritaient sinon du retard du jeton, trente
+  // jours au pire -- la suppression par lot comprise.
+  const moi = await identiteEnBase();
+  if (!moi) return null;
   return {
-    userId: session.user.id,
-    name: session.user.name ?? "",
-    role: session.user.role as string,
+    userId: moi.id,
+    name: moi.name,
+    role: moi.role,
     scopes: [...SCOPE_IDS],
     via: "session",
   };

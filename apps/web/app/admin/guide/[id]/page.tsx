@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { deleteFicheAction, updateFicheAction } from "@/lib/actions/guide-actions";
 import { GuideSectionsEditor } from "@/components/admin/guide-sections-editor";
 import { IDENTITE, REGIONS, avancement } from "@/lib/guide";
@@ -23,7 +24,7 @@ export default async function EditFiche({
   searchParams: Promise<{ ok?: string; erreur?: string }>;
 }) {
   const [{ id }, { ok, erreur }, session] = await Promise.all([params, searchParams, auth()]);
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const fiche = await prisma.guideFiche.findUnique({ where: { id } });
   if (!fiche) notFound();

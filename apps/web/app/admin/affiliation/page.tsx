@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
-import { auth, PUBLISH_ROLES } from "@/auth";
+import { auth, PUBLISH_ROLES, REGIE_OU_PUBLICATION } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import {
   createLinkAction,
   updateLinkAction,
@@ -19,7 +20,7 @@ const btn = "rounded-pill border border-line bg-surface-2 px-3 py-1.5 text-[11.5
 export default async function AdminAffiliation({ searchParams }: { searchParams: Promise<{ erreur?: string }> }) {
   const [{ erreur }, session] = await Promise.all([searchParams, auth()]);
   const autorises = [...PUBLISH_ROLES, "ad_manager"] as string[];
-  if (!autorises.includes(session?.user?.role ?? "")) redirect("/admin");
+  if (!(await exigerRole(REGIE_OU_PUBLICATION))) redirect("/admin");
 
   const liens = await prisma.affiliateLink.findMany({ orderBy: [{ actif: "desc" }, { clicks: "desc" }] });
   const totalClics = liens.reduce((s, l) => s + l.clicks, 0);

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { formatXOF } from "@a4a/payments";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { prixDu } from "@/lib/offres";
 import { createOfferAction, toggleOfferAction, updateOfferAction } from "@/lib/actions/offer-actions";
 
@@ -36,7 +37,7 @@ export default async function AdminOffres({
   searchParams: Promise<{ erreur?: string; ok?: string }>;
 }) {
   const [{ erreur, ok }, session] = await Promise.all([searchParams, auth()]);
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const maintenant = new Date();
   const offres = await prisma.offer.findMany({

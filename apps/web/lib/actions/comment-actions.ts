@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma, type CommentStatus } from "@a4a/db";
 import { moderateText } from "@a4a/ai";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 
 export type CommentResult = { ok: true } | { ok: false; error: string };
 
@@ -39,8 +40,8 @@ export async function addComment(
 
 /** Modération (editor+) — approuver / rejeter / signaler. */
 export async function moderateComment(id: string, status: CommentStatus): Promise<CommentResult> {
-  const session = await auth();
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) {
+  const moi = await exigerRole(PUBLISH_ROLES);
+  if (!moi) {
     return { ok: false, error: "Rôle editor ou admin requis." };
   }
   await prisma.comment.update({ where: { id }, data: { status } });

@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma, type BriefKind } from "@a4a/db";
-import { auth, PUBLISH_ROLES } from "@/auth";
+import { PUBLISH_ROLES } from "@/auth";
+import { exigerRoleOuRediriger } from "@/lib/garde-role";
 import { removeUpload, saveDocumentUpload, saveImageUpload } from "@/lib/uploads";
 import { ouvrirAbonnement } from "@/lib/intelligence";
 
@@ -11,11 +12,7 @@ const KINDS: BriefKind[] = ["rapport", "revue", "classement", "etude", "revue_pr
 
 /** Rédaction en chef ou administration (rôle relu en base, jamais le JWT seul). */
 async function requirePublish() {
-  const session = await auth();
-  if (!session?.user) redirect("/login?next=/admin/intelligence");
-  const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } });
-  if (!me || !PUBLISH_ROLES.includes(me.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
-  return me;
+  return exigerRoleOuRediriger(PUBLISH_ROLES, "/admin/intelligence");
 }
 
 function slugify(s: string): string {

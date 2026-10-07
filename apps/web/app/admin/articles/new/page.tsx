@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { exigerRole } from "@/lib/garde-role";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
@@ -53,7 +54,7 @@ export default async function NewArticlePage() {
       <ArticleEditor
         initial={initial}
         rubriques={rubriques}
-        canPublish={PUBLISH_ROLES.includes((session?.user?.role ?? "") as (typeof PUBLISH_ROLES)[number])}
+        canPublish={Boolean(await exigerRole(PUBLISH_ROLES))}
         authorName={session?.user?.name ?? "—"}
         mediaOptions={mediaOptions}
         motsCles={motsCles.map((m) => m.mot)}

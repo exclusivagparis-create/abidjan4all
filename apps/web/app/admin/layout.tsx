@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@a4a/db";
-import { auth, PUBLISH_ROLES, STUDIO_ROLES } from "@/auth";
+import { PUBLISH_ROLES, STUDIO_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { AdminNavLink, type NavItem } from "@/components/admin/admin-nav";
 import { AdminDrawer } from "@/components/admin/admin-shell";
 import { logout } from "@/lib/actions/auth-actions";
@@ -15,11 +16,20 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-  const user = session?.user;
-  if (!user || !STUDIO_ROLES.includes(user.role as (typeof STUDIO_ROLES)[number])) {
-    redirect("/login?next=/admin");
-  }
+  /**
+   * Le rôle vient de la BASE, pas du jeton de session.
+   *
+   * Ce layout enveloppe TOUTES les pages du Studio : c’est donc ici que se
+   * joue l’essentiel. Le rôle était lu dans le jeton, inscrit une fois à la
+   * connexion et jamais rafraîchi — un compte rétrogradé gardait le Studio
+   * ouvert jusqu’à trente jours. Un composant serveur, lui, peut interroger
+   * la base ; le middleware non, et il reste donc un simple filtre.
+   *
+   * Un layout ne protège pas les actions serveur, appelées directement : les
+   * gardes de lib/actions font le reste du travail.
+   */
+  const moi = await exigerRole(STUDIO_ROLES);
+  if (!moi) redirect("/login?next=/admin");
 
   const [reviewCount, pendingComments, pendingListings, pendingReservations, brandLeads, remboursementsEnAttente] =
     await Promise.all([
@@ -33,10 +43,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       prisma.refundRequest.count({ where: { status: "en_attente" } }),
     ]);
 
-  const canPublish = PUBLISH_ROLES.includes(user.role as (typeof PUBLISH_ROLES)[number]);
+  const canPublish = PUBLISH_ROLES.includes(moi.role as (typeof PUBLISH_ROLES)[number]);
   // Gestionnaire Régie : seule la régie est accessible (le middleware renvoie
   // toute autre page du Studio vers /admin/ads) — le menu doit le refléter.
-  const isRegieOnly = user.role === "ad_manager";
+  const isRegieOnly = moi.role === "ad_manager";
   const editorial = !isRegieOnly;
   const contenu: NavItem[] = [
     { label: "Tableau de bord", href: editorial ? "/admin" : undefined, icon: "▦" },
@@ -54,7 +64,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Alertes push", href: canPublish ? "/admin/alertes" : undefined, icon: "🔔" },
   ];
   // Facturation et audience : liens actifs pour l'administration seulement.
-  const isAdmin = user.role === "admin";
+  const isAdmin = moi.role === "admin";
   const isRegie = isAdmin || isRegieOnly;
   const communaute: NavItem[] = [
     { label: "Commentaires", href: editorial ? "/admin/comments" : undefined, icon: "◎", badge: pendingComments, badgeColor: "var(--orange)" },
@@ -103,11 +113,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
       <div className="mt-auto flex items-center gap-2.5 border-t border-white/10 px-2 pt-3">
         <div className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-pill bg-[linear-gradient(135deg,#E8641A,#D6282D)] text-[13px] font-bold text-white">
-          {initials(user.name ?? "?")}
+          {initials(moi.name)}
         </div>
         <div className="min-w-0">
-          <div className="truncate text-[13px] font-semibold text-white">{user.name}</div>
-          <div className="text-[11px] text-[#6C7791]">{ROLE_LABEL[user.role] ?? user.role}</div>
+          <div className="truncate text-[13px] font-semibold text-white">{moi.name}</div>
+          <div className="text-[11px] text-[#6C7791]">{ROLE_LABEL[moi.role] ?? moi.role}</div>
         </div>
         <form action={logout} className="ml-auto">
           <button type="submit" title="Se déconnecter" className="text-[#6C7791] hover:text-white">

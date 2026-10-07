@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
-import { auth } from "@/auth";
+import { auth, ADMIN_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { createGroupAction, deleteGroupAction, updateGroupAction } from "@/lib/actions/admin-content-actions";
 
 export const metadata: Metadata = { title: "Groupes · Studio" };
@@ -16,7 +17,7 @@ const ERREURS: Record<string, string> = {
 
 export default async function AdminCommunity({ searchParams }: { searchParams: Promise<{ erreur?: string }> }) {
   const [{ erreur }, session] = await Promise.all([searchParams, auth()]);
-  if (session?.user?.role !== "admin") redirect("/admin");
+  if (!(await exigerRole(ADMIN_ROLES))) redirect("/admin");
 
   const groups = await prisma.group.findMany({
     orderBy: { membersCount: "desc" },

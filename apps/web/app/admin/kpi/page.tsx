@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { auth } from "@/auth";
+import { auth, ADMIN_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { kpiBusinessModel, type Kpi } from "@/lib/kpi";
 
 export const metadata: Metadata = { title: "KPI Business Model · Studio" };
@@ -17,7 +18,7 @@ function rendre(k: Kpi): string {
 
 export default async function AdminKpi() {
   const session = await auth();
-  if (session?.user?.role !== "admin") redirect("/admin");
+  if (!(await exigerRole(ADMIN_ROLES))) redirect("/admin");
 
   const kpis = await kpiBusinessModel();
   const mesures = kpis.filter((k) => k.valeur !== null);

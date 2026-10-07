@@ -1,8 +1,9 @@
 import { createReadStream, existsSync } from "fs";
+import { exigerRole } from "@/lib/garde-role";
 import { stat } from "fs/promises";
 import { Readable } from "stream";
 import { prisma } from "@a4a/db";
-import { auth } from "@/auth";
+import { auth, PUBLISH_ROLES } from "@/auth";
 import { peutLireEditions } from "@/lib/intelligence";
 import { documentPath } from "@/lib/uploads";
 
@@ -34,7 +35,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   }
   // Édition non publiée : réservée à la relecture éditoriale.
   const publiee = edition.publishedAt && edition.publishedAt <= new Date();
-  if (!publiee && !["editor", "admin"].includes(session.user.role ?? "")) {
+  if (!publiee && !(await exigerRole(PUBLISH_ROLES))) {
     return new Response("Introuvable", { status: 404 });
   }
 

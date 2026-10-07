@@ -4,7 +4,8 @@ import { mkdir, unlink, writeFile } from "fs/promises";
 import path from "path";
 import { revalidatePath } from "next/cache";
 import { prisma, type MediaType } from "@a4a/db";
-import { auth, STUDIO_ROLES } from "@/auth";
+import { STUDIO_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 
 export type MediaResult = { ok: true } | { ok: false; error: string };
 
@@ -28,8 +29,8 @@ const MIME_EXT: Record<string, { ext: string; type: MediaType }> = {
 };
 
 export async function uploadMedia(_prev: MediaResult | undefined, formData: FormData): Promise<MediaResult> {
-  const session = await auth();
-  if (!session?.user || !STUDIO_ROLES.includes(session.user.role as (typeof STUDIO_ROLES)[number])) {
+  const moi = await exigerRole(STUDIO_ROLES);
+  if (!moi) {
     return { ok: false, error: "Accès refusé." };
   }
 
@@ -51,7 +52,7 @@ export async function uploadMedia(_prev: MediaResult | undefined, formData: Form
       credit: String(formData.get("credit") ?? "").trim() || null,
       sizeBytes: file.size,
       tags: [],
-      uploadedById: session.user.id,
+      uploadedById: moi.id,
     },
   });
   revalidatePath("/admin/media");
@@ -65,8 +66,8 @@ export async function uploadMedia(_prev: MediaResult | undefined, formData: Form
  * articles qui l'utilisent en une suivent automatiquement (référence par id).
  */
 export async function updateMedia(_prev: MediaResult | undefined, formData: FormData): Promise<MediaResult> {
-  const session = await auth();
-  if (!session?.user || !STUDIO_ROLES.includes(session.user.role as (typeof STUDIO_ROLES)[number])) {
+  const moi = await exigerRole(STUDIO_ROLES);
+  if (!moi) {
     return { ok: false, error: "Accès refusé." };
   }
 
@@ -106,8 +107,8 @@ export async function updateMedia(_prev: MediaResult | undefined, formData: Form
 }
 
 export async function deleteMedia(id: string): Promise<MediaResult> {
-  const session = await auth();
-  if (!session?.user || !STUDIO_ROLES.includes(session.user.role as (typeof STUDIO_ROLES)[number])) {
+  const moi = await exigerRole(STUDIO_ROLES);
+  if (!moi) {
     return { ok: false, error: "Accès refusé." };
   }
 
@@ -137,8 +138,8 @@ export async function deleteMedia(id: string): Promise<MediaResult> {
  * cherche une photo d'archive conclut à tort qu'elle n'existe pas.
  */
 export async function chercherMedias(q: string): Promise<{ id: string; url: string; alt: string | null }[]> {
-  const session = await auth();
-  if (!session?.user || !STUDIO_ROLES.includes(session.user.role as (typeof STUDIO_ROLES)[number])) {
+  const moi = await exigerRole(STUDIO_ROLES);
+  if (!moi) {
     return [];
   }
 

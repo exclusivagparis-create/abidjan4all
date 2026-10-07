@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type Role } from "@a4a/db";
-import { auth } from "@/auth";
+import { ADMIN_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { emailConfigured } from "@/lib/email";
 import {
   sendPasswordLinkAction,
@@ -44,8 +45,8 @@ export default async function FicheCompte({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ ok?: string; erreur?: string }>;
 }) {
-  const [{ id }, { ok, erreur }, session] = await Promise.all([params, searchParams, auth()]);
-  if (session?.user?.role !== "admin") redirect("/admin");
+  const [{ id }, { ok, erreur }, moi] = await Promise.all([params, searchParams, exigerRole(ADMIN_ROLES)]);
+  if (!moi) redirect("/admin");
 
   const user = await prisma.user.findUnique({
     where: { id },
@@ -71,7 +72,7 @@ export default async function FicheCompte({
   });
   if (!user) notFound();
 
-  const soi = user.id === session.user.id;
+  const soi = user.id === moi.id;
   const message = MESSAGES[ok ?? erreur ?? ""];
   const inp = "w-full rounded-[8px] border border-line bg-bg px-3 py-2.5 text-[14px]";
   const lab = "grid gap-1.5 text-xs font-semibold text-ink-2";

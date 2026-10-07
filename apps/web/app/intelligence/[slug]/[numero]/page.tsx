@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { exigerRole } from "@/lib/garde-role";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { formatXOF } from "@a4a/payments";
-import { auth } from "@/auth";
+import { auth, PUBLISH_ROLES } from "@/auth";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ArticleBody } from "@/components/article-body";
@@ -45,7 +46,7 @@ export default async function EditionPage({ params }: Props) {
   // Édition non encore publiée : visible de la seule rédaction (relecture).
   const enApercu = !edition.publishedAt || edition.publishedAt > new Date();
   const acces = await peutLireEditions(session?.user, serie.id);
-  if (enApercu && !["editor", "admin"].includes(session?.user?.role ?? "")) notFound();
+  if (enApercu && !(await exigerRole(PUBLISH_ROLES))) notFound();
 
   const blocks = Array.isArray(edition.body) ? edition.body : [];
 

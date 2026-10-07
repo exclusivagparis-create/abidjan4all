@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { identiteEnBase } from "@/lib/garde-role";
 import type { Metadata } from "next";
 import { auth } from "@/auth";
 
@@ -116,7 +117,7 @@ const SOMMAIRE: Array<[string, Array<[string, string]>]> = [
 
 export default async function AidePage() {
   const session = await auth();
-  const role = session?.user?.role ?? "";
+  const role = (await identiteEnBase())?.role ?? "";
 
   return (
     <div className="max-w-[860px]">

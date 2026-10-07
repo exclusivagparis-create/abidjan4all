@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma, Prisma } from "@a4a/db";
 import { formatXOF } from "@a4a/payments";
-import { auth } from "@/auth";
+import { auth, ADMIN_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { AudienceMoisBloc } from "@/components/admin/audience-mois";
 import { HistoriqueBloc } from "@/components/admin/historique";
 import {
@@ -47,7 +48,7 @@ export default async function AdminStats({
 }) {
   const [{ mois: moisDemande, annee: anneeDemandee }, session] = await Promise.all([searchParams, auth()]);
   // Chiffres d'audience et de revenus : administration uniquement.
-  if (session?.user?.role !== "admin") redirect("/admin");
+  if (!(await exigerRole(ADMIN_ROLES))) redirect("/admin");
 
   // Le mois en cours par défaut ; on n'accepte que le format AAAA-MM.
   const mois = /^\d{4}-\d{2}$/.test(moisDemande ?? "") ? moisDemande! : moisCourant();

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { createRedirectAction, deleteRedirectAction, importRedirectsAction } from "@/lib/actions/redirect-actions";
 import { formatDate } from "@/lib/format";
 import { MAX_REGLES } from "@/lib/redirects-import";
@@ -31,7 +32,7 @@ type Params = {
 export default async function AdminRedirections({ searchParams }: { searchParams: Promise<Params> }) {
   const [params, session] = await Promise.all([searchParams, auth()]);
   const { erreur, importees } = params;
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const rules = await prisma.redirect.findMany({ orderBy: [{ hits: "desc" }, { createdAt: "desc" }] });
   const inp = "rounded-[8px] border border-line bg-surface px-3 py-2 text-[13px]";

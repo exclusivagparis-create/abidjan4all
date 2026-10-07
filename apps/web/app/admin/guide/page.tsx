@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { createFicheAction } from "@/lib/actions/guide-actions";
 import { REGIONS, avancement } from "@/lib/guide";
 
@@ -16,7 +17,7 @@ const ERREURS: Record<string, string> = {
 
 export default async function AdminGuide({ searchParams }: { searchParams: Promise<{ erreur?: string }> }) {
   const [{ erreur }, session] = await Promise.all([searchParams, auth()]);
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const fiches = await prisma.guideFiche.findMany({ orderBy: [{ order: "asc" }, { title: "asc" }] });
   const inp = "rounded-[8px] border border-line bg-surface px-3 py-2 text-[13px]";

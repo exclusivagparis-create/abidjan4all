@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma, Prisma, type ArticleStatus } from "@a4a/db";
-import { auth, PUBLISH_ROLES, STUDIO_ROLES } from "@/auth";
+import { PUBLISH_ROLES, STUDIO_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { sendArticleAlert } from "@/lib/push";
 import { sanitizeArticleHtml } from "@/lib/sanitize-html";
 
@@ -115,18 +116,12 @@ function computeReadingTime(blocks: ArticleInput["blocks"]): number {
   return Math.max(1, Math.round(words / 200));
 }
 
-async function requireRole(roles: readonly string[]) {
-  const session = await auth();
-  if (!session?.user || !roles.includes(session.user.role)) return null;
-  return session.user;
-}
-
 function revalidatePublic() {
   revalidatePath("/", "layout"); // accueil, rubriques, articles (ISR 60 s sinon)
 }
 
 export async function saveArticle(raw: unknown): Promise<ActionResult> {
-  const user = await requireRole(STUDIO_ROLES);
+  const user = await exigerRole(STUDIO_ROLES);
   if (!user) return { ok: false, error: "Accès refusé." };
 
   const parsed = ArticleInputSchema.safeParse(raw);
@@ -213,7 +208,7 @@ const TRANSITIONS: Record<
 
 export async function transitionArticle(id: string, action: Transition): Promise<ActionResult> {
   const rule = TRANSITIONS[action];
-  const user = await requireRole(rule.roles);
+  const user = await exigerRole(rule.roles);
   if (!user) return { ok: false, error: "Rôle insuffisant pour cette action." };
 
   const article = await prisma.article.findUnique({
@@ -270,7 +265,7 @@ export async function transitionArticle(id: string, action: Transition): Promise
  * à la Une, mais reste consultable en aperçu par la rédaction.
  */
 export async function setArticleHidden(id: string, hidden: boolean): Promise<ActionResult> {
-  const user = await requireRole(PUBLISH_ROLES);
+  const user = await exigerRole(PUBLISH_ROLES);
   if (!user) return { ok: false, error: "Rôle insuffisant." };
   await prisma.article.update({
     where: { id },
@@ -293,7 +288,7 @@ export async function setArticleHidden(id: string, hidden: boolean): Promise<Act
  * en tête reviendrait à le faire recopier sur des articles qui n'en sont pas.
  */
 export async function motsClesConnus(): Promise<{ mot: string; usages: number }[]> {
-  const user = await requireRole(STUDIO_ROLES);
+  const user = await exigerRole(STUDIO_ROLES);
   if (!user) return [];
 
   const lignes = await prisma.$queryRaw<{ mot: string; usages: bigint }[]>`

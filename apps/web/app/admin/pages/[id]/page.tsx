@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { deletePageAction, updatePageAction } from "@/lib/actions/page-actions";
 import { PageBodyEditor } from "@/components/admin/page-body-editor";
 
@@ -17,7 +18,7 @@ export default async function EditPage({
   searchParams: Promise<{ ok?: string; erreur?: string }>;
 }) {
   const [{ id }, { ok, erreur }, session] = await Promise.all([params, searchParams, auth()]);
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const page = await prisma.page.findUnique({ where: { id } });
   if (!page) notFound();

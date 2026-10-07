@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { exigerRole } from "@/lib/garde-role";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
@@ -84,7 +85,7 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
       <ArticleEditor
         initial={initial}
         rubriques={rubriques}
-        canPublish={PUBLISH_ROLES.includes((session?.user?.role ?? "") as (typeof PUBLISH_ROLES)[number])}
+        canPublish={Boolean(await exigerRole(PUBLISH_ROLES))}
         authorName={article.author.name}
         mediaOptions={mediaOptions}
         auteurs={auteurs}

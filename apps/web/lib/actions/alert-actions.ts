@@ -2,12 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { prisma } from "@a4a/db";
-import { auth, PUBLISH_ROLES } from "@/auth";
+import { PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { pushConfigured, sendBroadcast } from "@/lib/push";
 
 async function requirePublisher() {
-  const session = await auth();
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) {
+  const moi = await exigerRole(PUBLISH_ROLES);
+  if (!moi) {
     redirect("/login?next=/admin/alertes");
   }
 }

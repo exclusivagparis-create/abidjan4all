@@ -7,6 +7,30 @@ const STUDIO_ROLES = ["journalist", "editor", "admin", "ad_manager"];
 // Instance edge-safe (sans Prisma/bcrypt) : suffit à lire le JWT de session.
 const { auth } = NextAuth(authConfig);
 
+/**
+ * Ce fichier lit le rôle dans le JETON, et c'est assumé.
+ *
+ * Le rôle y est inscrit à la connexion et jamais rafraîchi : celui que lit ce
+ * middleware peut donc avoir trente jours de retard sur la base. Il tourne sur
+ * le runtime edge et n'atteindra jamais Prisma — il n'y a pas de correctif
+ * possible ici, seulement un choix à expliciter.
+ *
+ * Le choix : ce middleware est un CONFORT DE NAVIGATION. Il évite d'afficher
+ * une page du Studio à qui n'a rien à y faire, et renvoie la régie vers son
+ * propre périmètre. Il ne décide de rien.
+ *
+ * La frontière réelle se tient à deux endroits, qui relisent tous deux le rôle
+ * en base par `exigerRole` (lib/garde-role.ts) :
+ *
+ * — `app/admin/layout.tsx`, qui enveloppe TOUTES les pages du Studio ;
+ * — les gardes de `lib/actions`, car un layout ne protège pas une action
+ *   serveur, appelée directement par son identifiant.
+ *
+ * Autrement dit : un compte rétrogradé pourrait, dans le pire des cas, voir le
+ * middleware le laisser passer — et se faire refuser une fraction de seconde
+ * plus tard par le layout, avant qu'aucune donnée ne s'affiche.
+ */
+
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const user = req.auth?.user;

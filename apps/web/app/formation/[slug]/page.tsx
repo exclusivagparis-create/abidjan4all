@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { identiteEnBase } from "@/lib/garde-role";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
@@ -72,7 +73,7 @@ export default async function CoursePage({ params }: Props) {
       inscrit: Boolean(enrollment),
       prix: course.price,
       abonnementCouvrant,
-      role: session?.user?.role,
+      role: (await identiteEnBase())?.role,
     });
 
   const enroll = enrollAction.bind(null, course.slug);

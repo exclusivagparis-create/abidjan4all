@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type AdFormat } from "@a4a/db";
-import { auth } from "@/auth";
+import { auth, REGIE_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import {
   createPackAction,
   updatePackAction,
@@ -29,7 +30,7 @@ const btn = "rounded-pill border border-line bg-surface-2 px-3 py-1.5 text-[11.5
 
 export default async function AdminTarifs({ searchParams }: { searchParams: Promise<{ erreur?: string }> }) {
   const [{ erreur }, session] = await Promise.all([searchParams, auth()]);
-  if (!["admin", "ad_manager"].includes(session?.user?.role ?? "")) redirect("/admin");
+  if (!(await exigerRole(REGIE_ROLES))) redirect("/admin");
 
   const packs = await prisma.adPack.findMany({ orderBy: [{ ordre: "asc" }, { jours: "asc" }] });
 

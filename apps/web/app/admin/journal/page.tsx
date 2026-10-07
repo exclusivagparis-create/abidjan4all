@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { exigerRole } from "@/lib/garde-role";
 import type { Metadata } from "next";
 import { prisma } from "@a4a/db";
-import { auth, PUBLISH_ROLES } from "@/auth";
+import { PUBLISH_ROLES } from "@/auth";
 import { Pagination } from "@/components/admin/pagination";
 import { JournalEntree } from "@/components/admin/journal-entree";
 import { formatDate } from "@/lib/format";
@@ -29,8 +30,7 @@ export default async function AdminJournal({
   searchParams: Promise<{ type?: string; q?: string; page?: string }>;
 }) {
   const { type = "articles", q = "", page: pageBrute } = await searchParams;
-  const session = await auth();
-  if (!PUBLISH_ROLES.includes(session?.user?.role as (typeof PUBLISH_ROLES)[number])) {
+  if (!(await exigerRole(PUBLISH_ROLES))) {
     return (
       <div className="rounded-[14px] border border-line bg-surface px-6 py-10 text-center">
         <p className="text-[14px] font-semibold">Réservé à la rédaction en chef et à l&apos;administration.</p>

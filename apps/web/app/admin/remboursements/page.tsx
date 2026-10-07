@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type RefundStatus } from "@a4a/db";
 import { formatXOF } from "@a4a/payments";
-import { auth } from "@/auth";
+import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { traiterRemboursementAction } from "@/lib/actions/remboursement-actions";
 import { ETATS, ETATS_IDS } from "@/lib/remboursement";
 import { formatDate } from "@/lib/format";
@@ -16,7 +17,7 @@ export default async function AdminRemboursements({
   searchParams: Promise<{ etat?: string; ok?: string }>;
 }) {
   const [{ etat, ok }, session] = await Promise.all([searchParams, auth()]);
-  if (!session?.user || !["admin", "editor"].includes(session.user.role ?? "")) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const filtre = ETATS_IDS.includes(etat as RefundStatus) ? (etat as RefundStatus) : undefined;
 

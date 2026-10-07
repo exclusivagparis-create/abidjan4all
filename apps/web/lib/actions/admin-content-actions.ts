@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 
 /** « Diaspora Québec » → "diaspora-quebec" (slug d'URL stable). */
 function slugify(s: string): string {
@@ -24,8 +25,8 @@ async function requireAdmin(next: string) {
 }
 
 async function requirePublisher(next: string) {
-  const session = await auth();
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) {
+  const moi = await exigerRole(PUBLISH_ROLES);
+  if (!moi) {
     redirect(`/login?next=${next}`);
   }
 }

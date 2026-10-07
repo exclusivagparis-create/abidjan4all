@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma, type EventKind, type EventStatus } from "@a4a/db";
 import type { PaymentMethodId } from "@a4a/payments";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRoleOuRediriger } from "@/lib/garde-role";
 import { removeUpload, saveImageUpload } from "@/lib/uploads";
 import { startOrderCheckout } from "@/lib/order-billing";
 import { genererCode, placesRestantes, placesRestantesTicket } from "@/lib/events";
@@ -14,11 +15,7 @@ const STATUTS: EventStatus[] = ["draft", "published", "ended", "cancelled"];
 const METHODS: PaymentMethodId[] = ["momo", "orange", "wave", "moov", "djamo", "card", "paypal"];
 
 async function requirePublish() {
-  const session = await auth();
-  if (!session?.user) redirect("/login?next=/admin/evenements");
-  const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } });
-  if (!me || !PUBLISH_ROLES.includes(me.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
-  return me;
+  return exigerRoleOuRediriger(PUBLISH_ROLES, "/admin/evenements");
 }
 
 function slugify(s: string): string {

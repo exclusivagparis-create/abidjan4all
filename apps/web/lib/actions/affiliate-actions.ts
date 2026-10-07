@@ -3,15 +3,11 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@a4a/db";
-import { auth, PUBLISH_ROLES } from "@/auth";
+import { REGIE_OU_PUBLICATION } from "@/auth";
+import { exigerRoleOuRediriger } from "@/lib/garde-role";
 
 async function requireRegieOuPublication() {
-  const session = await auth();
-  if (!session?.user) redirect("/login?next=/admin/affiliation");
-  const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } });
-  const autorises = [...PUBLISH_ROLES, "ad_manager"] as string[];
-  if (!me || !autorises.includes(me.role)) redirect("/admin");
-  return me;
+  return exigerRoleOuRediriger(REGIE_OU_PUBLICATION, "/admin/affiliation");
 }
 
 /** Code d'URL court, stable et lisible (« wave-transfert »). */

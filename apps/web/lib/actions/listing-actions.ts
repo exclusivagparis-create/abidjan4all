@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma, type ListingStatus, type ListingType, type OrderKind } from "@a4a/db";
 import type { PaymentMethodId } from "@a4a/payments";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { startOrderCheckout } from "@/lib/order-billing";
 import { TARIFS_EMPLOI, TARIFS_IMMO, trouverPalier, type PalierAnnonce } from "@/lib/tarifs";
 import { lireCriteres } from "@/lib/annonces-immobilier";
@@ -110,8 +111,8 @@ export async function createListingAction(_prev: ListingResult | undefined, form
 }
 
 async function requirePublisher() {
-  const session = await auth();
-  if (!session?.user || !PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) {
+  const moi = await exigerRole(PUBLISH_ROLES);
+  if (!moi) {
     redirect("/login?next=/admin/annonces");
   }
 }

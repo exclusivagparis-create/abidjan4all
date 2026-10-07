@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { prisma, type SubscriptionStatus } from "@a4a/db";
 import { formatXOF } from "@a4a/payments";
 import { prixDu } from "@/lib/offres";
-import { auth } from "@/auth";
+import { auth, ADMIN_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Abonnés A4A+ · Studio" };
@@ -22,7 +23,7 @@ export default async function AdminSubscribers({
 }) {
   const [{ statut }, session] = await Promise.all([searchParams, auth()]);
   // Données de facturation : réservées à l'administration.
-  if (session?.user?.role !== "admin") redirect("/admin");
+  if (!(await exigerRole(ADMIN_ROLES))) redirect("/admin");
 
   const where = { plan: { not: "free" as const } };
   const subs = await prisma.subscription.findMany({

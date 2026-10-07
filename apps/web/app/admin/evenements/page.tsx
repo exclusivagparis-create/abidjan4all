@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma, type EventKind, type EventStatus } from "@a4a/db";
 import { auth, PUBLISH_ROLES } from "@/auth";
+import { exigerRole } from "@/lib/garde-role";
 import { createEventAction, setEventStatusAction } from "@/lib/actions/event-actions";
 import { EVENT_KIND_LABEL } from "@/lib/events";
 import { formatFCFA } from "@/lib/tarifs";
@@ -23,7 +24,7 @@ const STATUS_META: Record<EventStatus, { label: string; color: string }> = {
 
 export default async function AdminEvenements({ searchParams }: { searchParams: Promise<{ erreur?: string }> }) {
   const [{ erreur }, session] = await Promise.all([searchParams, auth()]);
-  if (!PUBLISH_ROLES.includes(session?.user?.role as (typeof PUBLISH_ROLES)[number])) redirect("/admin");
+  if (!(await exigerRole(PUBLISH_ROLES))) redirect("/admin");
 
   const events = await prisma.event.findMany({
     orderBy: { startAt: "desc" },

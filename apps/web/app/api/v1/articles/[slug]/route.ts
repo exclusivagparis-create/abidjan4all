@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { identiteEnBase } from "@/lib/garde-role";
+import { roleAdmis } from "@/lib/roles";
 import { prisma, Prisma } from "@a4a/db";
 import { apiError } from "@/lib/api";
-import { auth, PUBLISH_ROLES } from "@/auth";
+import { auth, PUBLISH_ROLES, ADMIN_ROLES } from "@/auth";
 import { hasActiveSubscription } from "@/lib/billing";
 
 // GET /api/v1/articles/:slug — body complet ; 402 si premium & non-abonné
@@ -53,9 +55,9 @@ async function findByIdOrSlug(idOrSlug: string) {
 
 // PATCH /api/v1/articles/:id (editor+) — workflow draft→review→scheduled→published
 export async function PATCH(request: Request, { params }: { params: Promise<{ slug: string }> }) {
-  const session = await auth();
-  if (!session?.user) return apiError("unauthorized", "Authentification requise.", 401);
-  if (!PUBLISH_ROLES.includes(session.user.role as (typeof PUBLISH_ROLES)[number])) {
+  const moi = await identiteEnBase();
+  if (!moi) return apiError("unauthorized", "Authentification requise.", 401);
+  if (!roleAdmis(moi.role, PUBLISH_ROLES)) {
     return apiError("forbidden", "Rôle editor ou admin requis.", 403);
   }
 
@@ -83,9 +85,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
 
 // DELETE /api/v1/articles/:id (admin)
 export async function DELETE(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
-  const session = await auth();
-  if (!session?.user) return apiError("unauthorized", "Authentification requise.", 401);
-  if (session.user.role !== "admin") return apiError("forbidden", "Rôle admin requis.", 403);
+  const moi = await identiteEnBase();
+  if (!moi) return apiError("unauthorized", "Authentification requise.", 401);
+  if (!roleAdmis(moi.role, ADMIN_ROLES)) return apiError("forbidden", "Rôle admin requis.", 403);
 
   const { slug: idOrSlug } = await params;
   const article = await findByIdOrSlug(idOrSlug);
