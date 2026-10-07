@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { prisma } from "@a4a/db";
 import { chatReply, type SearchSource } from "@a4a/ai";
+import { auth } from "@/auth";
 import { apiError } from "@/lib/api";
+import { hasActiveSubscription } from "@/lib/billing";
+import { corpsLisible } from "@/lib/mur-payant";
 import { absoluteUrl } from "@/lib/seo";
 import { searchArticles } from "@/lib/search";
 import { adresseAppelant, limiter, reponseTropDeRequetes } from "@/lib/limite-debit";
@@ -34,7 +37,21 @@ export async function POST(request: Request) {
       include: { rubrique: { select: { slug: true } } },
     });
     if (article) {
-      const blocks = Array.isArray(article.body) ? article.body : [];
+      /**
+       * Derrière le mur, l'assistant n'a droit qu'au chapeau.
+       *
+       * Il recevait 800 caractères du corps comme « source » — de quoi faire
+       * raconter par l'assistant ce que le lecteur n'a pas payé, et de quoi
+       * reconstituer l'article en posant les bonnes questions. Le chapeau,
+       * lui, est déjà affiché à tout le monde sur la page.
+       */
+      const session = article.premium ? await auth() : null;
+      const abonne = session?.user ? await hasActiveSubscription(session.user.id) : false;
+      const blocks = corpsLisible({ premium: article.premium, abonne })
+        ? Array.isArray(article.body)
+          ? article.body
+          : []
+        : [];
       const text = [article.dek ?? "", ...blocks.map((b) => (b as { text?: string }).text ?? "")]
         .filter(Boolean)
         .join(" ");
