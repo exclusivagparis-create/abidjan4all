@@ -56,6 +56,18 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if ((await searchParams)?.[APERCU_PARAM]) return { robots: { index: false, follow: false } };
   const seo = (article.seo ?? {}) as { metaTitle?: string; metaDescription?: string };
   const path = `/${article.rubrique.slug}/${article.slug}`;
+
+  /**
+   * Brève retirée de l'index : « noindex, follow », et rien d'autre ne change.
+   *
+   * L'article reste en ligne, dans sa rubrique, dans la recherche interne et
+   * au bout de tous ses liens — seuls les moteurs cessent de le compter. Et
+   * `follow` plutôt que `nofollow` : le maillage interne et les 3 384
+   * redirections de l'ancien domaine doivent continuer de porter leur
+   * autorité vers les pages qui restent indexées. Voir
+   * lib/qualite-editoriale.ts pour le pourquoi.
+   */
+  const robots = article.noindex ? { index: false, follow: true } : undefined;
   const image =
     article.coverAsset && !article.coverAsset.url.startsWith("placeholder://")
       ? [absoluteUrl(article.coverAsset.url)]
@@ -70,6 +82,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     title: plainTitle(seo.metaTitle ?? article.title),
     description: seo.metaDescription ?? article.dek ?? undefined,
     alternates: { canonical: path },
+    ...(robots ? { robots } : {}),
     openGraph: {
       title: plainTitle(article.title),
       description: article.dek ?? undefined,

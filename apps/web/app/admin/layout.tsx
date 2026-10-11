@@ -86,6 +86,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Affiliation", href: isRegie || canPublish ? "/admin/affiliation" : undefined, icon: "⇗" },
     { label: "Statistiques", href: isAdmin ? "/admin/stats" : undefined, icon: "▲" },
     { label: "KPI Business Model", href: isAdmin ? "/admin/kpi" : undefined, icon: "◎" },
+    { label: "Qualité éditoriale", href: canPublish ? "/admin/qualite" : undefined, icon: "◴" },
     { label: "Redirections", href: canPublish ? "/admin/redirections" : undefined, icon: "↪" },
     // Seule voie de retour après un effacement : doit se trouver sans le
     // chercher, le jour où l'on en a besoin.

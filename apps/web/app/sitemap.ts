@@ -8,7 +8,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // tolérant au build sans base (docker build/CI) : régénéré au runtime (ISR 1 h)
   const [articles, rubriques, fiches] = await Promise.all([
     prisma.article.findMany({
-      where: { status: "published" },
+      // Déclarer au sitemap une page qu'on demande par ailleurs de ne pas
+      // indexer est un signal contradictoire : Google le relève comme une
+      // erreur de couverture. Les brèves retirées de l'index sortent donc
+      // aussi du sitemap — elles restent lisibles et liées, voir
+      // lib/qualite-editoriale.ts.
+      where: { status: "published", noindex: false },
       select: { slug: true, updatedAt: true, rubrique: { select: { slug: true } } },
       orderBy: { publishedAt: "desc" },
       take: 5000,

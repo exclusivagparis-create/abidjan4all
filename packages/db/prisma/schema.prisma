@@ -691,6 +691,20 @@ model Article {
   views        Int      @default(0)
   featuredRank Int? // position à la Une (1 à 5) — null = pas en Une
   hidden       Boolean  @default(false) // publié mais masqué du public (éditeur/admin)
+  /// Retiré de l'index des moteurs, mais TOUJOURS lisible et toujours lié.
+  ///
+  /// Autre chose que `hidden`, qui masque du public. Ici l'article reste en
+  /// ligne, dans les rubriques et dans la recherche : il cesse seulement de
+  /// compter dans le jugement que Google porte sur le site. Sert au traitement
+  /// des brèves, après l'avertissement AdSense « Contenu à faible valeur
+  /// informative » du 11 octobre 2026 : 46 % des articles tenaient en moins de
+  /// 300 mots, et ces pages diluaient la substance moyenne du site sans
+  /// rapporter de trafic — 3,4 vues par article en 87 jours.
+  ///
+  /// `noindex, follow` et non `noindex, nofollow` : le maillage interne et les
+  /// 3 384 redirections de l'ancien domaine doivent continuer de porter leur
+  /// autorité vers les pages qui restent indexées.
+  noindex      Boolean  @default(false)
   seo         Json     @default("{}") // { slug, metaTitle, metaDescription, ogImage }
   aiSummary   Json? // { keyPoints: string[], long: string }
 
