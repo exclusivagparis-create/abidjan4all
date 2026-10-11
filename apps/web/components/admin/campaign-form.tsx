@@ -1,3 +1,6 @@
+import { PLACEMENTS } from "@/lib/ad-placements-catalogue";
+import { nomFormat } from "@/lib/regie-motifs";
+
 type AdPriority = "basse" | "moyenne" | "haute";
 
 const PRIORITE_LABEL: Record<AdPriority, string> = {
@@ -13,7 +16,7 @@ export type CampaignInitial = {
   permanent: boolean;
   capImpressions: number | null;
   capClicks: number | null;
-  targeting: { rubriques?: string[]; geo?: string[]; tags?: string[] };
+  targeting: { rubriques?: string[]; geo?: string[]; tags?: string[]; placements?: string[] };
   advertiserUserId: string | null;
   startAt: string; // yyyy-mm-dd
   endAt: string;
@@ -26,6 +29,9 @@ const lbl = "grid gap-1 text-[11.5px] font-semibold text-ink-2";
  * Formulaire de campagne (conteneur) : annonceur, tarif, priorité, période,
  * plafonds, ciblage. Les créatifs (bannières) se gèrent sur la fiche campagne.
  */
+/** Ordre d affichage des familles de pages, du plus global au plus precis. */
+const PAGES = ["Global", "Accueil", "Rubrique", "Article", "Vidéo"] as const;
+
 export function CampaignForm({
   action,
   rubriques,
@@ -40,6 +46,7 @@ export function CampaignForm({
   submitLabel: string;
 }) {
   const targetRubriques = new Set(initial?.targeting?.rubriques ?? []);
+  const targetPlacements = new Set(initial?.targeting?.placements ?? []);
   const geo = (initial?.targeting?.geo ?? []).join(", ");
   const tags = (initial?.targeting?.tags ?? []).join(", ");
 
@@ -113,6 +120,46 @@ export function CampaignForm({
             </label>
           ))}
         </div>
+      </div>
+
+      {/* Emplacements achetés : c'est la commande du client, emplacement par
+          emplacement. Jusqu'au 11 octobre 2026 la zone était décidée par le
+          seul format de la bannière, si bien qu'un pavé vendu pour les
+          articles sortait aussi sur l'accueil et sur les rubriques. */}
+      <div className="grid gap-1 text-[11.5px] font-semibold text-ink-2 sm:col-span-2 lg:col-span-3">
+        Emplacements achetés (aucun coché = tous ceux du bon format)
+        <div className="grid gap-2.5 rounded border border-line bg-bg px-3 py-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          {PAGES.map((page) => {
+            const lot = PLACEMENTS.filter((p) => p.page === page);
+            if (lot.length === 0) return null;
+            return (
+              <div key={page} className="grid gap-1">
+                <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-ink-3">{page}</div>
+                {lot.map((p) => (
+                  <label key={p.slug} className="flex items-start gap-1.5 text-[12px] font-normal text-ink">
+                    <input
+                      type="checkbox"
+                      name="placements"
+                      value={p.slug}
+                      defaultChecked={targetPlacements.has(p.slug)}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      {/* Le libellé porte déjà la page en préfixe : on la retire
+                          ici, elle est au-dessus. */}
+                      {p.label.replace(/^[^—]*— /, "")}
+                      <span className="block text-[10.5px] text-ink-3">{nomFormat(p.format)}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+        <span className="text-[10.5px] font-normal text-ink-3">
+          Un emplacement coché n&apos;affichera la campagne que si elle possède une bannière au format
+          indiqué. L&apos;aperçu <code>?pub=1</code> sur le site le dira emplacement par emplacement.
+        </span>
       </div>
 
       <div className="flex items-end sm:col-span-2 lg:col-span-3">

@@ -55,7 +55,7 @@ export default async function EditCampaign({
     permanent: campaign.permanent,
     capImpressions: campaign.capImpressions,
     capClicks: campaign.capClicks,
-    targeting: (campaign.targeting ?? {}) as { rubriques?: string[]; geo?: string[]; tags?: string[] },
+    targeting: (campaign.targeting ?? {}) as { rubriques?: string[]; geo?: string[]; tags?: string[]; placements?: string[] },
     advertiserUserId: campaign.advertiserUserId,
     startAt: ymd(campaign.startAt),
     endAt: ymd(campaign.endAt),

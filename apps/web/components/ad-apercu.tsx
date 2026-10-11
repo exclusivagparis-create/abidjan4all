@@ -2,6 +2,8 @@ import { headers } from "next/headers";
 import { APERCU_PUB_PARAM } from "@/lib/apercu-publicite";
 import { apercuPubEnCours } from "@/lib/apercu-publicite-serveur";
 import type { Placement } from "@/lib/ad-placements";
+import type { MotifRejet } from "@/lib/ads";
+import { motifLisible, resumeRejets } from "@/lib/regie-motifs";
 
 /**
  * Cadre de prévisualisation d'un emplacement publicitaire.
@@ -32,6 +34,7 @@ export function CadreApercu({
   rempli,
   annonceur,
   note,
+  rejets = [],
   children,
 }: {
   placement: Placement;
@@ -41,6 +44,8 @@ export function CadreApercu({
   rempli: boolean;
   annonceur?: string;
   note?: string;
+  /** Pourquoi rien n’est servi ici — vide quand une bannière est affichée. */
+  rejets?: MotifRejet[];
   children?: React.ReactNode;
 }) {
   const taille = TAILLES[placement.format] ?? { h: 120, max: null, libelle: placement.format };
@@ -49,7 +54,7 @@ export function CadreApercu({
     ? { texte: "Éteint au Studio", couleur: "#9AA3B2" }
     : rempli
       ? { texte: `Vendu — ${annonceur ?? "annonceur"}`, couleur: "#2E7D32" }
-      : { texte: "Libre — aucune campagne", couleur: "#E8641A" };
+      : { texte: resumeRejets(rejets), couleur: "#E8641A" };
 
   return (
     <div className="my-6" data-apercu-pub={placement.slug}>
@@ -87,6 +92,19 @@ export function CadreApercu({
           {placement.zone}
           {note ? <span className="block italic">{note}</span> : null}
         </div>
+
+        {/* Pourquoi rien ne s’affiche ici. Huit conditions peuvent bloquer une
+            bannière, et toutes échouent en silence : sans cette liste, il faut
+            les essayer une par une. */}
+        {rejets.length > 0 ? (
+          <ul className="border-t border-[rgba(232,100,26,0.25)] bg-[rgba(232,100,26,0.05)] px-2.5 py-1.5">
+            {rejets.map((r, i) => (
+              <li key={i} className="py-0.5 text-[10.5px] leading-snug text-ink-2">
+                — {motifLisible(r)}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
     </div>
   );
