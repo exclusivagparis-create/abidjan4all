@@ -56,6 +56,11 @@ export default auth((req) => {
   // au navigateur.
   const enTetes = new Headers(req.headers);
   enTetes.set("x-a4a-path", pathname);
+  // La chaîne de requête suit le même chemin, pour la même raison : les
+  // encarts publicitaires sont rendus au fond de l'arbre, sans accès aux
+  // `searchParams` de la page, et leur mode de prévisualisation (`?pub=1`)
+  // devrait sinon être passé de main en main par onze points d'appel.
+  enTetes.set("x-a4a-search", req.nextUrl.search);
   return NextResponse.next({ request: { headers: enTetes } });
 });
 

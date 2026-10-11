@@ -3,6 +3,8 @@ import { countImpression, pickBanner } from "@/lib/ads";
 import { ipDeLaRequete, paysDepuisIp, appareilDepuisUa } from "@/lib/audience";
 import { getPlacement, placementActif } from "@/lib/ad-placements";
 import { AdInterstitial } from "@/components/ad-interstitial";
+import { apercuPubEnCours } from "@/lib/apercu-publicite-serveur";
+import { CadreApercu } from "@/components/ad-apercu";
 
 /** Contexte de diffusion (pays + appareil) déduit de la requête. */
 async function contexteDiffusion() {
@@ -11,6 +13,7 @@ async function contexteDiffusion() {
   const device = appareilDepuisUa(h.get("user-agent") ?? "");
   return { country, device };
 }
+
 
 /**
  * Encart publicitaire (régie interne, DF-03). Chaque encart est rattaché à un
@@ -30,7 +33,14 @@ export async function AdSlot({
 }) {
   const placement = getPlacement(placementId);
   if (!placement) return null;
-  if (!(await placementActif(placementId))) return null; // désactivé au Studio
+
+  const apercu = await apercuPubEnCours();
+  const actif = await placementActif(placementId);
+  // Hors aperçu, un emplacement désactivé au Studio ne rend rien : pas de
+  // cadre vide pour le lecteur. En aperçu, au contraire, il faut le voir —
+  // savoir qu'un encart existe ici mais dort est précisément l'information
+  // qu'on vient chercher.
+  if (!actif && !apercu) return null;
 
   const { country, device } = await contexteDiffusion();
   const format = placement.format;
@@ -38,6 +48,20 @@ export async function AdSlot({
   // L'interstitiel est réservé au mobile et délégué à un composant client
   // (fermeture + plafond de fréquence). On ne le sert pas sur desktop.
   if (format === "interstitial") {
+    /**
+     * En aperçu, l'interstitiel ne prend PAS l'écran.
+     *
+     * Il est plein écran par nature, et le montrer tel quel masquerait tous
+     * les autres encarts de la page — c'est-à-dire l'essentiel de ce qu'on
+     * est venu vérifier. Un cadre en ligne dit ce qu'il est et où il se
+     * déclenche ; pour le voir en vrai, il reste la navigation ordinaire sur
+     * un téléphone, avec une campagne active.
+     */
+    if (apercu) {
+      return (
+        <CadreApercu placement={placement} actif={actif} rempli={false} note="Plein écran sur mobile, une fois par session. Non déployé ici pour ne pas masquer les autres encarts." />
+      );
+    }
     if (device !== "mobile") return null;
     const banner = await pickBanner({ rubrique, device, country, format: "interstitial", contentTags });
     if (!banner) return null;
@@ -52,11 +76,19 @@ export async function AdSlot({
     );
   }
 
-  const banner = await pickBanner({ rubrique, device, country, format, contentTags });
-  if (!banner) return null;
+  const banner = actif ? await pickBanner({ rubrique, device, country, format, contentTags }) : null;
+  if (!banner) {
+    // Aucune campagne ne remplit cet encart. Pour le lecteur : rien. Pour la
+    // maison en aperçu : le cadre, à sa taille réelle, pour juger de la place
+    // qu'il prendra une fois vendu.
+    return apercu ? <CadreApercu placement={placement} actif={actif} rempli={false} /> : null;
+  }
   const campaign = { advertiser: banner.campaign.advertiser, headline: banner.headline, imageUrl: banner.imageUrl, linkUrl: banner.linkUrl, id: banner.id };
 
-  countImpression(banner.id);
+  // Une impression comptée en aperçu serait facturée à l'annonceur, et
+  // rapprocherait sa campagne de son plafond de diffusion. Regarder sa propre
+  // mise en page ne doit rien lui coûter.
+  if (!apercu) countImpression(banner.id);
 
   const isLeaderboard = format === "leaderboard_728x90";
   const isMpu = format === "mpu_300x250";
@@ -95,6 +127,16 @@ export async function AdSlot({
       ) : null}
     </div>
   );
+
+  // En aperçu, la bannière réelle s'affiche DANS le cadre annoté, et le lien
+  // de clic est retiré : un clic de la maison fausserait le taux de l'annonceur.
+  if (apercu) {
+    return (
+      <CadreApercu placement={placement} actif={actif} rempli annonceur={campaign.advertiser}>
+        {inner}
+      </CadreApercu>
+    );
+  }
 
   return (
     <div className="my-6">

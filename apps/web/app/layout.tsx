@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Archivo, Newsreader } from "next/font/google";
 import { ThemeProvider, ThemeScript } from "@a4a/ui";
 import { CookieConsent } from "@/components/cookie-consent";
 import { AdSkin } from "@/components/ad-skin";
+import { BandeauApercuPub } from "@/components/ad-apercu";
 import { habillageActif } from "@/lib/ad-skin";
+import { publiciteAutorisee } from "@/lib/pages-sans-publicite";
 import { jsonLdScript, organizationJsonLd, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
@@ -79,6 +82,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // laissent voir le habillage sur grand écran). Sinon, rendu identique.
   const skin = await habillageActif();
 
+  /**
+   * La balise AdSense n'est plus servie partout.
+   *
+   * Elle l'était, y compris sur la page de connexion et sur la coquille
+   * hors-ligne — vingt-sept mots. Les annonces automatiques placent des
+   * annonces partout où ce chargeur tourne, et une annonce sur un écran sans
+   * contenu éditeur est un motif de non-respect des règles. Voir
+   * lib/pages-sans-publicite.ts pour la liste et le raisonnement.
+   */
+  const publicite = publiciteAutorisee((await headers()).get("x-a4a-path"));
+
   return (
     <html
       lang="fr"
@@ -110,7 +124,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             l'analyseur dans la foulée. Mesuré sur une vraie requête
             publicitaire : `npa=1` sans consentement, absent après acceptation.
             Ne pas « corriger » cet ordre sans re-mesurer `npa`. */}
-        {ADSENSE_CLIENT ? (
+        {ADSENSE_CLIENT && publicite ? (
           <script
             async
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
@@ -142,6 +156,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           ) : (
             children
           )}
+          <BandeauApercuPub />
         </ThemeProvider>
         {/* Notre bandeau ne concerne plus que la mesure d'audience : la
             publicité relève du message de Google (cf. note ci-dessus). */}
