@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { countImpression, pickBanner } from "@/lib/ads";
+import { countImpression, pickBanner, selectionnerBanniere } from "@/lib/ads";
 import { ipDeLaRequete, paysDepuisIp, appareilDepuisUa } from "@/lib/audience";
 import { getPlacement, placementActif } from "@/lib/ad-placements";
 import { AdInterstitial } from "@/components/ad-interstitial";
@@ -76,12 +76,20 @@ export async function AdSlot({
     );
   }
 
-  const banner = actif ? await pickBanner({ rubrique, device, country, format, contentTags }) : null;
+  /**
+   * En aperçu, on passe par la sélection instrumentée : elle rend la même
+   * bannière, et en plus les motifs de rejet campagne par campagne. Hors
+   * aperçu, `pickBanner` reste le chemin du lecteur, requête identique.
+   */
+  const selection = apercu
+    ? await selectionnerBanniere({ rubrique, device, country, format, contentTags, diagnostic: true })
+    : null;
+  const banner = selection ? selection.banniere : actif ? await pickBanner({ rubrique, device, country, format, contentTags }) : null;
   if (!banner) {
     // Aucune campagne ne remplit cet encart. Pour le lecteur : rien. Pour la
     // maison en aperçu : le cadre, à sa taille réelle, pour juger de la place
     // qu'il prendra une fois vendu.
-    return apercu ? <CadreApercu placement={placement} actif={actif} rempli={false} /> : null;
+    return apercu ? <CadreApercu placement={placement} actif={actif} rempli={false} rejets={selection?.rejets ?? []} /> : null;
   }
   const campaign = { advertiser: banner.campaign.advertiser, headline: banner.headline, imageUrl: banner.imageUrl, linkUrl: banner.linkUrl, id: banner.id };
 
