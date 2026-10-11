@@ -4,6 +4,7 @@ import { Archivo, Newsreader } from "next/font/google";
 import { ThemeProvider, ThemeScript } from "@a4a/ui";
 import { CookieConsent } from "@/components/cookie-consent";
 import { AdSkin } from "@/components/ad-skin";
+import { BandeauApercuPub } from "@/components/ad-apercu";
 import { habillageActif } from "@/lib/ad-skin";
 import { publiciteAutorisee } from "@/lib/pages-sans-publicite";
 import { jsonLdScript, organizationJsonLd, SITE_URL } from "@/lib/seo";
@@ -155,6 +156,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           ) : (
             children
           )}
+          <BandeauApercuPub />
         </ThemeProvider>
         {/* Notre bandeau ne concerne plus que la mesure d'audience : la
             publicité relève du message de Google (cf. note ci-dessus). */}
