@@ -1,6 +1,27 @@
 import { prisma, type AdBanner, type AdCampaign, type AdFormat, type AdPriority } from "@a4a/db";
+import { emplacementCible } from "@/lib/ad-placements-catalogue";
 
-export type AdTargeting = { rubriques?: string[]; geo?: string[]; device?: string; tags?: string[] };
+/**
+ * Ciblage d'une campagne, tel qu'il est stocké dans `AdCampaign.targeting`.
+ *
+ * `placements` est la liste des emplacements achetés par l'annonceur, par
+ * identifiant du catalogue — `article_mpu`, `site_leaderboard`… Ajouté le
+ * 11 octobre 2026 : jusque-là la zone était décidée par le seul format de la
+ * bannière, si bien qu'un pavé acheté pour les articles sortait aussi sur
+ * l'accueil et sur les rubriques. La régie vend des emplacements, pas des
+ * formats ; le ciblage devait suivre la commande.
+ *
+ * Liste vide ou absente = tous les emplacements compatibles avec le format,
+ * c'est-à-dire le comportement d'avant. Les campagnes existantes ne changent
+ * donc pas de diffusion.
+ */
+export type AdTargeting = {
+  rubriques?: string[];
+  geo?: string[];
+  device?: string;
+  tags?: string[];
+  placements?: string[];
+};
 
 /** Bannière retenue pour diffusion, avec sa campagne (annonceur, ciblage). */
 export type BanniereDiffusee = AdBanner & { campaign: AdCampaign };
@@ -56,6 +77,7 @@ export type MotifRejet =
   | { type: "ciblage_appareil"; campagne: string; vise: string; actuel: string | null }
   | { type: "ciblage_geo"; campagne: string; visees: string[]; actuel: string | null }
   | { type: "ciblage_tags"; campagne: string; visees: string[]; page: string[] }
+  | { type: "ciblage_emplacement"; campagne: string; visees: string[]; actuel: string }
   | { type: "format_absent"; campagne: string; attendu: AdFormat; disponibles: AdFormat[] };
 
 export interface Selection {
@@ -70,6 +92,14 @@ interface ParamsSelection {
   country?: string | null;
   format: AdFormat;
   contentTags?: string[];
+  /**
+   * Emplacement qui demande une bannière — `article_mpu`, `site_leaderboard`…
+   *
+   * C'est ce qui permet à une campagne de ne sortir QUE sur les emplacements
+   * achetés. Sans lui, le ciblage par emplacement ne peut pas s'appliquer :
+   * s'il est absent, on ne refuse rien, on sert comme avant.
+   */
+  placementId?: string;
   /**
    * Mode diagnostic : la requête cesse de filtrer sur le statut et la période,
    * pour pouvoir dire « trois campagnes, aucune active » là où le moteur ne
@@ -148,8 +178,25 @@ export async function selectionnerBanniere(params: ParamsSelection): Promise<Sel
       continue;
     }
 
-    // Ciblage (identique à l'ancien comportement, au niveau campagne).
+    // Ciblage, au niveau campagne.
     const t = (c.targeting ?? {}) as AdTargeting;
+
+    /**
+     * Emplacements achetés, en premier parce que c'est le ciblage le plus
+     * explicite : l'annonceur a commandé « le pavé des articles », pas « un
+     * pavé quelque part ». Le format reste exigé ensuite — un emplacement
+     * acheté sans bannière au bon format ne sert rien, et le motif
+     * `format_absent` le dira.
+     */
+    if (!emplacementCible(t.placements, params.placementId)) {
+      rejets.push({
+        type: "ciblage_emplacement",
+        campagne: nom,
+        visees: t.placements ?? [],
+        actuel: params.placementId ?? "",
+      });
+      continue;
+    }
     // Une campagne ciblée sur des rubriques ne sort jamais sur une page qui
     // n'en a pas — l'accueil, la page Vidéos. C'est le piège le plus discret
     // du ciblage, et il mérite d'être nommé.
@@ -210,6 +257,7 @@ export async function pickBanner(params: {
   country?: string | null;
   format: AdFormat;
   contentTags?: string[];
+  placementId?: string;
 }): Promise<BanniereDiffusee | null> {
   return (await selectionnerBanniere(params)).banniere;
 }

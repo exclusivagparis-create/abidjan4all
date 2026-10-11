@@ -6,7 +6,7 @@ import { prisma, type AdFormat, type AdPriority, type AdStatus } from "@a4a/db";
 import { REGIE_ROLES } from "@/auth";
 import { exigerRoleOuRediriger } from "@/lib/garde-role";
 import { removeUpload, saveImageUpload } from "@/lib/uploads";
-import { getPlacement } from "@/lib/ad-placements";
+import { getPlacement, placementsValides } from "@/lib/ad-placements";
 import { sendMonthlyAdReports } from "@/lib/ad-reports";
 import { trouverPack } from "@/lib/packs";
 
@@ -42,6 +42,10 @@ function parseCampaignForm(formData: FormData) {
   const advertiser = String(formData.get("advertiser") ?? "").trim().slice(0, 80);
   const cpm = Number(formData.get("cpm"));
   const rubriques = formData.getAll("rubriques").map((s) => String(s).trim()).filter(Boolean);
+  // Emplacements achetés : filtrés sur le catalogue, car un identifiant
+  // inventé dans le formulaire dormirait en base sans jamais correspondre à
+  // rien — la campagne semblerait ciblée alors qu'elle ne sortirait nulle part.
+  const placements = placementsValides(formData.getAll("placements").map((s) => String(s).trim()));
   const geo = String(formData.get("geo") ?? "")
     .split(",")
     .map((s) => s.trim().toUpperCase())
@@ -78,7 +82,7 @@ function parseCampaignForm(formData: FormData) {
     data: {
       advertiser,
       cpm,
-      targeting: { rubriques, geo, tags },
+      targeting: { rubriques, geo, tags, placements },
       advertiserUserId,
       priority,
       permanent,

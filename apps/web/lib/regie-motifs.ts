@@ -10,6 +10,7 @@
  * contente de constater laisse son lecteur aussi démuni qu'avant.
  */
 import type { MotifRejet } from "@/lib/ads";
+import { libellePlacement } from "@/lib/ad-placements-catalogue";
 
 const FORMATS: Record<string, string> = {
   leaderboard_728x90: "bandeau 728 × 90",
@@ -88,6 +89,13 @@ export function motifLisible(r: MotifRejet): string {
       return r.page.length === 0
         ? `« ${r.campagne} » ne vise que les contenus portant ${liste(r.visees)}, et cette page n’a pas de mots-clés — seuls les articles en ont. Retirez le ciblage par mots-clés pour apparaître ailleurs.`
         : `« ${r.campagne} » ne vise que les contenus portant ${liste(r.visees)}, or cet article porte ${liste(r.page)}.`;
+
+    case "ciblage_emplacement":
+      // Le ciblage voulu : l'annonceur a acheté des emplacements précis, et la
+      // campagne ne sort que là. Le message nomme les emplacements par leur
+      // libellé du catalogue, celui-là même qui s'affiche dans les cases à
+      // cocher de la campagne — pour qu'on retrouve la case du premier coup.
+      return `« ${r.campagne} » n’a acheté que ${liste(r.visees.map(libellePlacement))}. Cet emplacement — ${libellePlacement(r.actuel)} — n’en fait pas partie. Cochez-le dans les réglages de la campagne pour l’y ajouter.`;
 
     case "format_absent":
       return `« ${r.campagne} » n’a aucune bannière en ${nomFormat(r.attendu)}, qui est le format de cet emplacement. Elle en a ${liste(r.disponibles.map(nomFormat))}. Ajoutez-lui un visuel au bon format.`;

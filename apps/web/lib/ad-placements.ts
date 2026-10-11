@@ -1,46 +1,22 @@
 import { cache } from "react";
-import { prisma, type AdFormat } from "@a4a/db";
+import { prisma } from "@a4a/db";
+import { PLACEMENTS, getPlacement } from "@/lib/ad-placements-catalogue";
 
 /**
- * Catalogue des emplacements publicitaires. Chaque entrée = un encart physique
- * sur une page, lié à un format. L'état activé/désactivé est piloté depuis la
- * régie Studio (table AdPlacement) ; ici on définit seulement le catalogue et
- * l'état par défaut.
+ * État activé/désactivé des emplacements publicitaires, lu en base.
+ *
+ * Le catalogue lui-même — la liste des encarts, leurs formats, leurs zones —
+ * vit dans `ad-placements-catalogue.ts`, sans Prisma, pour rester éprouvable.
+ * Tout y est réexporté ci-dessous : les `import { PLACEMENTS } from
+ * "@/lib/ad-placements"` existants continuent de fonctionner.
  */
-export type Placement = {
-  slug: string;
-  page: "Global" | "Accueil" | "Rubrique" | "Article" | "Vidéo";
-  format: AdFormat;
-  label: string;
-  zone: string; // description de l'emplacement, pour le Studio
-  defaultEnabled: boolean;
-};
-
-export const PLACEMENTS: Placement[] = [
-  // Global — présent sur TOUTES les pages publiques (rendu dans l'en-tête).
-  { slug: "site_leaderboard", page: "Global", format: "leaderboard_728x90", label: "Global — bandeau (toutes les pages)", zone: "Sous l'en-tête, sur tout le site", defaultEnabled: true },
-  { slug: "site_skin", page: "Global", format: "skin", label: "Global — habillage (fond de page)", zone: "Fond de page, visible dans les marges sur grand écran", defaultEnabled: false },
-  // Vidéo
-  { slug: "video_preroll", page: "Vidéo", format: "video", label: "Vidéo — encart sponsor", zone: "Au-dessus du lecteur, page Vidéos", defaultEnabled: true },
-  // Accueil
-  { slug: "home_mpu", page: "Accueil", format: "mpu_300x250", label: "Accueil — pavé colonne", zone: "Colonne latérale, sous « Les plus lus »", defaultEnabled: true },
-  { slug: "home_native", page: "Accueil", format: "native", label: "Accueil — natif in-feed", zone: "Entre les sections d'articles", defaultEnabled: true },
-  { slug: "home_interstitial", page: "Accueil", format: "interstitial", label: "Accueil — interstitiel mobile", zone: "Plein écran mobile, 1×/session", defaultEnabled: false },
-  // Rubrique
-  { slug: "rubrique_mpu", page: "Rubrique", format: "mpu_300x250", label: "Rubrique — pavé", zone: "Au milieu de la liste d'articles", defaultEnabled: true },
-  { slug: "rubrique_native", page: "Rubrique", format: "native", label: "Rubrique — natif in-feed", zone: "Au fil de la liste d'articles", defaultEnabled: true },
-  { slug: "rubrique_interstitial", page: "Rubrique", format: "interstitial", label: "Rubrique — interstitiel mobile", zone: "Plein écran mobile, 1×/session", defaultEnabled: false },
-  // Article
-  { slug: "article_mpu", page: "Article", format: "mpu_300x250", label: "Article — pavé", zone: "Après le chapeau / dans le corps", defaultEnabled: true },
-  { slug: "article_native", page: "Article", format: "native", label: "Article — natif fin d'article", zone: "Sous le corps de l'article", defaultEnabled: true },
-  { slug: "article_interstitial", page: "Article", format: "interstitial", label: "Article — interstitiel mobile", zone: "Plein écran mobile, 1×/session", defaultEnabled: false },
-];
-
-const PAR_SLUG = new Map(PLACEMENTS.map((p) => [p.slug, p]));
-
-export function getPlacement(slug: string): Placement | undefined {
-  return PAR_SLUG.get(slug);
-}
+export {
+  PLACEMENTS,
+  getPlacement,
+  libellePlacement,
+  placementsValides,
+  type Placement,
+} from "@/lib/ad-placements-catalogue";
 
 /**
  * État activé de chaque emplacement (catalogue + surcharges DB). Mis en cache

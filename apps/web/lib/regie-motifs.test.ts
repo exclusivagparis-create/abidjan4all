@@ -134,6 +134,7 @@ test("aucun motif ne rend une phrase vide", () => {
     { type: "ciblage_appareil", campagne: "A", vise: "mobile", actuel: null },
     { type: "ciblage_geo", campagne: "A", visees: [], actuel: null },
     { type: "ciblage_tags", campagne: "A", visees: ["x"], page: [] },
+    { type: "ciblage_emplacement", campagne: "A", visees: ["home_mpu"], actuel: "article_mpu" },
     { type: "format_absent", campagne: "A", attendu: "native", disponibles: [] },
   ] as const;
   for (const r of tous) {
@@ -142,4 +143,24 @@ test("aucun motif ne rend une phrase vide", () => {
     assert.ok(!m.includes("undefined"), `motif ${r.type} contient undefined`);
     assert.ok(!m.includes("null"), `motif ${r.type} contient null`);
   }
+});
+
+/**
+ * Le ciblage par emplacement est la raison de toute cette mécanique : la régie
+ * vend des emplacements, pas des formats. Le message doit nommer les
+ * emplacements comme les cases à cocher les nomment, pour qu'on retrouve la
+ * bonne case du premier coup.
+ */
+test("le ciblage par emplacement nomme les emplacements, pas leurs identifiants", () => {
+  const m = motifLisible({
+    type: "ciblage_emplacement",
+    campagne: "Orange CI",
+    visees: ["article_mpu", "home_mpu"],
+    actuel: "rubrique_mpu",
+  });
+  assert.ok(m.includes("Article — pavé"), `libelle attendu, obtenu : ${m}`);
+  assert.ok(m.includes("Accueil — pavé colonne"));
+  assert.ok(m.includes("Rubrique — pavé"), "l'emplacement courant est nommé");
+  assert.ok(!m.includes("article_mpu"), "aucun identifiant technique dans le message");
+  assert.ok(m.includes("Cochez-le"), "le geste est indiqué");
 });

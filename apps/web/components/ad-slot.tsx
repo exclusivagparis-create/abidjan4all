@@ -63,7 +63,7 @@ export async function AdSlot({
       );
     }
     if (device !== "mobile") return null;
-    const banner = await pickBanner({ rubrique, device, country, format: "interstitial", contentTags });
+    const banner = await pickBanner({ rubrique, device, country, format: "interstitial", contentTags, placementId });
     if (!banner) return null;
     return (
       <AdInterstitial
@@ -82,9 +82,13 @@ export async function AdSlot({
    * aperçu, `pickBanner` reste le chemin du lecteur, requête identique.
    */
   const selection = apercu
-    ? await selectionnerBanniere({ rubrique, device, country, format, contentTags, diagnostic: true })
+    ? await selectionnerBanniere({ rubrique, device, country, format, contentTags, placementId, diagnostic: true })
     : null;
-  const banner = selection ? selection.banniere : actif ? await pickBanner({ rubrique, device, country, format, contentTags }) : null;
+  const banner = selection
+    ? selection.banniere
+    : actif
+      ? await pickBanner({ rubrique, device, country, format, contentTags, placementId })
+      : null;
   if (!banner) {
     // Aucune campagne ne remplit cet encart. Pour le lecteur : rien. Pour la
     // maison en aperçu : le cadre, à sa taille réelle, pour juger de la place
