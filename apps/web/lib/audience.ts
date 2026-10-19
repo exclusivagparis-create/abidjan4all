@@ -2,6 +2,14 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@a4a/db";
 import { adresseDesEntetes } from "@/lib/limite-debit";
+import { appareilDepuisUa, estUnRobot, natureDuChemin } from "@/lib/audience-regles";
+
+/**
+ * Les regles pures — detection des robots, nature du chemin, appareil — vivent
+ * dans audience-regles.ts, eprouvables sans base ni server-only. Reexportees
+ * ici pour que les imports existants ne bougent pas.
+ */
+export { appareilDepuisUa, estUnRobot, natureDuChemin } from "@/lib/audience-regles";
 
 /**
  * Mesure d'audience maison, sans cookie ni service tiers.
@@ -77,30 +85,6 @@ export function paysDepuisIp(ip: string | null): string | null {
   } catch {
     return null;
   }
-}
-
-/** Téléphone ou tablette, d'après le navigateur annoncé. */
-export function appareilDepuisUa(ua: string): "mobile" | "desktop" {
-  return /Mobile|Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(ua) ? "mobile" : "desktop";
-}
-
-/** Robots connus — exclus des statistiques, sinon les chiffres sont faux. */
-const ROBOT =
-  /bot|crawl|spider|scanner|curl|wget|python|scrapy|semrush|ahrefs|censys|zgrab|masscan|Go-http|okhttp|monitoring|uptime|headless|lighthouse|facebookexternalhit|WhatsApp|Twitterbot|TelegramBot|Discordbot|Slackbot|preview/i;
-export function estUnRobot(ua: string): boolean {
-  return !ua || ROBOT.test(ua);
-}
-
-/** Nature de la page — alimente les compteurs « vidéos vues », « podcasts vus »… */
-export function natureDuChemin(path: string): string {
-  if (path === "/videos" || path.startsWith("/videos/")) return "video";
-  if (path === "/podcasts" || path.startsWith("/podcasts/")) return "podcast";
-  if (path === "/") return "accueil";
-  // /rubrique/slug = un article ; /rubrique seul = une page de rubrique
-  const segments = path.split("/").filter(Boolean);
-  if (segments.length >= 2) return "article";
-  if (segments.length === 1) return "rubrique";
-  return "autre";
 }
 
 /**
