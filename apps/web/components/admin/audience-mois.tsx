@@ -2,10 +2,30 @@ import type { AudienceMois } from "@/lib/stats-audience";
 
 const nf = new Intl.NumberFormat("fr-FR");
 
+/**
+ * Libellés des pays. Un code absent s’affichait brut — « JP », « BR », « CN »
+ * au milieu de « France » et « Belgique », ce qui donnait l’impression d’une
+ * panne alors que c’était un simple trou dans cette table.
+ */
 const PAYS: Record<string, string> = {
-  CI: "Côte d'Ivoire", FR: "France", US: "États-Unis", CA: "Canada", BE: "Belgique",
-  SN: "Sénégal", ML: "Mali", BF: "Burkina Faso", GH: "Ghana", MA: "Maroc",
-  GB: "Royaume-Uni", DE: "Allemagne", CM: "Cameroun", TG: "Togo", BJ: "Bénin",
+  // Afrique de l’Ouest et du Centre
+  CI: "Côte d’Ivoire", SN: "Sénégal", ML: "Mali", BF: "Burkina Faso", GH: "Ghana",
+  TG: "Togo", BJ: "Bénin", NE: "Niger", GN: "Guinée", NG: "Nigeria", CM: "Cameroun",
+  GA: "Gabon", CD: "RD Congo", CG: "Congo", SL: "Sierra Leone", LR: "Liberia",
+  GM: "Gambie", GW: "Guinée-Bissau", CV: "Cap-Vert", TD: "Tchad", CF: "Centrafrique",
+  // Maghreb et reste de l’Afrique
+  MA: "Maroc", DZ: "Algérie", TN: "Tunisie", EG: "Égypte", ZA: "Afrique du Sud",
+  KE: "Kenya", ET: "Éthiopie", MU: "Maurice", MG: "Madagascar",
+  // Diaspora
+  FR: "France", BE: "Belgique", CH: "Suisse", CA: "Canada", US: "États-Unis",
+  GB: "Royaume-Uni", DE: "Allemagne", IT: "Italie", ES: "Espagne", PT: "Portugal",
+  NL: "Pays-Bas", SE: "Suède", NO: "Norvège", DK: "Danemark", IE: "Irlande",
+  LU: "Luxembourg", AT: "Autriche", PL: "Pologne", RU: "Russie", TR: "Turquie",
+  // Reste du monde
+  CN: "Chine", JP: "Japon", IN: "Inde", BR: "Brésil", AR: "Argentine", MX: "Mexique",
+  AU: "Australie", NZ: "Nouvelle-Zélande", SG: "Singapour", KR: "Corée du Sud",
+  AE: "Émirats arabes unis", SA: "Arabie saoudite", QA: "Qatar", IL: "Israël",
+  TH: "Thaïlande", VN: "Viêt Nam", ID: "Indonésie", PH: "Philippines", HK: "Hong Kong",
 };
 
 function libelleMois(m: string): string {
