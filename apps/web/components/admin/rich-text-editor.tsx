@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { TRAMES, teinteTrame, type TrameFond } from "@/lib/trames-paragraphe";
+
 /**
  * Éditeur de texte enrichi (contentEditable). Stocke du HTML nettoyé côté
  * serveur au save. Utilise document.execCommand (déprécié mais universellement
@@ -16,8 +18,9 @@ import { useEffect, useRef, useState } from "react";
  * page, et sa barre n'apparaît qu'au moment où l'on écrit dedans. C'est ce qui
  * rend la mise en forme utilisable ici — un article de trente paragraphes
  * afficherait sinon trente barres d'outils empilées, et l'on ne verrait plus le
- * texte. Le jeu de boutons y est réduit à ce qu'on emploie dans un paragraphe :
- * ni tableau, ni alignement, ni retrait.
+ * texte. Son jeu de boutons est celui du paragraphe : la mise en forme du
+ * texte, le tableau et la trame de fond. Restent au bloc seul ce qui n'a pas
+ * de sens dans un fil d'article — l'historique et les retraits.
  *
  * `onChange` renvoie le HTML **et** le texte nu. Ce second n'est pas une
  * commodité : l'index de recherche du site lit le champ `text` des blocs
@@ -63,6 +66,8 @@ export function RichTextEditor({
   reserveDroite = false,
   placeholder,
   className,
+  fond,
+  onFondChange,
 }: {
   value: string;
   onChange: (html: string, texte: string) => void;
@@ -79,10 +84,20 @@ export function RichTextEditor({
   placeholder?: string;
   /** Typographie de la zone d'écriture, en tenue compacte. */
   className?: string;
+  /**
+   * Trame de fond du paragraphe entier.
+   *
+   * Propriété du bloc, et non du HTML : contrairement au surlignage, elle ne
+   * se pose pas sur une sélection mais derrière tout le paragraphe. L'outil
+   * n'apparaît donc que si l'appelant sait où ranger la valeur — l'éditeur
+   * d'article ici, pas l'éditeur de page, dont les blocs n'ont pas ce champ.
+   */
+  fond?: TrameFond | null;
+  onFondChange?: (fond: TrameFond | null) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const boite = useRef<HTMLDivElement>(null);
-  const [showColors, setShowColors] = useState<false | "fore" | "back">(false);
+  const [showColors, setShowColors] = useState<false | "fore" | "back" | "trame">(false);
   const [actif, setActif] = useState(false);
 
   /**
@@ -128,13 +143,27 @@ export function RichTextEditor({
     if (url) exec("createLink", url);
   };
 
+  /**
+   * Insertion d'un tableau.
+   *
+   * Le balisage sort nu, sans bordures ni marges en style inline. Ce n'est pas
+   * un oubli : le nettoyage du serveur n'admet pas `border`, `padding`,
+   * `width` ni `margin` (cf. sanitize-html, allowedStyles). Ces styles-là
+   * étaient donc effacés à l'enregistrement, et le tableau que l'auteur venait
+   * de voir encadré ressortait sans filets après sauvegarde. Les bordures
+   * viennent maintenant de la feuille de style, des deux côtés — l'éditeur
+   * comme l'article — et suivent le thème, ce qu'un `#ccc` figé ne faisait pas.
+   *
+   * Seul `text-align` demeure : il passe le filtre, et un titre de colonne se
+   * lit à gauche, non centré comme le veut le navigateur par défaut.
+   */
   const insertTable = () => {
     const cols = Math.min(6, Math.max(1, Number(window.prompt("Nombre de colonnes ?", "3")) || 3));
     const rows = Math.min(20, Math.max(1, Number(window.prompt("Nombre de lignes ?", "3")) || 3));
-    const th = `<th style="border:1px solid #ccc;padding:6px 10px;text-align:left">Titre</th>`.repeat(cols);
-    const td = `<td style="border:1px solid #ccc;padding:6px 10px">—</td>`.repeat(cols);
+    const th = `<th style="text-align:left">Titre</th>`.repeat(cols);
+    const td = `<td>—</td>`.repeat(cols);
     const body = `<tr>${td}</tr>`.repeat(rows - 1);
-    const table = `<table style="border-collapse:collapse;width:100%;margin:12px 0"><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table><p><br/></p>`;
+    const table = `<table><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table><p><br/></p>`;
     exec("insertHTML", table);
   };
 
@@ -175,9 +204,24 @@ export function RichTextEditor({
         <span className='rounded-sm px-0.5' style={{ background: '#FDE68A', color: '#1a1a1a' }}>A</span>
         <span className='ml-0.5 text-[9px] text-ink-3'>▾</span>
       </Tb>
+      {/* La trame n'est proposée que si l'appelant a un champ pour elle. Elle
+          vient après les deux couleurs d'encre : les trois commandes se lisent
+          alors ensemble — la lettre, le surlignage, puis le paragraphe. */}
+      {onFondChange ? (
+        <Tb onClick={() => setShowColors(showColors === 'trame' ? false : 'trame')} title='Trame de fond du paragraphe'>
+          <span
+            className='rounded-sm border border-line px-1'
+            style={{ background: teinteTrame(fond) ?? 'transparent' }}
+          >
+            ¶
+          </span>
+          <span className='ml-0.5 text-[9px] text-ink-3'>▾</span>
+        </Tb>
+      ) : null}
       <Sep />
       <Tb onClick={() => exec('insertUnorderedList')} title='Puces'>•≡</Tb>
       <Tb onClick={() => exec('insertOrderedList')} title='Numérotation'>1.</Tb>
+      <Tb onClick={insertTable} title='Insérer un tableau'>▦</Tb>
       <Sep />
       <Tb onClick={() => exec('justifyLeft')} title='Aligner à gauche'>⇤≡</Tb>
       <Tb onClick={() => exec('justifyCenter')} title='Centrer'>≡</Tb>
@@ -191,10 +235,10 @@ export function RichTextEditor({
     </>
   );
 
-  // Ce qui reste propre au bloc : l'historique, les retraits et le tableau. La
-  // taille et l'alignement sont passés dans le jeu commun — un paragraphe en a
-  // l'usage autant qu'un bloc, et les dupliquer ici les aurait affichés deux
-  // fois dans la barre pleine.
+  // Ce qui reste propre au bloc : l'historique et les retraits. La taille,
+  // l'alignement et le tableau sont passés dans le jeu commun — un paragraphe
+  // en a l'usage autant qu'un bloc, et les dupliquer ici les aurait affichés
+  // deux fois dans la barre pleine.
   const outilsBloc = (
     <>
       <Tb onClick={() => exec('undo')} title='Annuler'>↶</Tb>
@@ -204,14 +248,42 @@ export function RichTextEditor({
       <Sep />
       <Tb onClick={() => exec('outdent')} title='Diminuer le retrait'>⇤</Tb>
       <Tb onClick={() => exec('indent')} title='Augmenter le retrait'>⇥</Tb>
-      <Sep />
-      <Tb onClick={insertTable} title='Insérer un tableau'>▦</Tb>
     </>
   );
 
   const palette = showColors ? (
     <div className='flex flex-wrap gap-1.5 border-b border-line-2 bg-surface-2 px-2.5 py-2'>
-      {showColors === 'fore'
+      {showColors === 'trame' ? (
+        <>
+          {/* Des pastilles nommées, et non des carrés de couleur comme pour
+              l'encre : une trame est posée à 10 % d'opacité pour rester lisible
+              sous du texte, et sur un carré de cinq millimètres ces sept
+              teintes-là sont indiscernables. Le libellé tranche, et la teinte
+              se montre telle qu'elle sera — derrière des mots. */}
+          <button
+            type='button'
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => { onFondChange?.(null); setShowColors(false); }}
+            className={'rounded border px-2 py-0.5 text-[11.5px] text-ink-2 hover:text-ink ' + (fond ? 'border-line' : 'border-ink')}
+            title='Retirer la trame'
+          >
+            Aucune
+          </button>
+          {TRAMES.map(([valeur, libelle, teinte]) => (
+            <button
+              key={valeur}
+              type='button'
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { onFondChange?.(valeur); setShowColors(false); }}
+              className={'rounded border px-2 py-0.5 text-[11.5px] text-ink ' + (fond === valeur ? 'border-ink' : 'border-line')}
+              style={{ background: teinte }}
+              title={'Fond ' + libelle.toLowerCase()}
+            >
+              {libelle}
+            </button>
+          ))}
+        </>
+      ) : showColors === 'fore'
         ? COLORS.map((c) => (
             <button
               key={c}
@@ -296,7 +368,7 @@ export function RichTextEditor({
         onKeyUp={memoriser}
         onMouseUp={memoriser}
         onBlur={() => { memoriser(); sync(); }}
-        className='prose-editor min-h-[120px] px-4 py-3 font-serif text-[16px] leading-relaxed text-ink outline-none [&_a]:text-blue [&_a]:underline [&_table]:my-2 [&_td]:border [&_td]:border-line [&_td]:px-2.5 [&_td]:py-1.5 [&_th]:border [&_th]:border-line [&_th]:bg-surface-2 [&_th]:px-2.5 [&_th]:py-1.5'
+        className='prose-editor min-h-[120px] px-4 py-3 font-serif text-[16px] leading-relaxed text-ink outline-none [&_a]:text-blue [&_a]:underline [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-line [&_td]:px-2.5 [&_td]:py-1.5 [&_th]:border [&_th]:border-line [&_th]:bg-surface-2 [&_th]:px-2.5 [&_th]:py-1.5'
       />
     </div>
   );

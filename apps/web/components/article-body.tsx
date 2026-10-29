@@ -1,4 +1,5 @@
 import { PlaceholderMedia } from "./placeholder-media";
+import { teinteTrame } from "@/lib/trames-paragraphe";
 
 type Block = {
   type: string;
@@ -11,6 +12,8 @@ type Block = {
   /** Légende éditoriale, affichée sous l'image. */
   caption?: string;
   variant?: string;
+  /** Trame de fond d'un paragraphe (cf. lib/trames-paragraphe). */
+  fond?: string;
 };
 
 /** Teintes des encadrés (callout) — reprises du modèle éditorial. */
@@ -56,9 +59,16 @@ export function ArticleBody({ blocks, dropCap = true }: { blocks: unknown; dropC
             const text = block.text ?? "";
             // premier paragraphe = « lead » du modèle : plus grand, semi-gras
             const lead = dropCap && i === 0 && text.length > 1;
-            const classe = lead
+            const base = lead
               ? "mb-[22px] font-serif text-[19.5px] font-semibold leading-[1.62] text-ink"
               : "mb-[22px] font-serif text-[17.5px] leading-[1.78] text-ink";
+
+            // Trame de fond, posée sur le paragraphe entier. Elle appelle ses
+            // propres marges intérieures : sans elles le texte touche le bord
+            // de la teinte, et le bloc a l'air d'une coquille, non d'un fond.
+            const trame = teinteTrame(block.fond);
+            const classe = trame ? base + " rounded-[6px] px-4 py-3" : base;
+            const fondStyle = trame ? { background: trame } : undefined;
 
             // Un paragraphe mis en forme porte du `html` ; les autres — tous
             // ceux écrits avant que l'éditeur ne sache le faire, dont les
@@ -69,7 +79,13 @@ export function ArticleBody({ blocks, dropCap = true }: { blocks: unknown; dropC
               return (
                 <div
                   key={i}
-                  className={`${classe} [&_a]:text-blue [&_a]:underline [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6`}
+                  // Les tableaux : un paragraphe peut en porter depuis que la
+                  // barre de mise en forme sait les insérer. Leurs bordures
+                  // viennent d'ici et non du HTML enregistré — le nettoyage ne
+                  // garde pas les styles de bordure, et une bordure figée en
+                  // clair se verrait à peine en thème sombre.
+                  className={`${classe} [&_a]:text-blue [&_a]:underline [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_table]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-line [&_td]:px-2.5 [&_td]:py-1.5 [&_th]:border [&_th]:border-line [&_th]:bg-surface-2 [&_th]:px-2.5 [&_th]:py-1.5 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6`}
+                  style={fondStyle}
                   // Nettoyé au save par la liste blanche du serveur, comme le
                   // texte enrichi (cf. sanitizeBlocks).
                   dangerouslySetInnerHTML={{ __html: block.html }}
@@ -78,7 +94,7 @@ export function ArticleBody({ blocks, dropCap = true }: { blocks: unknown; dropC
             }
 
             return (
-              <p key={i} className={classe}>
+              <p key={i} className={classe} style={fondStyle}>
                 {text}
               </p>
             );

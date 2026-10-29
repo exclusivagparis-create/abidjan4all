@@ -13,6 +13,7 @@ import {
 } from "./garde-modifications";
 import { ImportHtml } from "./import-html";
 import { RichTextEditor } from "./rich-text-editor";
+import { teinteTrame, type TrameFond } from "@/lib/trames-paragraphe";
 import { SelecteurImage } from "./selecteur-image";
 import { STATUS_META } from "./status-chip";
 
@@ -38,6 +39,13 @@ type Block = {
   /** Légende éditoriale, affichée sous l'image dans l'article. */
   caption?: string;
   variant?: CalloutVariant;
+  /**
+   * Trame de fond du paragraphe — teinte posée derrière le bloc entier.
+   *
+   * Distincte du surlignage, qui vit dans le `html` du paragraphe et ne couvre
+   * que les mots sélectionnés.
+   */
+  fond?: TrameFond;
 };
 
 export type EditorArticle = {
@@ -368,22 +376,34 @@ export function ArticleEditor({
               {block.type === "richtext" ? (
                 <RichTextEditor reserveDroite value={block.html ?? ""} onChange={(html) => setBlock(i, { html })} />
               ) : block.type === "paragraph" ? (
-                <RichTextEditor
-                  compact
-                  reserveDroite
-                  placeholder="Paragraphe…"
-                  // Un paragraphe d'avant la mise en forme ne porte que du
-                  // texte : on l'échappe pour l'ouvrir en HTML, sinon un
-                  // chevron ou une esperluette du texte d'origine serait pris
-                  // pour du balisage. Les archives en contiennent.
-                  value={block.html ?? echapperHtml(block.text ?? "")}
-                  // Le texte nu est conservé À CÔTÉ du HTML, et ce n'est pas
-                  // une redondance : l'index de recherche du site lit le champ
-                  // `text` des blocs. Un paragraphe qui ne porterait que du
-                  // HTML sortirait des résultats de recherche.
-                  onChange={(html, texte) => setBlock(i, { html, text: texte })}
-                  className="prose-editor w-full bg-transparent font-serif text-lg leading-[1.72] text-ink outline-none [&_a]:text-blue [&_a]:underline [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6"
-                />
+                // La trame est posée ici, autour de l'éditeur, plutôt que dans
+                // la zone d'écriture : l'auteur voit son paragraphe tel qu'il
+                // paraîtra — fond et marges comprises — pendant qu'il l'écrit.
+                <div
+                  className={block.fond ? "rounded-[6px] px-4 py-3" : undefined}
+                  style={block.fond ? { background: teinteTrame(block.fond) } : undefined}
+                >
+                  <RichTextEditor
+                    compact
+                    reserveDroite
+                    placeholder="Paragraphe…"
+                    // Un paragraphe d'avant la mise en forme ne porte que du
+                    // texte : on l'échappe pour l'ouvrir en HTML, sinon un
+                    // chevron ou une esperluette du texte d'origine serait pris
+                    // pour du balisage. Les archives en contiennent.
+                    value={block.html ?? echapperHtml(block.text ?? "")}
+                    // Le texte nu est conservé À CÔTÉ du HTML, et ce n'est pas
+                    // une redondance : l'index de recherche du site lit le champ
+                    // `text` des blocs. Un paragraphe qui ne porterait que du
+                    // HTML sortirait des résultats de recherche.
+                    onChange={(html, texte) => setBlock(i, { html, text: texte })}
+                    fond={block.fond}
+                    // `undefined` et non `null` : le champ disparaît alors du
+                    // JSON enregistré, au lieu d'y laisser une trame nulle.
+                    onFondChange={(fond) => setBlock(i, { fond: fond ?? undefined })}
+                    className="prose-editor w-full bg-transparent font-serif text-lg leading-[1.72] text-ink outline-none [&_a]:text-blue [&_a]:underline [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-line [&_td]:px-2.5 [&_td]:py-1.5 [&_th]:border [&_th]:border-line [&_th]:bg-surface-2 [&_th]:px-2.5 [&_th]:py-1.5 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6"
+                  />
+                </div>
               ) : block.type === "h2" ? (
                 <input
                   value={block.text ?? ""}
