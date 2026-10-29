@@ -7,6 +7,7 @@ import { PUBLISH_ROLES, STUDIO_ROLES } from "@/auth";
 import { exigerRole } from "@/lib/garde-role";
 import { sendArticleAlert } from "@/lib/push";
 import { sanitizeArticleHtml } from "@/lib/sanitize-html";
+import { TRAMES_VALEURS } from "@/lib/trames-paragraphe";
 
 const BlockSchema = z.object({
   type: z.enum(["paragraph", "richtext", "h2", "quote", "callout", "image", "kpi", "note"]),
@@ -29,6 +30,13 @@ const BlockSchema = z.object({
    */
   caption: z.string().optional(),
   variant: z.enum(["orange", "blue", "teal", "red", "green", "purple"]).optional(), // encadré coloré
+  /**
+   * Trame de fond d'un paragraphe. Énumérée depuis la palette partagée, et non
+   * libre : une couleur quelconque arrivant ici finirait en style inline dans
+   * la page, hors de la liste blanche du nettoyage HTML, et pourrait rendre un
+   * paragraphe illisible dans l'un des deux thèmes.
+   */
+  fond: z.enum(TRAMES_VALEURS).optional(),
 });
 
 const ArticleInputSchema = z.object({
