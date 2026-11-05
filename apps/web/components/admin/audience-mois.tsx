@@ -21,6 +21,7 @@ const PAYS: Record<string, string> = {
   GB: "Royaume-Uni", DE: "Allemagne", IT: "Italie", ES: "Espagne", PT: "Portugal",
   NL: "Pays-Bas", SE: "Suède", NO: "Norvège", DK: "Danemark", IE: "Irlande",
   LU: "Luxembourg", AT: "Autriche", PL: "Pologne", RU: "Russie", TR: "Turquie",
+  LT: "Lituanie", LV: "Lettonie", EE: "Estonie", CZ: "Tchéquie", RO: "Roumanie",
   // Reste du monde
   CN: "Chine", JP: "Japon", IN: "Inde", BR: "Brésil", AR: "Argentine", MX: "Mexique",
   AU: "Australie", NZ: "Nouvelle-Zélande", SG: "Singapour", KR: "Corée du Sud",
@@ -146,19 +147,37 @@ export function AudienceMoisBloc({
               <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">
                 Pays des visites
               </div>
+              {/* Une barre grise signale une ligne dont le comportement ne
+                  ressemble pas à de la lecture : une page par visite, presque
+                  pas de mobile. C'est un indice à vérifier, pas un verdict —
+                  rien n'est exclu du comptage sur cette base. */}
               <div className="flex flex-col gap-2">
                 {data.pays.map((p) => {
                   const part = data.visites > 0 ? Math.round((p.visites / data.visites) * 100) : 0;
+                  // Les deux chiffres qui séparent un lectorat d'un parc de
+                  // machines. Une ligne à 1,0 page par visite et 0 % de mobile
+                  // n'est pas un public, quel que soit son volume.
+                  const parVisite = p.visites > 0 ? p.pages / p.visites : 0;
+                  const partMobile = p.visites > 0 ? Math.round((p.mobiles / p.visites) * 100) : 0;
+                  const suspect = p.visites >= 20 && parVisite < 1.1 && partMobile < 10;
                   return (
                     <div key={p.code} className="flex items-center gap-3">
                       <span className="w-[110px] flex-none truncate text-[12.5px] font-semibold">
                         {PAYS[p.code] ?? p.code}
                       </span>
                       <span className="h-2.5 flex-1 overflow-hidden rounded-pill bg-surface-2">
-                        <span className="block h-full rounded-pill bg-green" style={{ width: `${Math.max(2, part)}%` }} />
+                        <span
+                          className={`block h-full rounded-pill ${suspect ? "bg-ink-3" : "bg-green"}`}
+                          style={{ width: `${Math.max(2, part)}%` }}
+                        />
                       </span>
-                      <span className="w-[86px] flex-none text-right text-[12px] text-ink-3">
-                        {nf.format(p.visites)} · {part} %
+                      <span className="flex w-[150px] flex-none flex-col items-end leading-tight">
+                        <span className="text-[12px] text-ink-3">
+                          {nf.format(p.visites)} · {part} %
+                        </span>
+                        <span className={`text-[10.5px] ${suspect ? "font-semibold text-ink-2" : "text-ink-3"}`}>
+                          {parVisite.toFixed(2).replace(".", ",")} p/visite · {partMobile} % mob.
+                        </span>
                       </span>
                     </div>
                   );
