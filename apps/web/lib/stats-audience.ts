@@ -26,7 +26,14 @@ export type AudienceMois = {
   podcastsVus: number;
   inscritsSite: number;
   inscritsNewsletter: number;
-  pays: Array<{ code: string; visites: number }>;
+  /**
+   * Les huit premiers pays. Chacun porte de quoi distinguer un lectorat d'un
+   * parc de machines : un lecteur enchaîne les pages et vient souvent du
+   * téléphone, un programme ouvre une page et s'en va, depuis un centre de
+   * données. Le seul compte de visites ne les sépare pas — c'est ce qui avait
+   * laissé passer la mesure faussée jusqu'au 19 octobre 2026.
+   */
+  pays: Array<{ code: string; visites: number; pages: number; mobiles: number }>;
 };
 
 /** Bornes UTC du mois `AAAA-MM`. */
@@ -195,8 +202,11 @@ export async function audienceDuMois(mois: string): Promise<AudienceMois> {
       prisma.pageView.count({ where: { createdAt: periode, kind: "podcast" } }),
       prisma.user.count({ where: { createdAt: periode } }),
       prisma.newsletterSubscription.count({ where: { createdAt: periode } }),
-      prisma.$queryRaw<Array<{ country: string | null; visites: bigint }>>(Prisma.sql`
-        SELECT country, COUNT(DISTINCT "sessionId")::bigint AS visites
+      prisma.$queryRaw<Array<{ country: string | null; visites: bigint; pages: bigint; mobiles: bigint }>>(Prisma.sql`
+        SELECT country,
+               COUNT(DISTINCT "sessionId")::bigint AS visites,
+               COUNT(*)::bigint AS pages,
+               (COUNT(DISTINCT "sessionId") FILTER (WHERE device = 'mobile'))::bigint AS mobiles
         FROM "PageView"
         WHERE "createdAt" >= ${debut} AND "createdAt" < ${fin} AND country IS NOT NULL
         GROUP BY 1 ORDER BY 2 DESC LIMIT 8
@@ -227,6 +237,11 @@ export async function audienceDuMois(mois: string): Promise<AudienceMois> {
     podcastsVus: podcasts,
     inscritsSite,
     inscritsNewsletter: inscritsNl,
-    pays: paysBrut.map((p) => ({ code: p.country ?? "?", visites: Number(p.visites) })),
+    pays: paysBrut.map((p) => ({
+      code: p.country ?? "?",
+      visites: Number(p.visites),
+      pages: Number(p.pages),
+      mobiles: Number(p.mobiles),
+    })),
   };
 }
