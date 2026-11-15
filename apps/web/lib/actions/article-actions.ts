@@ -6,6 +6,7 @@ import { prisma, Prisma, type ArticleStatus } from "@a4a/db";
 import { PUBLISH_ROLES, STUDIO_ROLES } from "@/auth";
 import { exigerRole } from "@/lib/garde-role";
 import { sendArticleAlert } from "@/lib/push";
+import { diffuserArticle } from "@/lib/diffusion-sociale";
 import { sanitizeArticleHtml } from "@/lib/sanitize-html";
 import { TRAMES_VALEURS } from "@/lib/trames-paragraphe";
 
@@ -261,8 +262,11 @@ export async function transitionArticle(id: string, action: Transition): Promise
   await prisma.article.update({ where: { id }, data });
   revalidatePublic();
   // Alerte Web Push à la première mise en ligne (pas sur une re-publication).
+  // La diffusion sociale suit la même règle, et pour la même raison : republier
+  // un article corrigé ne doit pas le renvoyer une seconde fois sur la page.
   if (action === "publish" && !article.publishedAt) {
     sendArticleAlert(id).catch((e) => console.error("[push]", e));
+    diffuserArticle(id).catch((e) => console.error("[diffusion]", e));
   }
   return { ok: true, id };
 }

@@ -688,6 +688,9 @@ model Article {
 
   tags         String[]
   readingTime  Int      @default(0)
+
+  /// Annonces de publication poussées vers l'automate de diffusion.
+  diffusions DiffusionArticle[]
   views        Int      @default(0)
   featuredRank Int? // position à la Une (1 à 5) — null = pas en Une
   hidden       Boolean  @default(false) // publié mais masqué du public (éditeur/admin)
@@ -1623,4 +1626,40 @@ model CvProfile {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Diffusion sociale : annoncer une publication hors du site
+// ---------------------------------------------------------------------------
+
+/// Annonce d'une publication, poussée vers l'automate de diffusion.
+///
+/// Un article mis en ligne doit partir sur la page Facebook, et demain
+/// ailleurs. Le site ne parle à aucun réseau directement : il émet un seul
+/// appel signé vers Activepieces (automation.abidjan4all.info), qui tient les
+/// autorisations de chaque réseau et se charge de la distribution. Le jour où
+/// Meta change son API — ce qu'il fait régulièrement — rien ne bouge ici.
+///
+/// Cette table existe pour que la rédaction voie ce qui est parti et ce qui a
+/// échoué. Sans elle, un envoi raté serait invisible : l'article paraîtrait
+/// sur le site et nulle part ailleurs, sans que personne le sache.
+model DiffusionArticle {
+  id        String  @id @default(cuid())
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  articleId String
+
+  /// en_attente | envoyee | echec
+  statut String @default("en_attente")
+  /// Code HTTP rendu par l'automate ; null s'il n'a pas répondu du tout.
+  codeHttp Int?
+  /// Motif lisible, affiché à la rédaction quand l'envoi échoue.
+  erreur String?
+  essais Int     @default(0)
+
+  envoyeeAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([articleId])
+  @@index([statut, createdAt])
 }
