@@ -1,5 +1,6 @@
 import { prisma } from "@a4a/db";
 import { sendArticleAlert } from "@/lib/push";
+import { diffuserArticle } from "@/lib/diffusion-sociale";
 import { sendMonthlyAdReports } from "@/lib/ad-reports";
 import { marquerEcheancesDepassees, relancerEcheancesProches } from "@/lib/abonnements-echeances";
 
@@ -33,6 +34,7 @@ export async function publishDueArticles(): Promise<number> {
   console.log(`[scheduler] ${count} article(s) programmé(s) publié(s)`);
   for (const id of ids) {
     sendArticleAlert(id).catch((e) => console.error("[push]", e));
+    diffuserArticle(id).catch((e) => console.error("[diffusion]", e));
   }
   return count;
 }
