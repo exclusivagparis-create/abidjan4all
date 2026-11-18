@@ -104,7 +104,9 @@ export default async function PublicitePage() {
           <p className="mb-5 max-w-[70ch] text-[13px] text-ink-3">
             Article sponsorisé, rédigé à vos côtés et clairement signalé « Communiqué partenaire ».
           </p>
-          <div className="grid gap-4 sm:grid-cols-2">
+          {/* Une seule formule : la grille à deux colonnes laissait une case
+              vide depuis le retrait du « premium ». */}
+          <div className="grid gap-4 sm:max-w-[480px]">
             {COMMUNIQUE_PARTENAIRE.formules.map((f) => (
               <div key={f.id} className="rounded-[14px] border border-line bg-surface px-6 py-5 shadow-[var(--shadow-sm)]">
                 <div className="flex items-baseline justify-between">

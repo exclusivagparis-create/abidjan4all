@@ -87,10 +87,24 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
           {/* Adhésion ou accès */}
           <section>
             {!session?.user ? (
-              <div className="rounded-[14px] border border-line bg-surface p-6 text-center shadow-[var(--shadow-sm)]">
-                <p className="mb-3 font-serif text-[15px] text-ink-2">Connectez-vous pour rejoindre le Club.</p>
+              /* Les formules s'affichent avant la connexion. Elles ne vivaient
+                 que dans le formulaire d'adhésion, réservé aux comptes : le
+                 visiteur lisait « Connectez-vous pour rejoindre le Club » sans
+                 savoir si cela coûtait mille francs ou cinquante mille. Créer
+                 un compte pour découvrir un prix, personne ne le fait. */
+              <div className="rounded-[14px] border border-line bg-surface p-6 shadow-[var(--shadow-sm)]">
+                <h2 className="mb-4 font-serif text-[18px] font-semibold">Les formules</h2>
+                <div className="mb-5 grid gap-3 sm:grid-cols-3">
+                  {TARIFS_WHATSAPP.map((p) => (
+                    <div key={p.id} className="rounded-[12px] border border-line bg-surface-2 px-4 py-4">
+                      <div className="font-serif text-[16px] font-semibold">{p.label}</div>
+                      <div className="mt-0.5 font-serif text-[20px] font-bold text-ink">{formatXOF(p.prix)}</div>
+                      <div className="mt-1.5 text-[12px] leading-snug text-ink-3">{p.description}</div>
+                    </div>
+                  ))}
+                </div>
                 <Link href="/login?next=/club" className="inline-block rounded-pill bg-red px-5 py-2.5 text-[13px] font-bold text-white">
-                  Se connecter
+                  Se connecter pour adhérer
                 </Link>
               </div>
             ) : actif ? (
