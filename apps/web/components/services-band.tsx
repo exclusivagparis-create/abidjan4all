@@ -4,12 +4,27 @@ import Link from "next/link";
  * Bande « Services A4A » (inspirée de l'Espace du Citoyen) — accès rapide aux
  * services concrets de la plateforme. Identité CI : fond vert, accents orange.
  */
+/**
+ * Les libellés sont des verbes, et c'est le point.
+ *
+ * La bande annonçait des rayons — « Bourse d'emploi », « Immobilier » — là où
+ * le lecteur ne sait pas qu'il a le droit d'y déposer quelque chose. Un nom de
+ * service se contemple ; un ordre se suit. Le sous-titre dit pour qui c'est,
+ * quand les deux côtés d'un même service peuvent se confondre : déposer son CV
+ * et consulter la CVthèque sont deux gestes opposés, faits par deux personnes
+ * différentes, et ils avaient jusqu'ici une seule carte pour deux.
+ */
 const SERVICES = [
-  { icon: "💼", title: "Bourse d'emploi", sub: "Offres & recrutement", href: "/annonces?type=emploi" },
-  { icon: "📄", title: "Banque de CV", sub: "Déposer / recruter", href: "/cv" },
-  { icon: "🏠", title: "Immobilier", sub: "Annonces", href: "/annonces?type=immobilier" },
-  { icon: "💬", title: "WhatsApp Club", sub: "Rejoindre le groupe", href: "/club" },
-  { icon: "✅", title: "A4A Vérifie", sub: "Fact-checking", href: "/verifie" },
+  // Les liens de dépôt visent l'ancre du formulaire, en bas de /annonces.
+  // Sans elle, « déposez une offre » déposait le lecteur sur la liste des
+  // annonces existantes, à lui de deviner qu'il fallait faire défiler.
+  { icon: "💼", title: "Emploi : déposez une offre", sub: "Employeurs", href: "/annonces?type=emploi#deposer" },
+  { icon: "🔍", title: "Consultez les annonces", sub: "Emploi, immobilier, services", href: "/annonces" },
+  { icon: "📄", title: "Déposez votre CV", sub: "Candidats — gratuit", href: "/espace-membre/cv" },
+  { icon: "🔎", title: "Accédez à la CVthèque", sub: "Recruteurs", href: "/recruteur" },
+  { icon: "🏠", title: "Déposer une annonce", sub: "Immobilier & petites annonces", href: "/annonces#deposer" },
+  { icon: "💬", title: "Rejoignez le Club", sub: "Groupe WhatsApp privé", href: "/club" },
+  { icon: "✅", title: "Vérifiez une info", sub: "A4A Vérifie", href: "/verifie" },
 ];
 
 export function ServicesBand() {
@@ -20,9 +35,9 @@ export function ServicesBand() {
           <h2 className="font-serif text-[20px] font-semibold text-ink sm:text-[22px]">
             Services <span className="text-[#E8500A]">A4A</span>
           </h2>
-          <span className="hidden text-[12px] text-ink-3 sm:inline">Emploi, annonces, communauté — en un clic</span>
+          <span className="hidden text-[12px] text-ink-3 sm:inline">Emploi, CVthèque, annonces — en un clic</span>
         </div>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
           {SERVICES.map((s) => (
             <Link
               key={s.href}
