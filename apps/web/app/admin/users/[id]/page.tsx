@@ -22,6 +22,7 @@ const ROLE_LABEL: Record<Role, string> = {
   member: "Membre",
   journalist: "Journaliste",
   editor: "Rédaction en chef",
+  recruteur: "Recruteur",
   admin: "Administration",
   partner: "Partenaire",
   ad_manager: "Gestionnaire Régie",

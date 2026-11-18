@@ -73,6 +73,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Newsletters", href: canPublish ? "/admin/newsletters" : undefined, icon: "✉" },
     { label: "Groupes", href: isAdmin ? "/admin/community" : undefined, icon: "◉" },
     { label: "Abonnés A4A+", href: isAdmin ? "/admin/subscribers" : undefined, icon: "◍" },
+    { label: "CVthèque", href: canPublish ? "/admin/cvtheque" : undefined, icon: "📄" },
+    { label: "WhatsApp Club", href: canPublish ? "/admin/club" : undefined, icon: "💬" },
     { label: "Remboursements", href: isAdmin || canPublish ? "/admin/remboursements" : undefined, icon: "↩", badge: remboursementsEnAttente, badgeColor: "var(--orange)" },
     { label: "Offres A4A+", href: canPublish ? "/admin/offres" : undefined, icon: "◈" },
     { label: "Utilisateurs", href: isAdmin ? "/admin/users" : undefined, icon: "☺" },
