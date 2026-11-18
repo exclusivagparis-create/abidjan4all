@@ -59,11 +59,8 @@ export const TARIFS_PUB: TarifPub[] = [
  * n'aura pas été branché sur la base.
  */
 export const COMMUNIQUE_PARTENAIRE = {
-  min: 200000,
-  max: 300000,
   formules: [
-    { id: "standard", label: "Communiqué standard", prix: 200000, description: "Article sponsorisé publié 30 jours, partagé une fois en newsletter." },
-    { id: "premium", label: "Communiqué premium", prix: 300000, description: "Mise en avant accueil 7 jours, partage réseaux + newsletter, référencement prolongé." },
+    { id: "standard", label: "Communiqué partenaire", prix: 200000, description: "Article sponsorisé publié 30 jours, partagé une fois en newsletter." },
   ],
 } as const;
 
