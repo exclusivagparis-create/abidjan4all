@@ -22,6 +22,7 @@ enum Role {
   admin
   partner
   ad_manager // Gestionnaire Régie : accès Studio limité à la régie publicitaire
+  recruteur // Accès permanent à la CVthèque, accordé à la main depuis le Studio
 }
 
 enum ArticleStatus {

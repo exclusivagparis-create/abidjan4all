@@ -8,8 +8,16 @@ import { prisma } from "@a4a/db";
  * recruteurs abonnés : c'est ce qui se vend.
  */
 
-/** Rôles qui voient les coordonnées sans abonnement (support, modération). */
-const ROLES_ACCES_TOTAL = ["editor", "admin"];
+/**
+ * Rôles qui voient les coordonnées sans abonnement.
+ *
+ * `editor` et `admin` y sont pour le support et la modération. `recruteur` est
+ * d'une autre nature : c'est un accès commercial accordé à la main depuis le
+ * Studio — partenaire, contrepartie d'un échange, essai avant achat. Il
+ * dispense de payer, et c'est pourquoi il s'accorde et se retire un compte à
+ * la fois, en le voyant écrit, plutôt qu'en modifiant une date d'échéance.
+ */
+const ROLES_ACCES_TOTAL = ["editor", "admin", "recruteur"];
 
 /** L'accès recruteur en cours de validité d'un compte, s'il existe. */
 export async function accesRecruteurActif(userId: string | undefined) {
