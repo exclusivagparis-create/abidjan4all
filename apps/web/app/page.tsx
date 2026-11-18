@@ -150,6 +150,14 @@ export default async function HomePage() {
       <SiteHeader />
       <Ticker items={tickerItems} />
 
+      {/* BANDE SERVICES (identité CI).
+          Elle vivait sous le héros, à près de deux écrans de défilement : un
+          lecteur venu pour l'actualité n'y arrivait jamais, et les services —
+          emploi, CVthèque, annonces — sont précisément ce qui ne se découvre
+          pas tout seul. Remontée ici, entre le fil direct et le ruban des
+          marchés, elle est vue avant le premier article. */}
+      <ServicesBand />
+
       {/* RUBAN MARCHÉS (statique — flux de cotation à brancher en DF-05) */}
       <section className="mx-auto max-w-[1200px] px-4 pt-[22px] sm:px-6 lg:px-8">
         <div className="flex overflow-hidden rounded-md border border-line bg-surface shadow-[var(--shadow-sm)]">
@@ -253,10 +261,6 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      {/* BANDE SERVICES + FILTRES DIASPORA (identité CI) */}
-      <div className="mt-12">
-        <ServicesBand />
-      </div>
       <DiasporaStrip />
 
       {/* 4 ARTICLES À LA UNE (positions choisies dans le Studio) */}
