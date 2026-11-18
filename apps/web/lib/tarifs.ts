@@ -46,12 +46,23 @@ export const TARIFS_PUB: TarifPub[] = [
   },
 ];
 
-/** Communiqué partenaire : article sponsorisé rédigé et signé « partenaire ». */
+/**
+ * Communiqué partenaire : article sponsorisé rédigé et signé « partenaire ».
+ *
+ * ATTENTION — ce n'est PAS la source de vérité. Le catalogue Brand Content
+ * vit en base (modèle `BrandOffer`, édité au Studio /admin/brand-content) et
+ * s'affiche sur /publicite/brand-content. Cette grille-ci ne sert qu'au bloc
+ * « Communiqué partenaire » de /publicite, et les deux ont divergé : le
+ * catalogue annonçait 200 000 F l'article quand ce fichier en affichait
+ * encore 150 000, soit deux prix pour le même produit sur deux pages du même
+ * site. Toute révision du catalogue doit être reportée ici tant que ce bloc
+ * n'aura pas été branché sur la base.
+ */
 export const COMMUNIQUE_PARTENAIRE = {
-  min: 150000,
+  min: 200000,
   max: 300000,
   formules: [
-    { id: "standard", label: "Communiqué standard", prix: 150000, description: "Article sponsorisé publié 30 jours, partagé une fois en newsletter." },
+    { id: "standard", label: "Communiqué standard", prix: 200000, description: "Article sponsorisé publié 30 jours, partagé une fois en newsletter." },
     { id: "premium", label: "Communiqué premium", prix: 300000, description: "Mise en avant accueil 7 jours, partage réseaux + newsletter, référencement prolongé." },
   ],
 } as const;
@@ -77,14 +88,21 @@ export const TARIFS_IMMO: PalierAnnonce[] = [
  */
 export const TARIFS_RECRUTEUR: PalierAnnonce[] = [
   { id: "decouverte", label: "Découverte", prix: 50000, jours: 30, description: "1 mois d'accès aux coordonnées de la CVthèque." },
-  { id: "trimestre", label: "Trimestre", prix: 120000, jours: 90, description: "3 mois d'accès — un mois offert." },
+  // « un mois offert » était faux : 3 × 50 000 = 150 000, le trimestre en
+  // coûte 120 000, l'économie est de 30 000 — soit 0,6 mois. On annonce donc
+  // le montant épargné, qui se vérifie, plutôt qu'un nombre de mois qui ne
+  // tient pas devant une calculette.
+  { id: "trimestre", label: "Trimestre", prix: 120000, jours: 90, description: "3 mois d'accès — 30 000 FCFA d'économie sur le tarif mensuel." },
   { id: "annuel", label: "Annuel", prix: 400000, jours: 365, description: "12 mois d'accès au meilleur tarif, pour recruter toute l'année." },
 ];
 
 /** Adhésion WhatsApp Club : accès au groupe privé pour une durée donnée. */
 export const TARIFS_WHATSAPP: PalierAnnonce[] = [
   { id: "mensuel", label: "Mensuel", prix: 2000, jours: 30, description: "Accès 1 mois au groupe WhatsApp privé A4A." },
-  { id: "trimestriel", label: "Trimestriel", prix: 5000, jours: 90, description: "Accès 3 mois — deux mois offerts sur le tarif mensuel." },
+  // « deux mois offerts » était faux : 3 × 2 000 = 6 000, le trimestriel en
+  // coûte 5 000, l'économie est de 1 000 — un demi-mois. Le prix reste
+  // inchangé : le défaut était la phrase, pas le tarif.
+  { id: "trimestriel", label: "Trimestriel", prix: 5000, jours: 90, description: "Accès 3 mois — un demi-mois offert sur le tarif mensuel." },
   { id: "annuel", label: "Annuel", prix: 15000, jours: 365, description: "Accès 12 mois au meilleur tarif." },
 ];
 

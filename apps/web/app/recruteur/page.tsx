@@ -119,12 +119,32 @@ export default async function RecruteurPage({
                 </div>
               </form>
             ) : (
-              <Link
-                href="/login?next=/recruteur"
-                className="inline-block rounded-pill bg-[#0E5A8A] px-6 py-2.5 text-[13px] font-bold text-white"
-              >
-                Se connecter pour souscrire
-              </Link>
+              /* Les tarifs s'affichent aussi à qui n'est pas connecté.
+                 Ils ne vivaient que dans la branche « connecté » : un recruteur
+                 arrivant sur la page lisait « Se connecter pour souscrire » sans
+                 savoir ce qu'il allait payer, et repartait. On n'exige pas la
+                 création d'un compte avant d'annoncer un prix — c'est aussi ce
+                 qui faisait croire que la CVthèque n'avait pas de tarifs. */
+              <>
+                <div className="mb-5 grid gap-4 sm:grid-cols-3">
+                  {TARIFS_RECRUTEUR.map((t) => (
+                    <div
+                      key={t.id}
+                      className="flex flex-col rounded-[14px] border border-line bg-surface p-5 shadow-[var(--shadow-sm)]"
+                    >
+                      <span className="font-serif text-[18px] font-semibold">{t.label}</span>
+                      <span className="mt-1 font-serif text-[24px] font-bold text-[#0E5A8A]">{formatXOF(t.prix)}</span>
+                      <span className="mt-2 text-[12.5px] leading-snug text-ink-2">{t.description}</span>
+                    </div>
+                  ))}
+                </div>
+                <Link
+                  href="/login?next=/recruteur"
+                  className="inline-block rounded-pill bg-[#0E5A8A] px-6 py-2.5 text-[13px] font-bold text-white"
+                >
+                  Se connecter pour souscrire
+                </Link>
+              </>
             )
           ) : null}
         </section>
