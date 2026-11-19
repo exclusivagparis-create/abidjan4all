@@ -41,9 +41,9 @@ const SERVICES = [
 export function ServicesBand() {
   return (
     <section className="border-y border-line bg-[#1A6B3C]/8">
-      <div className="mx-auto max-w-[1200px] px-4 py-7 sm:px-6 lg:px-8">
-        <div className="mb-4 flex items-baseline justify-between gap-3">
-          <h2 className="font-serif text-[20px] font-semibold text-ink sm:text-[22px]">
+      <div className="mx-auto max-w-[1200px] px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="font-serif text-[18px] font-semibold text-ink sm:text-[20px]">
             Services <span className="text-[#E8500A]">A4A</span>
           </h2>
           <span className="hidden text-[12px] text-ink-3 sm:inline">Emploi, CVthèque, annonces — en un clic</span>
@@ -53,11 +53,13 @@ export function ServicesBand() {
             <Link
               key={s.href}
               href={s.href}
-              className="group rounded-[10px] border border-line bg-surface px-4 py-3.5 shadow-[var(--shadow-sm)] transition-colors hover:border-[#1A6B3C]"
+              className="group flex items-center gap-2.5 rounded-[9px] border border-line bg-surface px-3 py-2.5 shadow-[var(--shadow-sm)] transition-colors hover:border-[#1A6B3C]"
             >
-              <div className="text-[22px]">{s.icon}</div>
-              <div className="mt-1.5 text-[13.5px] font-semibold leading-tight text-ink">{s.title}</div>
-              <div className="text-[11px] text-ink-3">{s.sub}</div>
+              <span className="flex-none text-[16px] leading-none">{s.icon}</span>
+              <span className="min-w-0">
+                <span className="block text-[12.5px] font-semibold leading-[1.25] text-ink">{s.title}</span>
+                <span className="block text-[10.5px] leading-tight text-ink-3">{s.sub}</span>
+              </span>
             </Link>
           ))}
         </div>
