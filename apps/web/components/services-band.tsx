@@ -14,17 +14,28 @@ import Link from "next/link";
  * et consulter la CVthèque sont deux gestes opposés, faits par deux personnes
  * différentes, et ils avaient jusqu'ici une seule carte pour deux.
  */
+/**
+ * Deux rangées, et la séparation n'est pas décorative.
+ *
+ * La première ne contient que du gratuit, ouvert à tous et sans compte :
+ * c'est le plus grand nombre, et c'est ce qui amène du monde. La seconde
+ * s'adresse à qui vient déposer ou acheter.
+ *
+ * « Consultez les offres d'emploi » a sa propre carte, distincte des
+ * annonces : un demandeur d'emploi ne cherche pas « une annonce », il cherche
+ * du travail, et le mot générique ne l'arrêtait pas.
+ *
+ * Les liens de dépôt visent l'ancre du formulaire, en bas de /annonces.
+ */
 const SERVICES = [
-  // Les liens de dépôt visent l'ancre du formulaire, en bas de /annonces.
-  // Sans elle, « déposez une offre » déposait le lecteur sur la liste des
-  // annonces existantes, à lui de deviner qu'il fallait faire défiler.
-  { icon: "💼", title: "Emploi : déposez une offre", sub: "Employeurs", href: "/annonces?type=emploi#deposer" },
-  { icon: "🔍", title: "Consultez les annonces", sub: "Emploi, immobilier, services", href: "/annonces" },
+  { icon: "🔍", title: "Consultez les offres d'emploi", sub: "Gratuit, sans compte", href: "/annonces?type=emploi" },
+  { icon: "📰", title: "Consultez les annonces", sub: "Immobilier, services — gratuit", href: "/annonces" },
   { icon: "📄", title: "Déposez votre CV", sub: "Candidats — gratuit", href: "/espace-membre/cv" },
-  { icon: "🔎", title: "Accédez à la CVthèque", sub: "Recruteurs", href: "/recruteur" },
-  { icon: "🏠", title: "Déposer une annonce", sub: "Immobilier & petites annonces", href: "/annonces#deposer" },
-  { icon: "💬", title: "Rejoignez le Club", sub: "Groupe WhatsApp privé", href: "/club" },
   { icon: "✅", title: "Vérifiez une info", sub: "A4A Vérifie", href: "/verifie" },
+  { icon: "💼", title: "Emploi : déposez une offre", sub: "Employeurs", href: "/annonces?type=emploi#deposer" },
+  { icon: "🏠", title: "Déposer une annonce", sub: "Immobilier & petites annonces", href: "/annonces#deposer" },
+  { icon: "🔎", title: "Accédez à la CVthèque", sub: "Recruteurs", href: "/recruteur" },
+  { icon: "💬", title: "Rejoignez le Club", sub: "Groupe WhatsApp privé", href: "/club" },
 ];
 
 export function ServicesBand() {
