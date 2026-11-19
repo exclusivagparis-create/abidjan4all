@@ -52,8 +52,9 @@ export default async function AnnoncesPage({ searchParams }: { searchParams: Pro
         </div>
         <p className="mb-6 max-w-[62ch] font-serif text-[15px] text-ink-2">
           Emploi, immobilier et services — les annonces de la communauté Abidjan4All, en Côte d&apos;Ivoire et dans la
-          diaspora. Offres d&apos;emploi et immobilier payantes selon la formule choisie ; annonces de services
-          gratuites, publiées après validation.
+          diaspora. <b>Les consulter est libre et gratuit, sans compte ni inscription.</b> Seul le dépôt est payant
+          pour l&apos;emploi et l&apos;immobilier, selon la formule choisie ; les annonces de services sont gratuites,
+          publiées après validation.
         </p>
 
         {/* Bourse d'emploi : CV en ligne gratuit pour les candidats. */}
@@ -113,7 +114,28 @@ export default async function AnnoncesPage({ searchParams }: { searchParams: Pro
             );
           })}
           {listings.length === 0 ? (
-            <p className="py-12 text-center font-serif text-lg text-ink-3">Aucune annonce dans cette catégorie pour l&apos;instant.</p>
+            /* L'état vide tenait en une ligne grise, et le formulaire de dépôt
+               occupait alors tout l'écran : on prenait /annonces pour une page
+               de dépôt, alors qu'elle est d'abord une page de consultation. */
+            <div className="rounded-[14px] border border-dashed border-line bg-surface-2 px-6 py-10 text-center">
+              <p className="font-serif text-lg text-ink-2">
+                {filter
+                  ? "Aucune annonce dans « " + (TYPE_META[filter]?.label ?? filter) + " » pour l'instant."
+                  : "Aucune annonce publiée pour l'instant."}
+              </p>
+              <p className="mx-auto mt-2 max-w-[52ch] text-[13px] leading-relaxed text-ink-3">
+                La consultation restera toujours libre et gratuite. Revenez bientôt — ou déposez la première
+                annonce, juste en dessous.
+              </p>
+              {filter ? (
+                <Link
+                  href="/annonces"
+                  className="mt-4 inline-block rounded-pill border border-line bg-surface px-5 py-2 text-[13px] font-semibold text-ink-2 hover:border-ink-3 hover:text-ink"
+                >
+                  Voir toutes les catégories
+                </Link>
+              ) : null}
+            </div>
           ) : null}
         </div>
 
